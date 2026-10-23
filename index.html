@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greater Tomorrow Model College Ado — Grade System</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --ink: #2b1d0e;
+    --muted: #7a6a58;
+    --line: #e5dccf;
+
+    --brown: #6b4423;
+    --brown-dark: #4a2f18;
+    --brown-light: #8b5e34;
+
+    --gold: #e6b422;
+    --gold-dark: #c9981a;
+    --gold-light: #f5d76e;
+
+    --blue: #1e3a8a;
+    --blue-dark: #172d6b;
+    --blue-light: #3b5bdb;
+
+    --ok: #15803d;
+    --warn: #b45309;
+    --err: #b91c1c;
+
+    --radius: 12px;
+    --shadow-sm: 0 1px 2px rgba(43,29,14,0.06);
+    --shadow: 0 4px 14px rgba(43,29,14,0.08);
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  button {
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    padding: 9px 16px; border: 1px solid transparent; border-radius: 8px;
+    background: var(--brown); color: white; cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--brown-dark); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.sec { background: white; color: var(--brown); border-color: var(--line); }
+  button.sec:hover { background: #faf7f2; border-color: var(--brown-light); }
+  button.danger { background: var(--err); }
+  button.danger:hover { background: #991b1b; }
+  button.ok { background: var(--ok); }
+  button.ok:hover { background: #166534; }
+  button.blue { background: var(--blue); }
+  button.blue:hover { background: var(--blue-dark); }
+  button.gold { background: var(--gold); color: var(--brown-dark); }
+  button.gold:hover { background: var(--gold-dark); }
+  button.sm { padding: 5px 10px; font-size: 13px; }
+  input, select, textarea {
+    font-family: inherit; font-size: 14px; padding: 9px 12px;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: white; color: var(--ink); width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--brown);
+    box-shadow: 0 0 0 3px rgba(107,68,35,0.12);
+  }
+  label {
+    font-size: 12px; color: var(--muted); font-weight: 700;
+    display: block; margin-bottom: 5px; letter-spacing: 0.02em;
+  }
+
+  /* ============ LOGIN ============ */
+  .login-wrap {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(230,180,34,0.14) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(30,58,138,0.22) 0%, transparent 50%),
+      linear-gradient(135deg, #3a2413 0%, #6b4423 45%, #4a2f18 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .login-wrap::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(230,180,34,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(230,180,34,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .login-card {
+    background: white; padding: 40px 40px 32px; border-radius: 18px;
+    width: 100%; max-width: 440px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.4);
+    position: relative;
+    z-index: 1;
+    border-top: 5px solid var(--gold);
+  }
+  .login-logo {
+    width: 78px; height: 78px; margin: 0 auto 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-size: 32px; font-weight: 800;
+    box-shadow: 0 10px 24px rgba(30,58,138,0.35);
+    border: 3px solid var(--gold);
+    font-family: Georgia, serif;
+  }
+  .school-name {
+    text-align: center; font-size: 19px; font-weight: 800;
+    color: var(--brown); letter-spacing: 0.02em;
+    line-height: 1.25; margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .motto {
+    text-align: center; font-size: 12px; color: var(--blue);
+    font-style: italic; font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .school-tag {
+    text-align: center; font-size: 10.5px; color: var(--muted);
+    margin-bottom: 26px; letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 700;
+  }
+  .divider {
+    height: 1px; background: var(--line); margin: 0 0 22px;
+    position: relative;
+  }
+  .divider::after {
+    content: 'Sign in to your account';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: white; padding: 0 12px;
+    font-size: 10px; color: var(--muted); font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .login-card label { margin-top: 0; }
+  .login-card input { margin-bottom: 14px; }
+  .login-card button.primary-btn {
+    width: 100%; margin-top: 8px; padding: 12px;
+    font-size: 15px; font-weight: 700;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    border: none;
+    letter-spacing: 0.03em;
+  }
+  .login-card button.primary-btn:hover {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, #0f1f4a 100%);
+  }
+  .err-msg {
+    color: var(--err); font-size: 13px;
+    margin-top: 12px; min-height: 18px; text-align: center;
+    font-weight: 600;
+  }
+  .login-footer {
+    text-align: center; margin-top: 24px; padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+  }
+  .login-footer .credit {
+    display: block; margin-top: 6px;
+    color: var(--brown-light);
+    letter-spacing: 0.08em;
+    font-size: 10px;
+  }
+
+  /* ============ SHELL ============ */
+  header.topbar {
+    background: white; padding: 0 28px;
+    height: 68px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 3px solid var(--gold);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+  header.topbar .brand {
+    display: flex; align-items: center; gap: 14px;
+  }
+  header.topbar .logo-mini {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-size: 17px; font-weight: 800;
+    border: 2.5px solid var(--gold);
+    font-family: Georgia, serif;
+  }
+  header.topbar .brand-text {
+    display: flex; flex-direction: column; line-height: 1.15;
+  }
+  header.topbar .brand-text .name {
+    font-size: 13px; font-weight: 800; color: var(--brown);
+    letter-spacing: 0.02em;
+  }
+  header.topbar .brand-text .tag {
+    font-size: 10px; color: var(--blue);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 700; margin-top: 2px;
+  }
+  header.topbar .brand-text .tag .motto-inline {
+    color: var(--brown-light);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  header.topbar .user {
+    display: flex; align-items: center; gap: 16px;
+  }
+  header.topbar .user .who {
+    text-align: right; line-height: 1.2;
+  }
+  header.topbar .user .who .uname {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+  }
+  header.topbar .user .who .urole {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+  }
+  .role-badge {
+    display: inline-block;
+    font-size: 10px; font-weight: 800; padding: 3px 10px;
+    background: var(--gold-light); color: var(--brown-dark);
+    border-radius: 20px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid var(--gold);
+  }
+
+  main { padding: 28px; max-width: 1400px; margin: 0 auto; flex: 1; width: 100%; }
+  .page-head {
+    margin-bottom: 24px;
+  }
+  .page-head h1 {
+    font-size: 24px; font-weight: 800; color: var(--brown);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .page-head p {
+    color: var(--muted); font-size: 14px;
+  }
+
+  /* ============ CARDS ============ */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+  }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px; gap: 12px; flex-wrap: wrap;
+  }
+  .card-head h2 {
+    font-size: 16px; font-weight: 800; color: var(--brown);
+    letter-spacing: -0.01em;
+  }
+  .card-head .sub {
+    font-size: 13px; color: var(--muted); margin-top: 2px;
+  }
+
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grid { display: grid; gap: 14px; }
+  .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card);
+  }
+  th, td {
+    padding: 12px 14px; text-align: left;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  th {
+    background: #faf7f2; font-weight: 700; color: var(--brown);
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fbf9f5; }
+  .table-wrap {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  /* ============ SCORE ENTRY ============ */
+  .score-input {
+    width: 68px; text-align: center;
+    padding: 7px 4px; font-size: 14px;
+    border: 1.5px solid var(--line); border-radius: 6px;
+    transition: all 0.15s; font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .score-input:focus { border-color: var(--blue); }
+  .score-input.saving { border-color: var(--gold-dark); background: #fffbea; }
+  .score-input.saved { border-color: var(--ok); background: #f0fdf4; }
+  .score-input.error { border-color: var(--err); background: #fef2f2; }
+  .score-input[readonly] { background: #f1f5f9; color: var(--muted); cursor: not-allowed; }
+  .total-cell { font-weight: 800; color: var(--blue); font-variant-numeric: tabular-nums; }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--brown-dark); color: white;
+    padding: 14px 20px; border-radius: 10px;
+    font-size: 14px; max-width: 340px;
+    opacity: 0; transform: translateY(12px);
+    transition: opacity 0.22s, transform 0.22s;
+    pointer-events: none; z-index: 1000;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+    font-weight: 600;
+    border-left: 4px solid var(--gold);
+  }
+  .toast.on { opacity: 1; transform: translateY(0); }
+  .toast.err { background: var(--err); border-left-color: #fca5a5; }
+  .toast.ok { background: var(--ok); border-left-color: var(--gold); }
+
+  /* ============ BADGES ============ */
+  .badge {
+    display: inline-block; padding: 4px 11px;
+    border-radius: 20px; font-size: 11px; font-weight: 800;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .badge.locked { background: #fef3c7; color: #92400e; border: 1px solid var(--gold); }
+  .badge.unlocked { background: #d1fae5; color: #065f46; }
+  .badge.pending { background: #e0e7ff; color: var(--blue-dark); }
+
+  .locked-banner {
+    background: #fef3c7; border: 1px solid var(--gold);
+    padding: 14px 18px; border-radius: 10px; margin-bottom: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: #92400e; font-weight: 700; font-size: 14px;
+  }
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* ============ BULK TEXTAREA ============ */
+  textarea.bulk {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px; line-height: 1.6;
+    resize: vertical;
+    min-height: 220px;
+    border-radius: 10px;
+  }
+
+  /* ============ UPLOAD AREA ============ */
+  .dropzone {
+    border: 2px dashed var(--line); border-radius: var(--radius);
+    padding: 36px 20px; text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+    background: #fbf9f5;
+  }
+  .dropzone:hover { border-color: var(--brown); background: #f7f2ea; }
+  .dropzone.dragover { border-color: var(--blue); background: #eff3fd; }
+  .dropzone .icon {
+    font-size: 34px; margin-bottom: 8px;
+  }
+  .dropzone .title {
+    font-weight: 700; color: var(--brown); margin-bottom: 4px;
+  }
+  .dropzone .hint {
+    font-size: 12px; color: var(--muted);
+  }
+  .upload-result {
+    margin-top: 16px; padding: 14px 16px; border-radius: 10px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .upload-result.success { background: #f0fdf4; border: 1px solid #a7f3d0; color: #065f46; }
+  .upload-result.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .upload-result ul { margin: 8px 0 0 20px; }
+
+  /* ============ TABS ============ */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    border-bottom: 2px solid var(--line);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 11px 20px; font-size: 14px; font-weight: 700;
+    color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+    margin-bottom: -2px;
+  }
+  .tab:hover { color: var(--brown); }
+  .tab.active { color: var(--brown); border-bottom-color: var(--gold); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ============ APP FOOTER ============ */
+  footer.app-footer {
+    text-align: center;
+    padding: 20px 28px 24px;
+    border-top: 1px solid var(--line);
+    background: white;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  footer.app-footer .motto-line {
+    color: var(--blue);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  footer.app-footer .credit {
+    color: var(--brown-light);
+    margin-top: 6px;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+  }
+
+
+  .portal-note { padding:12px 14px; border-radius:9px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; margin:12px 0; }
+  .result-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0; }
+  .result-stat { padding:15px; border:1px solid var(--line); border-radius:10px; background:#fbf9f5; }
+  .result-stat strong { display:block; font-size:20px; color:var(--blue); }
+  .report-heading { text-align:center; padding:18px 10px; border-bottom:2px solid var(--gold); margin-bottom:18px; }
+  .report-heading img { max-width:80px; max-height:80px; object-fit:contain; margin-bottom:8px; }
+  .chat-message { padding:12px 14px; border-radius:10px; margin:10px 0; white-space:pre-wrap; }
+  .chat-message.parent { background:#eff6ff; margin-left:24px; }
+  .chat-message.ai { background:#f0fdf4; margin-right:24px; }
+  .check-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+  .check-item { display:flex; gap:8px; align-items:center; padding:9px; border:1px solid var(--line); border-radius:8px; }
+  .check-item input { width:auto; }
+  @media print {
+    body { background:#fff; }
+    body * { visibility:hidden !important; }
+    #parentReport, #parentReport * { visibility:visible !important; }
+    #parentReport { position:absolute; left:0; top:0; width:100%; border:0; box-shadow:none; }
+    header, footer, button, select, textarea, input, .tabs { display:none !important; }
+  }
+
+  @media (max-width: 640px) {
+    main { padding: 16px; }
+    .card { padding: 18px; }
+    header.topbar { padding: 0 14px; height: 62px; }
+    header.topbar .brand-text .name { font-size: 11px; }
+    header.topbar .brand-text .tag { display: none; }
+    header.topbar .user .who { display: none; }
+    th, td { padding: 9px 8px; font-size: 12.5px; }
+    .score-input { width: 54px; font-size: 13px; }
+    .login-card { padding: 32px 24px; }
+    .school-name { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================================================
+     LOGIN
+     ====================================================== -->
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">G</div>
+    <div class="school-name">Greater Tomorrow<br>Model College Ado</div>
+    <div class="motto">“Jesus, Our Teacher”</div>
+    <div class="school-tag">Known for Moral and Academic Excellence</div>
+    <div class="divider"></div>
+    <label>Email or Student ID</label>
+    <input id="email" type="text" autocomplete="username" placeholder="you@school.com">
+    <label>Password</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button class="primary-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div id="loginErr" class="err-msg"></div>
+    <div class="login-footer">
+      Greater Tomorrow Model College Ado
+      <span class="credit">Created and designed by Veehicee</span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================
+     APP
+     ====================================================== -->
+<div id="appView" style="display:none">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-mini">G</div>
+      <div class="brand-text">
+        <span class="name">Greater Tomorrow Model College Ado</span>
+        <span class="tag">Jesus, Our Teacher · <span class="motto-inline">Known for Moral &amp; Academic Excellence</span></span>
+      </div>
+    </div>
+    <div class="user">
+      <div class="who">
+        <div class="uname" id="userLabel"></div>
+        <div class="urole"><span class="role-badge" id="userRole"></span></div>
+      </div>
+      <button class="sec sm" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <main id="mainContent"></main>
+  <footer class="app-footer">
+    <div class="motto-line">“Jesus, Our Teacher” — Known for Moral and Academic Excellence</div>
+    Greater Tomorrow Model College Ado
+    <div class="credit">Created and designed by Veehicee</div>
+  </footer>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const API = 'https://script.google.com/macros/s/AKfycbwlZ6JwXFeyV5GoNzrSXMQWhS7yaVHYWn6AM3UpOH83uHj1i_ZRk4a-8JCWu1Q0OZk8/exec';
+
+/* ============================================================
+   SESSION + API
+   ============================================================ */
+const S = {
+  token: localStorage.getItem('gs_token') || '',
+  user: JSON.parse(localStorage.getItem('gs_user') || 'null'),
+  cache: { classes: null, subjectsByClass: {} }
+};
+
+async function api(action, payload = {}) {
+  const body = JSON.stringify(Object.assign({ action: action, token: S.token }, payload));
+  let res;
+  try {
+    res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: body,
+      redirect: 'follow'
+    });
+  } catch (netErr) {
+    throw new Error('Network error — check your internet or the API URL');
+  }
+  let json;
+  try { json = await res.json(); }
+  catch (parseErr) { throw new Error('Invalid response from server'); }
+
+  if (!json.success) {
+    if (/session/i.test(json.error)) logout();
+    throw new Error(json.error || 'Request failed');
+  }
+  return json.data;
+}
+
+function saveSession(token, user) {
+  S.token = token; S.user = user;
+  localStorage.setItem('gs_token', token);
+  localStorage.setItem('gs_user', JSON.stringify(user));
+}
+function logout() {
+  localStorage.removeItem('gs_token');
+  localStorage.removeItem('gs_user');
+  S.token = ''; S.user = null;
+  document.getElementById('loginView').style.display = 'flex';
+  document.getElementById('appView').style.display = 'none';
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function cssEsc(s) { return String(s).replace(/(["\\])/g, '\\$1'); }
+
+let toastTimer;
+function toast(msg, kind) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast on' + (kind ? ' ' + kind : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = 'toast', 2800);
+}
+
+function debounce(fn, wait) {
+  const timers = new Map();
+  return function(key) {
+    const args = Array.prototype.slice.call(arguments);
+    if (timers.has(key)) clearTimeout(timers.get(key));
+    timers.set(key, setTimeout(() => fn.apply(this, args), wait));
+  };
+}
+
+function totalOf(t1, t2, t3, exam) {
+  return (Number(t1) || 0) + (Number(t2) || 0) + (Number(t3) || 0) + (Number(exam) || 0);
+}
+function roleLabel(r) {
+  return ({
+    admin: 'Administrator',
+    class_teacher: 'Class Teacher',
+    subject_teacher: 'Subject Teacher',
+    student: 'Student',
+    parent: 'Parent / Guardian'
+  })[r] || r;
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+  if (!email || !password) { err.textContent = 'Enter your email/student ID and password.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  let staffError = null;
+  try {
+    try {
+      const r = await api('login', { email: email, password: password });
+      saveSession(r.token, r.user);
+      boot();
+      return;
+    } catch (e) { staffError = e; }
+    try {
+      const r = await api('parentLogin', { email: email, password: password });
+      saveSession(r.token, r.user);
+      boot();
+      return;
+    } catch (parentError) {
+      err.textContent = /unknown action|not found|do not have access/i.test(parentError.message)
+        ? (staffError ? staffError.message : parentError.message)
+        : parentError.message;
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+}
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+function boot() {
+  if (!S.token || !S.user) return logout();
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+  document.getElementById('userLabel').textContent = S.user.name || S.user.email;
+  document.getElementById('userRole').textContent = roleLabel(S.user.role);
+
+  if (S.user.role === 'admin') renderAdmin();
+  else if (S.user.role === 'class_teacher') renderClassTeacher();
+  else if (S.user.role === 'subject_teacher') renderSubjectTeacher();
+  else if (S.user.role === 'student') renderStudent();
+  else if (S.user.role === 'parent') renderParent();
+  else toast('Unknown role: ' + S.user.role, 'err');
+}
+
+/* ============================================================
+   DATA LOADERS
+   ============================================================ */
+async function loadClasses() {
+  if (S.cache.classes) return S.cache.classes;
+  const list = await api('getClasses');
+  S.cache.classes = list.map(c => c.class);
+  return S.cache.classes;
+}
+async function loadSubjects(className) {
+  if (S.cache.subjectsByClass[className]) return S.cache.subjectsByClass[className];
+  const subs = await api('getSubjectsForClass', { className: className });
+  S.cache.subjectsByClass[className] = subs;
+  return subs;
+}
+
+/* ============================================================
+   TABS HELPER
+   ============================================================ */
+function showTab(groupId, tabId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  group.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  group.querySelectorAll('.tab').forEach(t => {
+    if (t.dataset.tab === tabId) t.classList.add('active');
+  });
+  const container = group.parentElement;
+  container.querySelectorAll(':scope > .section').forEach(s => s.classList.remove('active'));
+  const target = container.querySelector(':scope > .section[data-tab="' + tabId + '"]');
+  if (target) target.classList.add('active');
+}
+
+/* ============================================================
+   ADMIN DASHBOARD
+   ============================================================ */
+async function renderAdmin() {
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <div class="page-head">
+      <h1>Admin Dashboard</h1>
+      <p>Manage teachers, monitor submissions, and handle bulk data operations.</p>
+    </div>
+
+    <div class="tabs" id="adminTabs">
+      <div class="tab active" data-tab="teachers" onclick="showTab('adminTabs','teachers')">Teachers</div>
+      <div class="tab" data-tab="submissions" onclick="showTab('adminTabs','submissions'); adminLoadSubmissions();">Submissions</div>
+      <div class="tab" data-tab="bulk" onclick="showTab('adminTabs','bulk')">Bulk Import</div>
+      <div class="tab" data-tab="export" onclick="showTab('adminTabs','export')">Export</div>
+      <div class="tab" data-tab="parents" onclick="showTab('adminTabs','parents'); adminLoadParentAccounts();">Parent Portal</div>
+      <div class="tab" data-tab="publish" onclick="showTab('adminTabs','publish'); adminLoadPublicationStatus();">Publish Results</div>
+      <div class="tab" data-tab="template" onclick="showTab('adminTabs','template'); adminLoadTemplate();">Report Template</div>
+    </div>
+
+    <div class="section active" data-tab="teachers">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Create Teacher</h2>
+            <div class="sub">Add a new teacher account and assign their role, class, and subjects.</div>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <div><label>Full name</label><input id="tName" placeholder="e.g. Mrs Adeyemi Grace"></div>
+          <div><label>Email</label><input id="tEmail" type="email" placeholder="teacher@school.com"></div>
+          <div><label>Password</label><input id="tPass" placeholder="Initial password"></div>
+          <div>
+            <label>Role</label>
+            <select id="tRole" onchange="adminRoleChanged()">
+              <option value="subject_teacher">Subject Teacher</option>
+              <option value="class_teacher">Class Teacher</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </div>
+          <div>
+            <label>Class (for class teachers)</label>
+            <select id="tClass"><option value="">— none —</option></select>
+          </div>
+        </div>
+        <div id="subjectsBox" style="margin-top:14px">
+          <label>Subjects (hold Ctrl / Cmd to pick multiple)</label>
+          <select id="tSubjects" multiple size="8" style="font-size:13px"></select>
+        </div>
+        <div style="margin-top:18px">
+          <button onclick="adminCreateTeacher()">Create Teacher</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>All Teachers</h2>
+            <div class="sub" id="teacherCount">Loading…</div>
+          </div>
+          <button class="sec sm" onclick="adminLoadTeachers()">Refresh</button>
+        </div>
+        <div id="teacherList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="submissions">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Score Submissions</h2>
+            <div class="sub">Track which teachers have submitted scores and unlock when needed.</div>
+          </div>
+          <div class="row">
+            <select id="subFilter" onchange="adminLoadSubmissions()" style="max-width:180px">
+              <option value="">All statuses</option>
+              <option value="locked">Locked only</option>
+              <option value="unlocked">Unlocked only</option>
+            </select>
+            <button class="sec sm" onclick="adminLoadSubmissions()">Refresh</button>
+          </div>
+        </div>
+        <div id="submissionList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="bulk">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Bulk Import Scores</h2>
+            <div class="sub">Upload a filled spreadsheet to load scores for many students at once.</div>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:20px">
+          <button class="gold" onclick="downloadSampleTemplate()">Download Sample Template</button>
+          <span style="font-size:13px;color:var(--muted)">Get the template, fill it, then upload it below.</span>
+        </div>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('bulkFile').click()">
+          <div class="icon">📄</div>
+          <div class="title">Click to choose a file, or drag it here</div>
+          <div class="hint">Accepts .csv or .xlsx — one row per score entry</div>
+        </div>
+        <input type="file" id="bulkFile" accept=".csv,.xlsx" style="display:none" onchange="handleBulkFile(event)">
+        <div id="bulkResult"></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="export">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Export Full Database</h2>
+            <div class="sub">Download every class tab, teacher, submission, and audit trail as an Excel file.</div>
+          </div>
+        </div>
+        <button class="blue" onclick="adminExport()">Download Everything (Excel)</button>
+      </div>
+    </div>
+
+    <div class="section" data-tab="parents">
+      <div class="card">
+        <div class="card-head"><div><h2>Create Parent / Guardian Account</h2><div class="sub">Use a temporary password of at least 10 characters, then link the ward.</div></div></div>
+        <div class="grid cols-3">
+          <div><label>Parent / Guardian Name</label><input id="pName" placeholder="Full name"></div>
+          <div><label>Parent Email</label><input id="pEmail" type="email" placeholder="parent@example.com"></div>
+          <div><label>Temporary Password</label><input id="pPass" type="password" minlength="10" placeholder="At least 10 characters"></div>
+        </div>
+        <div style="margin-top:14px"><button onclick="adminCreateParentAccount()">Create Parent Account</button></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Link a Ward to a Parent</h2><div class="sub">Only linked students can be viewed by that parent.</div></div></div>
+        <div class="grid cols-3">
+          <div><label>Parent Email</label><input id="linkEmail" type="email" placeholder="Use an existing parent account"></div>
+          <div><label>Class</label><select id="linkClass" onchange="adminLoadLinkStudents()"></select></div>
+          <div><label>Student / Ward</label><select id="linkStudent"><option value="">Select class first</option></select></div>
+          <div><label>Relationship</label><select id="linkRelationship"><option>Parent</option><option>Father</option><option>Mother</option><option>Guardian</option></select></div>
+        </div>
+        <div style="margin-top:14px"><button onclick="adminLinkParentWard()">Link Ward</button></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Parent Accounts</h2><div class="sub">View linked wards and unlink access when necessary.</div></div><button class="sec sm" onclick="adminLoadParentAccounts()">Refresh</button></div>
+        <div id="parentAccountsList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="publish">
+      <div class="card">
+        <div class="card-head"><div><h2>Publish / Unpublish Student Results</h2><div class="sub">Parents can only see results after an administrator publishes them.</div></div></div>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="pubClass" onchange="adminLoadPublishStudents()"></select></div>
+          <div><label>Student</label><select id="pubStudent"><option value="">Select class first</option></select></div>
+          <div><label>Term</label><select id="pubTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="pubYear" placeholder="2026/2027" value="2026/2027"></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="ok" onclick="adminSetPublication(true)">Publish Result</button>
+          <button class="danger" onclick="adminSetPublication(false)">Unpublish Result</button>
+          <button class="sec" onclick="adminLoadPublicationStatus()">Refresh Status</button>
+        </div>
+        <div id="publicationFeedback" class="portal-note">Select a student, term and academic year to manage publication.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Publication Status</h2><div class="sub">Results currently marked as published or unpublished.</div></div></div>
+        <div id="publicationList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="template">
+      <div class="card">
+        <div class="card-head"><div><h2>Report Card Template</h2><div class="sub">Configure the appearance and which result fields are displayed in the parent report.</div></div></div>
+        <div class="grid cols-3">
+          <div><label>School Name</label><input id="tplSchoolName"></div>
+          <div><label>School Motto</label><input id="tplMotto"></div>
+          <div><label>Logo URL (HTTPS)</label><input id="tplLogo" placeholder="https://..."></div>
+          <div><label>Primary Colour</label><input id="tplPrimary" type="color" value="#1e3a8a"></div>
+          <div><label>Secondary Colour</label><input id="tplSecondary" type="color" value="#ffffff"></div>
+        </div>
+        <h3 style="margin:20px 0 10px;color:var(--brown)">Fields to show</h3>
+        <div class="check-grid">
+          <label class="check-item"><input type="checkbox" id="tplShowTests"> Test scores</label>
+          <label class="check-item"><input type="checkbox" id="tplShowExam"> Examination score</label>
+          <label class="check-item"><input type="checkbox" id="tplShowTotals"> Subject totals</label>
+          <label class="check-item"><input type="checkbox" id="tplShowGrade"> Grades</label>
+          <label class="check-item"><input type="checkbox" id="tplShowTeacher"> Teacher remarks (reserved)</label>
+          <label class="check-item"><input type="checkbox" id="tplShowPrincipal"> Principal remarks (reserved)</label>
+          <label class="check-item"><input type="checkbox" id="tplShowAttendance"> Attendance (reserved)</label>
+          <label class="check-item"><input type="checkbox" id="tplShowAI"> AI comment (reserved)</label>
+          <label class="check-item"><input type="checkbox" id="tplShowAverage"> Overall average</label>
+        </div>
+        <div style="margin-top:18px"><button onclick="adminSaveTemplate()">Save Report Template</button></div>
+        <div class="portal-note">The current result data source contains subject scores, totals and grades. Fields marked “reserved” are template settings only until those values are connected to the report data.</div>
+      </div>
+    </div>
+  `;
+
+  const classes = await loadClasses();
+  document.getElementById('tClass').innerHTML =
+    '<option value="">— none —</option>' + classes.map(cl => `<option>${esc(cl)}</option>`).join('');
+  ['linkClass','pubClass'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = classes.map(cl => `<option value="${esc(cl)}">${esc(cl)}</option>`).join('');
+  });
+  await adminLoadLinkStudents();
+  await adminLoadPublishStudents();
+
+  const jssSubs = await api('getSubjectsForClass', { className: 'JSS1A' });
+  const ssSubs  = await api('getSubjectsForClass', { className: 'SS1A' });
+  const allSubs = Array.from(new Set(jssSubs.concat(ssSubs))).sort();
+  document.getElementById('tSubjects').innerHTML =
+    allSubs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
+  await adminLoadTeachers();
+
+  const dz = document.getElementById('dropzone');
+  ['dragenter','dragover'].forEach(ev => {
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(ev => {
+    dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); });
+  });
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) processBulkFile(e.dataTransfer.files[0]);
+  });
+}
+
+function adminRoleChanged() {
+  const role = document.getElementById('tRole').value;
+  document.getElementById('subjectsBox').style.display =
+    role === 'subject_teacher' ? 'block' : 'none';
+}
+
+async function adminCreateTeacher() {
+  const role = document.getElementById('tRole').value;
+  const subjects = role === 'subject_teacher'
+    ? Array.from(document.getElementById('tSubjects').selectedOptions).map(o => o.value)
+    : [];
+
+  const payload = {
+    name: document.getElementById('tName').value.trim(),
+    email: document.getElementById('tEmail').value.trim(),
+    password: document.getElementById('tPass').value,
+    role: role,
+    class: document.getElementById('tClass').value,
+    subjects: subjects.join(',')
+  };
+  if (!payload.name || !payload.email || !payload.password)
+    return toast('Name, email and password are required', 'err');
+
+  try {
+    await api('createTeacher', payload);
+    toast('Teacher created', 'ok');
+    document.getElementById('tName').value = '';
+    document.getElementById('tEmail').value = '';
+    document.getElementById('tPass').value = '';
+    adminLoadTeachers();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadTeachers() {
+  const box = document.getElementById('teacherList');
+  const count = document.getElementById('teacherCount');
+  try {
+    const rows = await api('getTeachers');
+    count.textContent = rows.length + ' teacher' + (rows.length === 1 ? '' : 's');
+    if (!rows.length) return box.innerHTML = '<div class="empty">No teachers yet.</div>';
+    box.innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Class</th><th>Subjects</th><th>Status</th><th></th></tr></thead>
+        <tbody>${rows.map(t => `
+          <tr>
+            <td><strong>${esc(t.name)}</strong></td>
+            <td>${esc(t.email)}</td>
+            <td>${roleLabel(t.role)}</td>
+            <td>${esc(t.class || '—')}</td>
+            <td style="font-size:12px;color:var(--muted);max-width:220px">${esc(t.subjects || '—')}</td>
+            <td>${t.active === false ? '<span class="badge pending">Disabled</span>' : '<span class="badge unlocked">Active</span>'}</td>
+            <td>${t.active === false ? '' : `<button class="danger sm" onclick="adminDeleteTeacher('${esc(t.email)}')">Disable</button>`}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+      </div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function adminDeleteTeacher(email) {
+  if (!confirm('Disable this teacher?')) return;
+  try { await api('deleteTeacher', { email: email }); toast('Teacher disabled', 'ok'); adminLoadTeachers(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadSubmissions() {
+  const box = document.getElementById('submissionList');
+  if (!box) return;
+  const status = document.getElementById('subFilter').value;
+  try {
+    const rows = await api('getSubmissions', { status: status });
+    if (!rows.length) return box.innerHTML = '<div class="empty">No submissions yet.</div>';
+    box.innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Term</th><th>Status</th><th>When</th><th></th></tr></thead>
+        <tbody>${rows.map(r => {
+          const when = r.timestamp ? new Date(r.timestamp).toLocaleString() : '—';
+          const locked = r.status === 'locked';
+          return `<tr>
+            <td>${esc(r.teacher_email)}</td>
+            <td>${esc(r.class)}</td>
+            <td><strong>${esc(r.subject)}</strong></td>
+            <td>${esc(r.term)}</td>
+            <td><span class="badge ${locked ? 'locked' : 'unlocked'}">${esc(r.status)}</span></td>
+            <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
+            <td>${locked
+              ? `<button class="blue sm" onclick="adminUnlock('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}')">Unlock</button>`
+              : ''}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      </div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function adminUnlock(teacherEmail, className, subject, term) {
+  if (!confirm('Unlock ' + subject + ' / ' + className + ' / ' + term + '?')) return;
+  try {
+    await api('unlockScores', { teacherEmail: teacherEmail, className: className, subject: subject, term: term });
+    toast('Unlocked', 'ok');
+    adminLoadSubmissions();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminExport() {
+  try {
+    toast('Preparing export…');
+    const r = await api('exportAll');
+    window.open(r.url, '_blank');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ============================================================
+   BULK IMPORT
+   ============================================================ */
+function downloadSampleTemplate() {
+  const headers = ['className','studentId','subject','term','field','value'];
+  const samples = [
+    ['JSS1A','STU001','Mathematics','Term1','T1','8'],
+    ['JSS1A','STU001','Mathematics','Term1','T2','7'],
+    ['JSS1A','STU001','Mathematics','Term1','T3','9'],
+    ['JSS1A','STU001','Mathematics','Term1','Exam','55'],
+    ['JSS1A','STU002','Mathematics','Term1','T1','9'],
+    ['JSS1A','STU002','Mathematics','Term1','T2','10'],
+    ['JSS1A','STU002','Mathematics','Term1','T3','8'],
+    ['JSS1A','STU002','Mathematics','Term1','Exam','62']
+  ];
+  const lines = [headers.join(',')].concat(samples.map(r => r.join(',')));
+  const csv = '\uFEFF' + lines.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'grade-import-sample.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Template downloaded', 'ok');
+}
+
+function handleBulkFile(ev) {
+  const file = ev.target.files[0];
+  if (file) processBulkFile(file);
+  ev.target.value = '';
+}
+
+function processBulkFile(file) {
+  const result = document.getElementById('bulkResult');
+  result.innerHTML = '<div class="upload-result">Reading file…</div>';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const text = typeof e.target.result === 'string'
+        ? e.target.result
+        : new TextDecoder().decode(e.target.result);
+      const rows = parseCSV(text);
+      if (!rows.length) throw new Error('File is empty');
+
+      const header = rows[0].map(h => h.trim().toLowerCase());
+      const idx = {
+        className: header.indexOf('classname'),
+        studentId: header.indexOf('studentid'),
+        subject:   header.indexOf('subject'),
+        term:      header.indexOf('term'),
+        field:     header.indexOf('field'),
+        value:     header.indexOf('value')
+      };
+      if (Object.values(idx).some(i => i === -1)) {
+        throw new Error('Missing required column. Expected: className, studentId, subject, term, field, value');
+      }
+
+      const payload = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || !r.length || (r.length === 1 && !r[0])) continue;
+        payload.push({
+          className: String(r[idx.className] || '').trim(),
+          studentId: String(r[idx.studentId] || '').trim(),
+          subject:   String(r[idx.subject] || '').trim(),
+          term:      String(r[idx.term] || '').trim(),
+          field:     String(r[idx.field] || '').trim(),
+          value:     String(r[idx.value] || '').trim()
+        });
+      }
+
+      if (!payload.length) throw new Error('No data rows found');
+
+      result.innerHTML = '<div class="upload-result">Uploading ' + payload.length + ' rows…</div>';
+
+      const chunkSize = 500;
+      let totalUpdated = 0;
+      for (let i = 0; i < payload.length; i += chunkSize) {
+        const chunk = payload.slice(i, i + chunkSize);
+        const r = await api('importBulk', { rows: chunk });
+        totalUpdated += (r.updated || 0);
+      }
+
+      result.innerHTML =
+        '<div class="upload-result success">' +
+        '<strong>✓ Import complete</strong><br>' +
+        'Processed: ' + payload.length + ' rows<br>' +
+        'Updated: ' + totalUpdated + ' scores<br>' +
+        'Skipped: ' + (payload.length - totalUpdated) + ' (student not found or bad data)' +
+        '</div>';
+      toast('Imported ' + totalUpdated + ' scores', 'ok');
+    } catch (err) {
+      result.innerHTML =
+        '<div class="upload-result error">' +
+        '<strong>Import failed</strong><br>' + esc(err.message) +
+        '</div>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(cur); cur = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (cur !== '' || row.length) { row.push(cur); rows.push(row); row = []; cur = ''; }
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+      } else cur += ch;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+/* ============================================================
+   CLASS TEACHER DASHBOARD
+   ============================================================ */
+async function renderClassTeacher() {
+  const className = S.user.class;
+  if (!className) return toast('No class assigned. Contact admin.', 'err');
+
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <div class="page-head">
+      <h1>Class Teacher · ${esc(className)}</h1>
+      <p>Manage your class roster and enter scores for any subject.</p>
+    </div>
+
+    <div class="tabs" id="ctTabs">
+      <div class="tab active" data-tab="students" onclick="showTab('ctTabs','students')">Students</div>
+      <div class="tab" data-tab="scores" onclick="showTab('ctTabs','scores')">Enter Scores</div>
+    </div>
+
+    <div class="section active" data-tab="students">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Add Students</h2>
+            <div class="sub">Paste up to hundreds of names at once — one per line.</div>
+          </div>
+        </div>
+        <textarea id="bulkNames" class="bulk"
+          placeholder="John Doe
+Jane Smith
+Ahmed Bello
+
+Optional — include an ID:
+STU001, John Doe
+STU002, Jane Smith"></textarea>
+        <div class="row" style="margin-top:14px">
+          <button onclick="ctAddStudentsBulk(event)">Add All Students</button>
+          <button class="sec" onclick="document.getElementById('bulkNames').value=''; document.getElementById('bulkCount').textContent=''">Clear</button>
+          <span id="bulkCount" style="color:var(--muted);font-size:13px;margin-left:auto"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Class Roster</h2>
+            <div class="sub" id="ctCount">Loading…</div>
+          </div>
+          <button class="sec sm" onclick="ctLoadStudents()">Refresh</button>
+        </div>
+        <div id="ctStudentList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="section" data-tab="scores">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Score Entry</h2>
+            <div class="sub">Pick a subject and term, then enter scores. Everything saves automatically.</div>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <div><label>Subject</label><select id="ctSubject"></select></div>
+          <div><label>Term</label>
+            <select id="ctTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="ctLoadScores()">Load Scores</button></div>
+        </div>
+      </div>
+      <div id="ctScoreArea"></div>
+    </div>
+  `;
+
+  const bulkBox = document.getElementById('bulkNames');
+  bulkBox.addEventListener('input', () => {
+    const lines = bulkBox.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    document.getElementById('bulkCount').textContent =
+      lines.length + ' name' + (lines.length === 1 ? '' : 's') + ' ready';
+  });
+
+  const subjects = await loadSubjects(className);
+  document.getElementById('ctSubject').innerHTML =
+    subjects.map(s => `<option>${esc(s)}</option>`).join('');
+
+  await ctLoadStudents();
+}
+
+async function ctLoadStudents() {
+  const box = document.getElementById('ctStudentList');
+  const countEl = document.getElementById('ctCount');
+  try {
+    const rows = await api('getStudents', { className: S.user.class });
+    countEl.textContent = rows.length + ' student' + (rows.length === 1 ? '' : 's') + ' enrolled';
+    if (!rows.length) return box.innerHTML = '<div class="empty">No students yet. Add some above.</div>';
+    box.innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th style="width:110px">Student ID</th><th>Full Name</th><th style="width:100px"></th></tr></thead>
+        <tbody>${rows.map(s => `
+          <tr>
+            <td style="font-family:ui-monospace,monospace;font-size:13px">${esc(s.student_id)}</td>
+            <td><strong>${esc(s.name)}</strong></td>
+            <td><button class="danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td>
+          </tr>`).join('')}</tbody>
+      </table>
+      </div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function ctAddStudentsBulk(ev) {
+  const box = document.getElementById('bulkNames');
+  const lines = box.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return toast('Nothing to add', 'err');
+
+  const btn = ev.target;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Adding ' + lines.length + '…';
+
+  try {
+    const r = await api('addStudentsBulk', { className: S.user.class, lines: lines });
+    box.value = '';
+    document.getElementById('bulkCount').textContent = '';
+    await ctLoadStudents();
+    let msg = r.count + ' student' + (r.count === 1 ? '' : 's') + ' added';
+    if (r.skipped && r.skipped.length) msg += ' · ' + r.skipped.length + ' skipped';
+    toast(msg, 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function ctRemove(id) {
+  if (!confirm('Remove this student?')) return;
+  try { await api('deleteStudent', { student_id: id }); ctLoadStudents(); toast('Student removed', 'ok'); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
+async function ctLoadScores() {
+  const subject = document.getElementById('ctSubject').value;
+  const term = document.getElementById('ctTerm').value;
+  if (!subject) return toast('No subject selected', 'err');
+  await renderScoreEntry('ctScoreArea', S.user.class, subject, term);
+}
+
+/* ============================================================
+   SUBJECT TEACHER DASHBOARD
+   ============================================================ */
+async function renderSubjectTeacher() {
+  const classes = await loadClasses();
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <div class="page-head">
+      <h1>Subject Teacher</h1>
+      <p>Enter scores for your assigned subjects. Everything saves automatically.</p>
+    </div>
+
+    <div class="tabs" id="stTabs">
+      <div class="tab active" data-tab="entry" onclick="showTab('stTabs','entry')">Score Entry</div>
+      <div class="tab" data-tab="history" onclick="showTab('stTabs','history'); stLoadSubmissions();">My Submissions</div>
+    </div>
+
+    <div class="section active" data-tab="entry">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Select Class, Subject, and Term</h2>
+            <div class="sub">Students will load below. Type scores and they save as you go.</div>
+          </div>
+        </div>
+        <div class="grid cols-3">
+          <div><label>Class</label>
+            <select id="stClass">${classes.map(cl => `<option>${esc(cl)}</option>`).join('')}</select></div>
+          <div><label>Subject</label><select id="stSubject"></select></div>
+          <div><label>Term</label>
+            <select id="stTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+        </div>
+        <div style="margin-top:16px"><button class="blue" onclick="stLoadScores()">Load Students</button></div>
+      </div>
+      <div id="stScoreArea"></div>
+    </div>
+
+    <div class="section" data-tab="history">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>My Submission History</h2>
+            <div class="sub">Track what you've submitted and what's still locked.</div>
+          </div>
+          <button class="sec sm" onclick="stLoadSubmissions()">Refresh</button>
+        </div>
+        <div id="stSubmissionList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('stClass').addEventListener('change', stRefreshSubjects);
+  await stRefreshSubjects();
+}
+
+async function stRefreshSubjects() {
+  const className = document.getElementById('stClass').value;
+  const subjSel = document.getElementById('stSubject');
+  const mySubjects = (S.user.subjects || '').split(',').map(s => s.trim()).filter(Boolean);
+
+  let subjects = await loadSubjects(className);
+  if (mySubjects.length) {
+    const filtered = subjects.filter(s => mySubjects.indexOf(s) !== -1);
+    if (filtered.length) subjects = filtered;
+  }
+  subjSel.innerHTML = subjects.length
+    ? subjects.map(s => `<option>${esc(s)}</option>`).join('')
+    : '<option value="">— none assigned —</option>';
+}
+
+async function stLoadScores() {
+  const className = document.getElementById('stClass').value;
+  const subject = document.getElementById('stSubject').value;
+  const term = document.getElementById('stTerm').value;
+  if (!subject) return toast('No subject selected', 'err');
+  await renderScoreEntry('stScoreArea', className, subject, term);
+}
+
+async function stLoadSubmissions() {
+  const box = document.getElementById('stSubmissionList');
+  if (!box) return;
+  try {
+    const rows = await api('getSubmissions');
+    if (!rows.length) return box.innerHTML = '<div class="empty">No submissions yet.</div>';
+    box.innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Class</th><th>Subject</th><th>Term</th><th>Status</th><th>When</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${esc(r.class)}</td>
+            <td><strong>${esc(r.subject)}</strong></td>
+            <td>${esc(r.term)}</td>
+            <td><span class="badge ${r.status === 'locked' ? 'locked' : 'unlocked'}">${esc(r.status)}</span></td>
+            <td style="font-size:12px;color:var(--muted)">${r.timestamp ? esc(new Date(r.timestamp).toLocaleString()) : '—'}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+      </div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ============================================================
+   SCORE ENTRY (shared)
+   ============================================================ */
+const saveScoreDebounced = debounce(async (key, payload) => {
+  const input = document.querySelector('input[data-key="' + cssEsc(key) + '"]');
+  try {
+    await api('saveScore', payload);
+    if (input) {
+      input.className = 'score-input saved';
+      setTimeout(() => { if (input) input.className = 'score-input'; }, 900);
+    }
+  } catch (e) {
+    if (input) input.className = 'score-input error';
+    toast('Save failed: ' + e.message, 'err');
+  }
+}, 1200);
+
+async function renderScoreEntry(containerId, className, subject, term) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '<div class="card"><div class="empty">Loading students and scores…</div></div>';
+
+  try {
+    const [students, scores] = await Promise.all([
+      api('getStudents', { className: className }),
+      api('getScores', { className: className, subject: subject, term: term })
+    ]);
+    const scoreMap = {};
+    scores.forEach(s => scoreMap[s.student_id] = s);
+
+    let locked = false;
+    if (S.user.role !== 'admin') {
+      try {
+        const subs = await api('getSubmissions');
+        locked = subs.some(s =>
+          s.class === className && s.subject === subject &&
+          s.term === term && s.teacher_email === S.user.email &&
+          s.status === 'locked'
+        );
+      } catch (e) {}
+    }
+
+    let html = '<div class="card">';
+
+    if (locked) {
+      html += `<div class="locked-banner">
+        <span>🔒 This submission is locked. Contact admin to unlock.</span>
+      </div>`;
+    }
+
+    if (!students.length) {
+      html += '<div class="empty">No students in this class yet.</div></div>';
+      container.innerHTML = html;
+      return;
+    }
+
+    html += `
+      <div class="card-head">
+        <div>
+          <h2>${esc(subject)} · ${esc(term)}</h2>
+          <div class="sub">${esc(className)} · ${students.length} student${students.length === 1 ? '' : 's'}</div>
+        </div>
+        <div>
+          ${locked ? '' : `<button class="ok" onclick="submitScores('${esc(className)}','${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button>`}
+        </div>
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:45%">Student</th>
+            <th style="text-align:center">Test 1<br><small style="font-weight:400;text-transform:none;letter-spacing:0">(0-10)</small></th>
+            <th style="text-align:center">Test 2<br><small style="font-weight:400;text-transform:none;letter-spacing:0">(0-10)</small></th>
+            <th style="text-align:center">Test 3<br><small style="font-weight:400;text-transform:none;letter-spacing:0">(0-10)</small></th>
+            <th style="text-align:center">Exam<br><small style="font-weight:400;text-transform:none;letter-spacing:0">(0-70)</small></th>
+            <th style="text-align:center">Total</th>
+          </tr>
+        </thead>
+        <tbody id="scoreRows">
+    `;
+
+    students.forEach(st => {
+      const sc = scoreMap[st.student_id] || {};
+      const rowTotal = totalOf(sc.T1, sc.T2, sc.T3, sc.Exam);
+      const ro = locked ? ' readonly' : '';
+      html += `
+        <tr data-student="${esc(st.student_id)}">
+          <td><strong>${esc(st.name)}</strong><br><small style="color:var(--muted);font-size:11px;font-family:ui-monospace,monospace">${esc(st.student_id)}</small></td>
+          ${['T1','T2','T3','Exam'].map(f => {
+            const max = f === 'Exam' ? 70 : 10;
+            const v = sc[f] != null && sc[f] !== '' ? sc[f] : '';
+            const key = st.student_id + '|' + className + '|' + subject + '|' + term + '|' + f;
+            return `<td style="text-align:center"><input type="number" class="score-input" min="0" max="${max}"
+              value="${v}"
+              data-key="${esc(key)}"
+              data-field="${f}"
+              data-student="${esc(st.student_id)}"
+              data-class="${esc(className)}"
+              data-subject="${esc(subject)}"
+              data-term="${esc(term)}"
+              ${ro}
+              oninput="onScoreInput(this)"></td>`;
+          }).join('')}
+          <td style="text-align:center" class="total-cell" data-total-for="${esc(st.student_id)}">${rowTotal || ''}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="card"><div class="empty">' + esc(e.message) + '</div></div>';
+  }
+}
+
+function onScoreInput(input) {
+  const field = input.dataset.field;
+  const max = field === 'Exam' ? 70 : 10;
+  const raw = input.value.trim();
+  if (raw === '') {
+    input.className = 'score-input';
+  } else {
+    const n = Number(raw);
+    if (isNaN(n) || n < 0 || n > max) {
+      input.className = 'score-input error';
+      return;
+    }
+    input.className = 'score-input saving';
+  }
+
+  const row = input.closest('tr');
+  if (row) {
+    const get = f => {
+      const el = row.querySelector('input[data-field="' + f + '"]');
+      return el ? el.value : '';
+    };
+    const total = totalOf(get('T1'), get('T2'), get('T3'), get('Exam'));
+    const totalCell = row.querySelector('.total-cell');
+    if (totalCell) totalCell.textContent = total || '';
+  }
+
+  const payload = {
+    className: input.dataset.class,
+    subject: input.dataset.subject,
+    term: input.dataset.term,
+    field: field,
+    studentId: input.dataset.student,
+    value: input.value
+  };
+  saveScoreDebounced(input.dataset.key, payload);
+}
+
+async function submitScores(className, subject, term) {
+  if (!confirm('Submit and lock ' + subject + ' / ' + className + ' / ' + term + '?\n\nYou will not be able to edit after this. Admin will be notified.')) return;
+  try {
+    await api('submitScores', { className: className, subject: subject, term: term });
+    toast('Submitted and locked', 'ok');
+    document.querySelectorAll('input.score-input').forEach(i => i.setAttribute('readonly', 'readonly'));
+    if (S.user.role === 'class_teacher') ctLoadScores();
+    else if (S.user.role === 'subject_teacher') { stLoadScores(); stLoadSubmissions(); }
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ============================================================
+   PARENT PORTAL + ADMIN PORTAL CONTROLS
+   ============================================================ */
+let currentReportTemplate = null;
+let parentWards = [];
+let parentSelectedWard = null;
+let parentCurrentResult = null;
+
+async function adminCreateParentAccount() {
+  const name = document.getElementById('pName').value.trim();
+  const email = document.getElementById('pEmail').value.trim();
+  const password = document.getElementById('pPass').value;
+  if (!name || !email || password.length < 10) return toast('Enter name, email and a password of at least 10 characters.', 'err');
+  try {
+    await api('adminCreateParent', { name, email, password });
+    document.getElementById('pName').value = '';
+    document.getElementById('pEmail').value = '';
+    document.getElementById('pPass').value = '';
+    toast('Parent account created. Link the ward before sharing login details.', 'ok');
+    await adminLoadParentAccounts();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadLinkStudents() {
+  const cls = document.getElementById('linkClass');
+  const sel = document.getElementById('linkStudent');
+  if (!cls || !sel) return;
+  sel.innerHTML = '<option value="">Loading students…</option>';
+  try {
+    const rows = await api('getStudents', { className: cls.value });
+    sel.innerHTML = rows.length
+      ? rows.map(st => `<option value="${esc(st.student_id)}">${esc(st.name)} · ${esc(st.student_id)}</option>`).join('')
+      : '<option value="">No students in this class</option>';
+  } catch (e) { sel.innerHTML = `<option value="">${esc(e.message)}</option>`; }
+}
+
+async function adminLoadPublishStudents() {
+  const cls = document.getElementById('pubClass');
+  const sel = document.getElementById('pubStudent');
+  if (!cls || !sel) return;
+  sel.innerHTML = '<option value="">Loading students…</option>';
+  try {
+    const rows = await api('getStudents', { className: cls.value });
+    sel.innerHTML = rows.length
+      ? rows.map(st => `<option value="${esc(st.student_id)}">${esc(st.name)} · ${esc(st.student_id)}</option>`).join('')
+      : '<option value="">No students in this class</option>';
+  } catch (e) { sel.innerHTML = `<option value="">${esc(e.message)}</option>`; }
+}
+
+async function adminLinkParentWard() {
+  const email = document.getElementById('linkEmail').value.trim();
+  const className = document.getElementById('linkClass').value;
+  const studentId = document.getElementById('linkStudent').value;
+  const relationship = document.getElementById('linkRelationship').value;
+  if (!email || !className || !studentId) return toast('Enter parent email and select a class and student.', 'err');
+  try {
+    await api('adminLinkWard', { email, className, studentId, relationship });
+    toast('Ward linked successfully.', 'ok');
+    await adminLoadParentAccounts();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminUnlinkParentWard(email, studentId, className) {
+  if (!confirm(`Remove ${studentId} (${className}) from ${email}?`)) return;
+  try {
+    await api('adminUnlinkWard', { email, studentId, className });
+    toast('Ward access removed.', 'ok');
+    await adminLoadParentAccounts();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadParentAccounts() {
+  const box = document.getElementById('parentAccountsList');
+  if (!box) return;
+  box.innerHTML = '<div class="empty">Loading parent accounts…</div>';
+  try {
+    const accounts = await api('adminGetParentAccounts');
+    if (!accounts.length) return box.innerHTML = '<div class="empty">No parent accounts have been created.</div>';
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Parent / Guardian</th><th>Email</th><th>Linked wards</th></tr></thead>
+      <tbody>${accounts.map(a => `<tr>
+        <td><strong>${esc(a.name)}</strong></td><td>${esc(a.email)}</td>
+        <td>${(a.wards || []).length ? a.wards.map(w => `<div style="padding:6px 0;border-bottom:1px solid var(--line)">
+          ${esc(w.studentName || w.studentId)} · ${esc(w.className)} <small>(${esc(w.relationship || 'Parent')})</small>
+          <button class="danger sm" style="margin-left:8px" onclick="adminUnlinkParentWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button>
+        </div>`).join('') : '<span style="color:var(--muted)">No ward linked</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+function getPublicationPayload() {
+  return {
+    studentId: document.getElementById('pubStudent').value,
+    className: document.getElementById('pubClass').value,
+    term: document.getElementById('pubTerm').value,
+    academicYear: document.getElementById('pubYear').value.trim()
+  };
+}
+
+async function adminSetPublication(publish) {
+  const payload = getPublicationPayload();
+  if (!payload.studentId || !payload.className || !payload.term || !payload.academicYear) {
+    return toast('Select a student, term and academic year.', 'err');
+  }
+  if (!confirm(`${publish ? 'Publish' : 'Unpublish'} this student's ${payload.term} result for ${payload.academicYear}?`)) return;
+  try {
+    await api(publish ? 'adminPublishResult' : 'adminUnpublishResult', payload);
+    document.getElementById('publicationFeedback').textContent = publish
+      ? 'Result is marked as published. The linked parent can now view it.'
+      : 'Result publication has been withdrawn. The parent can no longer view it.';
+    toast(publish ? 'Result published' : 'Result unpublished', 'ok');
+    await adminLoadPublicationStatus();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadPublicationStatus() {
+  const box = document.getElementById('publicationList');
+  if (!box) return;
+  box.innerHTML = '<div class="empty">Loading publication status…</div>';
+  try {
+    const rows = await api('adminGetPublicationStatus');
+    if (!rows.length) return box.innerHTML = '<div class="empty">No results have been published yet.</div>';
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Student ID</th><th>Class</th><th>Term</th><th>Academic Year</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.studentId)}</td><td>${esc(r.className)}</td><td>${esc(r.term)}</td><td>${esc(r.academicYear)}</td>
+        <td><span class="badge ${r.published ? 'unlocked' : 'locked'}">${r.published ? 'Published' : 'Unpublished'}</span></td>
+        <td><button class="${r.published ? 'danger' : 'ok'} sm" onclick="adminTogglePublication('${esc(r.studentId)}','${esc(r.className)}','${esc(r.term)}','${esc(r.academicYear)}',${!r.published})">${r.published ? 'Unpublish' : 'Publish'}</button></td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function adminTogglePublication(studentId, className, term, academicYear, publish) {
+  try {
+    await api(publish ? 'adminPublishResult' : 'adminUnpublishResult', { studentId, className, term, academicYear });
+    toast(publish ? 'Result published' : 'Result unpublished', 'ok');
+    await adminLoadPublicationStatus();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function adminLoadTemplate() {
+  try {
+    const t = await api('adminGetReportTemplate');
+    currentReportTemplate = t || {};
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val == null ? '' : val; };
+    const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val === true; };
+    setVal('tplSchoolName', t.schoolName || 'Greater Tomorrow Model Schools');
+    setVal('tplMotto', t.schoolMotto || 'Jesus, our Teacher');
+    setVal('tplLogo', t.logoUrl || '');
+    setVal('tplPrimary', t.primaryColor || '#1e3a8a');
+    setVal('tplSecondary', t.secondaryColor || '#ffffff');
+    setCheck('tplShowTests', t.showTests !== false);
+    setCheck('tplShowExam', t.showExam !== false);
+    setCheck('tplShowTotals', t.showSubjectTotals !== false);
+    setCheck('tplShowGrade', t.showGrade !== false);
+    setCheck('tplShowTeacher', t.showTeacherRemark === true);
+    setCheck('tplShowPrincipal', t.showPrincipalRemark === true);
+    setCheck('tplShowAttendance', t.showAttendance === true);
+    setCheck('tplShowAI', t.showAIComment === true);
+    setCheck('tplShowAverage', t.showAnnualAverage === true);
+  } catch (e) { toast('Could not load report template: ' + e.message, 'err'); }
+}
+
+async function adminSaveTemplate() {
+  const old = currentReportTemplate || {};
+  const template = Object.assign({}, old, {
+    schoolName: document.getElementById('tplSchoolName').value.trim(),
+    schoolMotto: document.getElementById('tplMotto').value.trim(),
+    logoUrl: document.getElementById('tplLogo').value.trim(),
+    primaryColor: document.getElementById('tplPrimary').value,
+    secondaryColor: document.getElementById('tplSecondary').value,
+    showTests: document.getElementById('tplShowTests').checked,
+    showExam: document.getElementById('tplShowExam').checked,
+    showSubjectTotals: document.getElementById('tplShowTotals').checked,
+    showGrade: document.getElementById('tplShowGrade').checked,
+    showTeacherRemark: document.getElementById('tplShowTeacher').checked,
+    showPrincipalRemark: document.getElementById('tplShowPrincipal').checked,
+    showAttendance: document.getElementById('tplShowAttendance').checked,
+    showAIComment: document.getElementById('tplShowAI').checked,
+    showAnnualAverage: document.getElementById('tplShowAverage').checked
+  });
+  if (!template.schoolName) return toast('School name is required.', 'err');
+  if (template.logoUrl && !/^https:\/\//i.test(template.logoUrl)) return toast('Logo URL must begin with https://', 'err');
+  try {
+    const result = await api('adminSaveReportTemplate', { template });
+    currentReportTemplate = result.template || template;
+    toast('Report template saved.', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function renderParent() {
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <div class="page-head"><h1>Parent / Guardian Portal</h1><p>View published results for your linked ward and ask the academic assistant questions about the result.</p></div>
+    <div class="card">
+      <div class="grid cols-3">
+        <div><label>Child / Ward</label><select id="parentWard" onchange="parentWardChanged()"><option>Loading wards…</option></select></div>
+        <div><label>Term</label><select id="parentTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+        <div><label>Academic Year</label><input id="parentYear" value="2026/2027" placeholder="2026/2027"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button class="blue" onclick="parentLoadResult()">Load Published Result</button><button class="sec" onclick="window.print()">Print Result</button></div>
+      <div id="parentStatus" class="portal-note">Choose a ward, term and academic year, then load the published result.</div>
+    </div>
+    <div id="parentReport" class="card"><div class="empty">Your published result will appear here.</div></div>
+    <div class="card">
+      <div class="card-head"><div><h2>Ask AI About This Result</h2><div class="sub">Questions are answered using only the selected ward's published result.</div></div></div>
+      <div id="parentChat"><div class="empty">Load a published result before asking a question.</div></div>
+      <div style="margin-top:12px"><label>Your question</label><textarea id="parentQuestion" rows="3" maxlength="1200" placeholder="For example: Which subjects should my child focus on, and how can I support them?"></textarea></div>
+      <div style="margin-top:12px"><button onclick="parentAskAI()">Ask Academic Assistant</button></div>
+    </div>`;
+  try {
+    parentWards = await api('parentGetWards');
+    const sel = document.getElementById('parentWard');
+    if (!parentWards.length) {
+      sel.innerHTML = '<option value="">No wards linked to this account</option>';
+      document.getElementById('parentStatus').textContent = 'No student is linked to this account yet. Please contact the school.';
+      return;
+    }
+    sel.innerHTML = parentWards.map((w, i) => `<option value="${i}">${esc(w.studentName)} · ${esc(w.className)}</option>`).join('');
+    parentWardChanged();
+  } catch (e) {
+    document.getElementById('parentStatus').textContent = e.message;
+  }
+}
+
+function parentWardChanged() {
+  const sel = document.getElementById('parentWard');
+  parentSelectedWard = sel && sel.value !== '' ? parentWards[Number(sel.value)] : null;
+  parentCurrentResult = null;
+}
+
+async function parentLoadResult() {
+  const ward = parentSelectedWard;
+  const area = document.getElementById('parentReport');
+  const status = document.getElementById('parentStatus');
+  if (!ward) { status.textContent = 'No ward is selected or linked.'; return; }
+  const term = document.getElementById('parentTerm').value;
+  const academicYear = document.getElementById('parentYear').value.trim();
+  if (!academicYear) { status.textContent = 'Enter the academic year.'; return; }
+  area.innerHTML = '<div class="empty">Loading published result…</div>';
+  try {
+    const r = await api('parentGetResult', { className: ward.className, studentId: ward.studentId, term, academicYear });
+    parentCurrentResult = r;
+    status.textContent = 'Published result loaded successfully.';
+    const t = r.template || {};
+    const tests = t.showTests !== false;
+    const exam = t.showExam !== false;
+    const totals = t.showSubjectTotals !== false;
+    const grades = t.showGrade !== false;
+    const primary = /^#[0-9a-f]{6}$/i.test(t.primaryColor || '') ? t.primaryColor : '#1e3a8a';
+    const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="School logo">` : '';
+    const subjects = r.subjects || [];
+    const columns = ['<th>Subject</th>'];
+    if (tests) columns.push('<th style="text-align:center">Test 1</th><th style="text-align:center">Test 2</th><th style="text-align:center">Test 3</th>');
+    if (exam) columns.push('<th style="text-align:center">Exam</th>');
+    if (totals) columns.push('<th style="text-align:center">Total</th>');
+    if (grades) columns.push('<th style="text-align:center">Grade</th>');
+    const rows = subjects.map(s => {
+      let cells = `<td><strong>${esc(s.subject)}</strong></td>`;
+      if (tests) cells += `<td style="text-align:center">${s.T1 == null || s.T1 === '' ? '—' : esc(s.T1)}</td><td style="text-align:center">${s.T2 == null || s.T2 === '' ? '—' : esc(s.T2)}</td><td style="text-align:center">${s.T3 == null || s.T3 === '' ? '—' : esc(s.T3)}</td>`;
+      if (exam) cells += `<td style="text-align:center">${s.Exam == null || s.Exam === '' ? '—' : esc(s.Exam)}</td>`;
+      if (totals) cells += `<td style="text-align:center" class="total-cell">${s.total == null ? '—' : esc(s.total)}</td>`;
+      if (grades) cells += `<td style="text-align:center">${esc(s.grade || '—')}</td>`;
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    area.innerHTML = `
+      <div class="report-heading" style="border-color:${esc(primary)}">
+        ${logo}<h2 style="color:${esc(primary)}">${esc(t.schoolName || 'Greater Tomorrow Model Schools')}</h2>
+        <div>${esc(t.schoolMotto || 'Jesus, our Teacher')}</div>
+        <h3 style="margin-top:12px">STUDENT REPORT CARD</h3>
+      </div>
+      <div class="grid cols-3">
+        <div><label>Student</label><strong>${esc(r.student.name)}</strong></div>
+        <div><label>Student ID</label><strong>${esc(r.student.studentId)}</strong></div>
+        <div><label>Class</label><strong>${esc(r.student.className)}</strong></div>
+        <div><label>Academic Year</label><strong>${esc(r.academicYear)}</strong></div>
+        <div><label>Term</label><strong>${esc(r.term)}</strong></div>
+        <div><label>Result Status</label><strong>${r.complete ? 'All subject scores complete' : 'Some subject scores are incomplete'}</strong></div>
+      </div>
+      <div class="result-summary">
+        <div class="result-stat"><span>Subjects</span><strong>${subjects.length}</strong></div>
+        <div class="result-stat"><span>Completed subjects</span><strong>${subjects.filter(x => x.complete).length}</strong></div>
+        ${t.showAnnualAverage && r.overallAverage != null ? `<div class="result-stat"><span>Overall average</span><strong>${esc(r.overallAverage)}%</strong></div>` : ''}
+      </div>
+      <div class="table-wrap"><table><thead><tr>${columns.join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+      <p style="margin-top:16px;color:var(--muted);font-size:12px">This report displays the result published by the school. Please contact the school if you notice a discrepancy.</p>`;
+    document.getElementById('parentChat').innerHTML = '<div class="empty">Ask a question about this published result below.</div>';
+  } catch (e) {
+    parentCurrentResult = null;
+    area.innerHTML = '<div class="empty">No result to display.</div>';
+    status.textContent = e.message;
+    document.getElementById('parentChat').innerHTML = '<div class="empty">Load a published result before asking a question.</div>';
+  }
+}
+
+async function parentAskAI() {
+  const ward = parentSelectedWard;
+  const question = document.getElementById('parentQuestion').value.trim();
+  if (!ward || !parentCurrentResult) return toast('Load a published result first.', 'err');
+  if (!question) return toast('Type a question first.', 'err');
+  const chat = document.getElementById('parentChat');
+  chat.innerHTML = `<div class="chat-message parent"><strong>You asked</strong>\n${esc(question)}</div><div class="chat-message ai">Thinking…</div>`;
+  try {
+    const r = await api('parentAskResultAI', {
+      className: ward.className, studentId: ward.studentId,
+      term: parentCurrentResult.term, academicYear: parentCurrentResult.academicYear, question
+    });
+    const answer = typeof r === 'string' ? r : (r.answer || r.response || r.text || JSON.stringify(r));
+    chat.innerHTML = `<div class="chat-message parent"><strong>You asked</strong>\n${esc(question)}</div><div class="chat-message ai"><strong>Academic Assistant</strong>\n${esc(answer)}</div>`;
+    document.getElementById('parentQuestion').value = '';
+  } catch (e) {
+    chat.innerHTML = `<div class="chat-message ai">${esc(e.message)}</div>`;
+  }
+}
+
+/* ============================================================
+   STUDENT DASHBOARD
+   ============================================================ */
+function renderStudent() {
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <div class="page-head">
+      <h1>My Results</h1>
+      <p>View your scores for each term. Print for your records.</p>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>Select Term</h2>
+          <div class="sub">Your results will show below.</div>
+        </div>
+        <div class="row">
+          <select id="stuTerm" style="width:auto"><option>Term1</option><option>Term2</option><option>Term3</option></select>
+          <button class="blue" onclick="stuLoad()">Load</button>
+          <button class="sec" onclick="window.print()">Print</button>
+        </div>
+      </div>
+      <div id="stuArea"></div>
+    </div>
+  `;
+  stuLoad();
+}
+
+async function stuLoad() {
+  const term = document.getElementById('stuTerm').value;
+  const area = document.getElementById('stuArea');
+  area.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await api('getStudentScores', {
+      className: S.user.class,
+      term: term,
+      studentId: S.user.email
+    });
+    if (!rows.length) {
+      area.innerHTML = '<div class="empty">No scores available for this term.</div>';
+      return;
+    }
+    let grand = 0;
+    area.innerHTML = `
+      <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Subject</th>
+          <th style="text-align:center">Test 1</th>
+          <th style="text-align:center">Test 2</th>
+          <th style="text-align:center">Test 3</th>
+          <th style="text-align:center">Exam</th>
+          <th style="text-align:center">Total</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            grand += Number(r.total) || 0;
+            return `<tr>
+              <td><strong>${esc(r.subject)}</strong></td>
+              <td style="text-align:center">${r.T1 != null && r.T1 !== '' ? r.T1 : '—'}</td>
+              <td style="text-align:center">${r.T2 != null && r.T2 !== '' ? r.T2 : '—'}</td>
+              <td style="text-align:center">${r.T3 != null && r.T3 !== '' ? r.T3 : '—'}</td>
+              <td style="text-align:center">${r.Exam != null && r.Exam !== '' ? r.Exam : '—'}</td>
+              <td style="text-align:center" class="total-cell">${r.total || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div style="margin-top:20px;padding:16px;background:#f0fdf4;border-radius:10px;font-size:16px;color:var(--brand)">
+        <strong>Grand Total:</strong> ${grand}
+      </div>
+    `;
+  } catch (e) {
+    area.innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
+  }
+}
+
+/* ============================================================
+   START
+   ============================================================ */
+boot();
+</script>
+</body>
+</html>
