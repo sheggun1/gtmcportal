@@ -530,7 +530,7 @@
 /* ============================================================
    CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbwlZ6JwXFeyV5GoNzrSXMQWhS7yaVHYWn6AM3UpOH83uHj1i_ZRk4a-8JCWu1Q0OZk8/exec';
+const API = 'https://script.google.com/macros/s/AKfycby8TjSOXz-XPR7aDzSrgrXgAQCnlt2kvAZXLPPf3pjtxanF2i2IJuRVf3M8ejabzDU/exec';
 
 /* ============================================================
    SESSION + API
@@ -554,13 +554,27 @@ async function api(action, payload = {}) {
   } catch (netErr) {
     throw new Error('Network error — check your internet or the API URL');
   }
-  let json;
-  try { json = await res.json(); }
-  catch (parseErr) { throw new Error('Invalid response from server'); }
 
-  if (!json.success) {
-    if (/session/i.test(json.error)) logout();
-    throw new Error(json.error || 'Request failed');
+  const raw = await res.text();
+  let json;
+  try { json = JSON.parse(raw); }
+  catch (parseErr) {
+    // Apps Script returns HTML for auth/deploy errors. Surface it instead of "Invalid response".
+    throw new Error('Server returned non-JSON (' + res.status + '). First 200 chars: ' + raw.slice(0, 200));
+  }
+
+  if (!json || json.success !== true) {
+    const msg = (json && json.error) ? String(json.error) : 'Request failed';
+    // A stale deployment / wrong URL returns this exact string.
+    if (/^unknown action:/i.test(msg)) {
+      throw new Error(
+        'Backend deployment is out of date or wrong URL. ' +
+        'Redeploy the Apps Script (Deploy → Manage deployments → New version) ' +
+        'and make sure the API constant matches. Detail: ' + msg
+      );
+    }
+    if (/session/i.test(msg)) logout();
+    throw new Error(msg);
   }
   return json.data;
 }
