@@ -14,7 +14,6 @@
   }
   body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
 
-  /* ---- login ---- */
   .login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#3a2413 0%,#6b4423 45%,#4a2f18 100%)}
   .login-card{background:#fff;padding:36px 32px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.4);border-top:5px solid var(--gold)}
   .login-logo{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:var(--gold);font-family:Georgia,serif;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:3px solid var(--gold)}
@@ -28,7 +27,6 @@
   .login-card button:disabled{opacity:.5;cursor:not-allowed}
   .login-err{color:var(--err);font-size:13px;text-align:center;margin-top:12px;min-height:18px;font-weight:600}
 
-  /* ---- shell ---- */
   header.topbar{background:#fff;border-bottom:3px solid var(--gold);padding:0 22px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
   .brand{display:flex;align-items:center;gap:12px}
   .logo-mini{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:var(--gold);font-family:Georgia,serif;font-weight:800;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--gold)}
@@ -80,8 +78,9 @@
   .badge.err{background:#fee2e2;color:#991b1b}
   .portal-note{padding:10px 14px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;margin:10px 0;font-size:12.5px}
   .score-input{width:64px;padding:4px 6px;text-align:center;font-size:13px}
+  .dmn-select{width:100%;min-width:110px;padding:4px 6px;font-size:12px;border-radius:5px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .dmn-select:focus{outline:none;border-color:var(--brown);box-shadow:0 0 0 2px rgba(107,68,35,.12)}
 
-  /* report card */
   .report{position:relative;overflow:hidden;padding:20px;border:1px solid var(--line);border-radius:12px;background:#fff}
   .report .watermark{position:absolute;inset:0;background-repeat:no-repeat;background-position:center;background-size:55% auto;opacity:.06;pointer-events:none;z-index:0}
   .report > *:not(.watermark){position:relative;z-index:1}
@@ -105,12 +104,10 @@
   .sig-cell .line{border-top:1px solid #2d3748;padding-top:4px;font-weight:700;font-size:13px}
   .sig-cell .label{font-size:11px;color:var(--muted);margin-top:2px}
 
-  /* chat */
   .chat-message{padding:10px 14px;border-radius:8px;margin:8px 0;font-size:13px;white-space:pre-wrap}
   .chat-message.user{background:#eff6ff;margin-left:20px}
   .chat-message.ai{background:#f0fdf4;margin-right:20px}
 
-  /* toast */
   .toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:10px;background:#2b1d0e;color:#fff;font-weight:600;font-size:13px;opacity:0;transform:translateY(12px);transition:.22s;pointer-events:none;z-index:1000;max-width:340px}
   .toast.on{opacity:1;transform:translateY(0)}
   .toast.ok{background:var(--ok)}.toast.err{background:var(--err)}
@@ -150,7 +147,7 @@
 </div>
 
 <!-- ================= APP ================= -->
-<div id="appView" style="display:none;min-height:100vh;display:none;flex-direction:column">
+<div id="appView" style="display:none;min-height:100vh;flex-direction:column">
   <header class="topbar">
     <div class="brand">
       <div class="logo-mini">G</div>
@@ -299,6 +296,149 @@ function boot() {
   else toast('Unknown role: ' + S.user.role, 'err');
 }
 
+/* ================= DOMAIN ITEM DEFINITIONS ================= */
+const AFFECTIVE_ITEMS = [
+  ['punctuality', 'Punctuality'],
+  ['attendance', 'Attendance'],
+  ['honesty', 'Honesty'],
+  ['cooperation', 'Cooperation'],
+  ['leadership', 'Leadership'],
+  ['club_participation', 'Club participation'],
+  ['obedience', 'Obedience'],
+  ['neatness', 'Neatness'],
+  ['responsibility', 'Responsibility'],
+  ['self_control', 'Self-control']
+];
+const PSYCHOMOTOR_ITEMS = [
+  ['handwriting', 'Handwriting'],
+  ['drawing', 'Drawing and painting'],
+  ['handwork', 'Handwork / practical skills'],
+  ['sports', 'Sports and physical activities'],
+  ['coordination', 'Coordination and dexterity'],
+  ['tools', 'Use of tools and equipment']
+];
+const DMN_RATINGS = { 5: 'Excellent', 4: 'Very Good', 3: 'Good', 2: 'Fair', 1: 'Needs Improvement' };
+
+/* ================= DOMAIN EDITOR (shared by admin & class teacher) ================= */
+let DMN_KIND = 'affective';
+
+function domainEditorHtml() {
+  return `
+    <div class="card">
+      <h2>Affective &amp; Psychomotor Domains</h2>
+      <div class="sub">Rate every item 1–5 per student, per term, per academic year. Ratings save as you change them.</div>
+      <div class="grid">
+        <div><label>Class</label><select id="dmnClass"></select></div>
+        <div><label>Term</label><select id="dmnTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+        <div><label>Academic Year</label><input id="dmnYear" value="2026/2027"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="reloadDomainEditor()">Load</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tabs" id="dmnKindTabs" style="margin-bottom:12px">
+        <div class="tab active" data-kind="affective" onclick="switchDomainKind('affective')">Affective Domain</div>
+        <div class="tab" data-kind="psychomotor" onclick="switchDomainKind('psychomotor')">Psychomotor Domain</div>
+      </div>
+      <div id="domainEditorBox"><div class="empty">Load a class and term.</div></div>
+    </div>`;
+}
+
+function switchDomainKind(kind) {
+  DMN_KIND = kind;
+  document.querySelectorAll('#dmnKindTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.kind === kind));
+  reloadDomainEditor();
+}
+
+async function initDomainSelector() {
+  const classes = await loadClasses();
+  const sel = q('dmnClass');
+  if (!sel.dataset.filled) {
+    sel.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
+    sel.dataset.filled = '1';
+    // Class teachers are locked to their own class
+    if (!hasRole('admin') && S.user.class) {
+      sel.value = S.user.class;
+      sel.disabled = true;
+    }
+  }
+}
+
+async function reloadDomainEditor() {
+  await initDomainSelector();
+  const className = hasRole('admin') ? q('dmnClass').value : S.user.class;
+  const term = q('dmnTerm').value;
+  const academicYear = q('dmnYear').value.trim();
+  const box = q('domainEditorBox');
+  if (!className || !term || !academicYear) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
+  box.innerHTML = '<div class="empty">Loading…</div>';
+
+  try {
+    const [students, existing] = await Promise.all([
+      api('getStudents', { className }),
+      api('getDomainAssessments', { kind: DMN_KIND, className, term, academicYear })
+    ]);
+    if (!students.length) { box.innerHTML = '<div class="empty">No students in this class.</div>'; return; }
+
+    const byStudent = {};
+    (existing || []).forEach(r => { byStudent[r.student_id] = r; });
+
+    const items = DMN_KIND === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
+
+    const headerHtml = `<th style="min-width:170px">Student</th>` +
+      items.map(([key, label]) => `<th style="text-align:center;min-width:120px">${esc(label)}</th>`).join('');
+
+    const rowsHtml = students.map(st => {
+      const row = byStudent[st.student_id] || {};
+      const cells = items.map(([key]) => {
+        const val = row[key];
+        const opts = ['',1,2,3,4,5].map(n =>
+          `<option value="${n}" ${String(val || '') === String(n) ? 'selected' : ''}>${n === '' ? '—' : n + ' · ' + DMN_RATINGS[n]}</option>`
+        ).join('');
+        return `<td style="text-align:center">
+          <select class="dmn-select" data-student="${esc(st.student_id)}" data-item="${key}">${opts}</select>
+        </td>`;
+      }).join('');
+      return `<tr>
+        <td><strong>${esc(st.name)}</strong><br>
+          <small style="color:var(--muted);font-size:11px;font-family:ui-monospace,monospace">${esc(st.student_id)}</small>
+        </td>${cells}</tr>`;
+    }).join('');
+
+    box.innerHTML = `
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>${headerHtml}</tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+      <p class="portal-note" style="margin-top:12px">
+        Ratings: <strong>5</strong> Excellent · <strong>4</strong> Very Good · <strong>3</strong> Good · <strong>2</strong> Fair · <strong>1</strong> Needs Improvement.
+        Each change saves immediately.
+      </p>`;
+
+    box.querySelectorAll('select.dmn-select').forEach(sel => {
+      sel.addEventListener('change', () => saveDomainRating(sel, className, term, academicYear));
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+async function saveDomainRating(sel, className, term, academicYear) {
+  const studentId = sel.dataset.student;
+  const item = sel.dataset.item;
+  const value = sel.value;
+  sel.style.background = '#fffbea';
+  try {
+    await api('saveDomainAssessment', { kind: DMN_KIND, className, term, academicYear, studentId, item, value });
+    sel.style.background = '#f0fdf4';
+    setTimeout(() => { sel.style.background = ''; }, 800);
+  } catch (e) {
+    sel.style.background = '#fef2f2';
+    toast('Save failed: ' + e.message, 'err');
+  }
+}
+
 /* ================= ADMIN ================= */
 async function renderAdmin() {
   q('roleTag').textContent = 'Administrator · Jesus, Our Teacher';
@@ -307,7 +447,7 @@ async function renderAdmin() {
     <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, domains, publishing, principal remarks and the report template.</p></div>
     <div class="tabs" id="adminTabs">
       <div class="tab active" data-tab="teachers" onclick="showTab('adminTabs','teachers')">Teachers</div>
-      <div class="tab" data-tab="domains" onclick="showTab('adminTabs','domains'); loadAdminDomains();">Domains</div>
+      <div class="tab" data-tab="dmn" onclick="showTab('adminTabs','dmn'); reloadDomainEditor();">Affective &amp; Psychomotor</div>
       <div class="tab" data-tab="publish" onclick="showTab('adminTabs','publish')">Publish</div>
       <div class="tab" data-tab="remarks" onclick="showTab('adminTabs','remarks'); loadRemarksList();">Principal Remarks</div>
       <div class="tab" data-tab="template" onclick="showTab('adminTabs','template'); loadTemplate();">Report Template</div>
@@ -342,17 +482,8 @@ async function renderAdmin() {
       </div>
     </div>
 
-    <div class="section" data-tab="domains">
-      <div class="card">
-        <h2>Behaviour &amp; Attendance</h2>
-        <div class="sub">Per class, term. Affective and Psychomotor are A–E.</div>
-        <div class="grid">
-          <div><label>Class</label><select id="domClass"></select></div>
-          <div><label>Term</label><select id="domTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-          <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="loadAdminDomains()">Load</button></div>
-        </div>
-      </div>
-      <div class="card" id="domCard"><div class="empty">Select class and term, then Load.</div></div>
+    <div class="section" data-tab="dmn">
+      ${domainEditorHtml()}
     </div>
 
     <div class="section" data-tab="publish">
@@ -444,7 +575,7 @@ async function renderAdmin() {
   `;
 
   const classes = await loadClasses();
-  ['tClass','domClass','pubClass','remClass','linkClass'].forEach(id => {
+  ['tClass','pubClass','remClass','linkClass'].forEach(id => {
     q(id).innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   });
   const [jss, ss] = await Promise.all([loadSubjects('JSS1A'), loadSubjects('SS1A')]);
@@ -453,7 +584,7 @@ async function renderAdmin() {
   q('roleST').addEventListener('change', () => {
     q('subjectsWrap').style.display = q('roleST').checked ? 'block' : 'none';
   });
-
+  await initDomainSelector();
   await loadTeachers();
 }
 
@@ -508,52 +639,6 @@ async function loadTeachers() {
 async function deleteTeacher(email) {
   if (!confirm('Disable this teacher?')) return;
   try { await api('deleteTeacher', { email }); toast('Disabled', 'ok'); loadTeachers(); }
-  catch (e) { toast(e.message, 'err'); }
-}
-
-/* ---- admin: domains ---- */
-async function loadAdminDomains() {
-  const className = q('domClass').value, term = q('domTerm').value;
-  const box = q('domCard');
-  box.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const rows = await api('getDomains', { className, term });
-    if (!rows.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
-    box.innerHTML = `<table>
-      <thead><tr><th>Student</th><th>Days Opened</th><th>Days Present</th><th>Affective</th><th>Psychomotor</th></tr></thead>
-      <tbody>${rows.map(r => `
-        <tr data-student="${esc(r.student_id)}">
-          <td><strong>${esc(r.name)}</strong><br><small style="color:var(--muted);font-size:11px">${esc(r.student_id)}</small></td>
-          <td><input class="score-input" type="number" data-f="days_opened" value="${r.days_opened ?? ''}"></td>
-          <td><input class="score-input" type="number" data-f="days_present" value="${r.days_present ?? ''}"></td>
-          <td>${letterSelect('affective', r.affective)}</td>
-          <td>${letterSelect('psychomotor', r.psychomotor)}</td>
-        </tr>`).join('')}</tbody></table>
-      <div class="row" style="margin-top:12px"><button class="btn ok" onclick="submitAdminDomains()">Submit &amp; Lock</button></div>`;
-    box.querySelectorAll('input,select').forEach(inp => inp.addEventListener('change', () => saveDomainCell(inp, className, term)));
-  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-}
-
-function letterSelect(field, value) {
-  const letters = ['', 'A', 'B', 'C', 'D', 'E'];
-  return `<select data-f="${field}">${letters.map(l => `<option value="${l}" ${String(value || '') === l ? 'selected' : ''}>${l || '—'}</option>`).join('')}</select>`;
-}
-
-async function saveDomainCell(inp, className, term) {
-  const tr = inp.closest('tr');
-  try {
-    await api('saveDomainScore', {
-      className, term, studentId: tr.dataset.student, field: inp.dataset.f, value: inp.value
-    });
-    inp.style.background = '#f0fdf4';
-    setTimeout(() => { inp.style.background = ''; }, 800);
-  } catch (e) { toast('Save failed: ' + e.message, 'err'); inp.style.background = '#fef2f2'; }
-}
-
-async function submitAdminDomains() {
-  const className = q('domClass').value, term = q('domTerm').value;
-  if (!confirm(`Submit & lock ${className} / ${term}?`)) return;
-  try { await api('submitDomains', { className, term }); toast('Locked', 'ok'); }
   catch (e) { toast(e.message, 'err'); }
 }
 
@@ -740,11 +825,11 @@ async function renderClassTeacher() {
   if (!CLASS_NAME) { q('main').innerHTML = '<div class="card"><div class="empty">No class assigned. Contact admin.</div></div>'; return; }
 
   q('main').innerHTML = `
-    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage roster, enter scores, and record behaviour.</p></div>
+    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage roster, enter scores, rate domains.</p></div>
     <div class="tabs" id="ctTabs">
       <div class="tab active" data-tab="students" onclick="showTab('ctTabs','students')">Students</div>
       <div class="tab" data-tab="scores" onclick="showTab('ctTabs','scores')">Scores</div>
-      <div class="tab" data-tab="beh" onclick="showTab('ctTabs','beh'); loadCtBehaviour();">Behaviour</div>
+      <div class="tab" data-tab="dmn" onclick="showTab('ctTabs','dmn'); reloadDomainEditor();">Affective &amp; Psychomotor</div>
     </div>
     <div class="section active" data-tab="students">
       <div class="card">
@@ -769,18 +854,13 @@ async function renderClassTeacher() {
       </div>
       <div class="card" id="ctScoreCard"><div class="empty">Load a subject and term.</div></div>
     </div>
-    <div class="section" data-tab="beh">
-      <div class="card">
-        <div class="grid">
-          <div><label>Term</label><select id="ctBehTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-          <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="loadCtBehaviour()">Load</button></div>
-        </div>
-      </div>
-      <div class="card" id="ctBehCard"><div class="empty">Load a term.</div></div>
+    <div class="section" data-tab="dmn">
+      ${domainEditorHtml()}
     </div>`;
 
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
+  await initDomainSelector();
   ctLoadStudents();
 }
 
@@ -859,40 +939,9 @@ async function ctSubmit(subject, term) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-async function loadCtBehaviour() {
-  const term = q('ctBehTerm').value;
-  const box = q('ctBehCard');
-  box.innerHTML = '<div class="empty">Loading…</div>';
-  try {
-    const rows = await api('getDomains', { className: S.user.class, term });
-    if (!rows.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
-    box.innerHTML = `<table>
-      <thead><tr><th>Student</th><th>Days Opened</th><th>Days Present</th><th>Affective</th><th>Psychomotor</th></tr></thead>
-      <tbody>${rows.map(r => `
-        <tr data-student="${esc(r.student_id)}">
-          <td><strong>${esc(r.name)}</strong></td>
-          <td><input class="score-input" type="number" data-f="days_opened" value="${r.days_opened ?? ''}"></td>
-          <td><input class="score-input" type="number" data-f="days_present" value="${r.days_present ?? ''}"></td>
-          <td>${letterSelect('affective', r.affective)}</td>
-          <td>${letterSelect('psychomotor', r.psychomotor)}</td>
-        </tr>`).join('')}</tbody></table>
-      <div class="row" style="margin-top:12px"><button class="btn ok" onclick="submitCtBehaviour()">Submit &amp; Lock</button></div>`;
-    box.querySelectorAll('input,select').forEach(inp => inp.addEventListener('change', () => saveDomainCell(inp, S.user.class, term)));
-  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-}
-
-async function submitCtBehaviour() {
-  const term = q('ctBehTerm').value;
-  if (!confirm('Submit & lock?')) return;
-  try { await api('submitDomains', { className: S.user.class, term }); toast('Locked', 'ok'); }
-  catch (e) { toast(e.message, 'err'); }
-}
-
 /* ================= SUBJECT TEACHER ================= */
 async function renderSubjectTeacher() {
   q('roleTag').textContent = 'Subject Teacher · Jesus, Our Teacher';
-  const MY_SUBJECTS = String(S.user.subjects || '').split(',').map(s => s.trim()).filter(Boolean);
-
   q('main').innerHTML = `
     <div class="page-head"><h1>Subject Teacher</h1><p>Enter scores for your assigned subjects.</p></div>
     <div class="tabs" id="stTabs">
@@ -1068,6 +1117,31 @@ async function parentLoad() {
   } catch (e) { q('pStatus').textContent = e.message; q('pReportBox').innerHTML = ''; toast(e.message, 'err'); }
 }
 
+function domainTable(title, kind, data, show) {
+  if (!show) return '';
+  const items = kind === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
+  if (!data) return `
+    <div class="card" style="margin-top:14px">
+      <h2 style="font-size:13px;color:var(--brown);text-transform:uppercase;letter-spacing:.05em">${esc(title)}</h2>
+      <div class="empty" style="padding:14px">Not recorded for this term.</div>
+    </div>`;
+  const rows = items.map(([key, label]) => {
+    const v = Number(data[key]);
+    const has = v >= 1 && v <= 5;
+    return `<tr><td>${esc(label)}</td>
+      <td style="text-align:center;font-weight:700">${has ? v : '—'}</td>
+      <td>${has ? esc(DMN_RATINGS[v]) : '—'}</td></tr>`;
+  }).join('');
+  return `
+    <div class="card" style="margin-top:14px">
+      <h2 style="font-size:13px;color:var(--brown);text-transform:uppercase;letter-spacing:.05em">${esc(title)}</h2>
+      <table style="margin-top:8px">
+        <thead><tr><th>Item</th><th style="text-align:center;width:70px">Score</th><th>Rating</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
 function renderParentReport(r) {
   const t = r.template || {};
   const primary = /^#[0-9a-f]{6}$/i.test(t.primaryColor || '') ? t.primaryColor : '#1e3a8a';
@@ -1098,6 +1172,9 @@ function renderParentReport(r) {
       ${t.showAffective !== false ? `<div><strong>Affective</strong>${esc(d.affective || '—')}</div>` : ''}
       ${t.showPsychomotor !== false ? `<div><strong>Psychomotor</strong>${esc(d.psychomotor || '—')}</div>` : ''}
     </div>` : '';
+
+  const affectiveTable = domainTable('Affective Domain', 'affective', r.affective, t.showAffective !== false);
+  const psychomotorTable = domainTable('Psychomotor Domain', 'psychomotor', r.psychomotor, t.showPsychomotor !== false);
 
   const principal = t.showPrincipalRemark !== false ? `
     <div class="principal-block">
@@ -1139,6 +1216,8 @@ function renderParentReport(r) {
       </div>
       <table><thead><tr>${cols.join('')}</tr></thead><tbody>${rows}</tbody></table>
       ${domainBlock}
+      ${affectiveTable}
+      ${psychomotorTable}
       ${principal}
     </div>`;
 }
