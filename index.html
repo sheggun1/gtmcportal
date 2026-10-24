@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Greater Tomorrow Model College — Grade System</title>
 <style>
-  /* ============================================================
-     THEME — put your school image here
-     ------------------------------------------------------------
-     1) Save the Facebook photo as school.jpg in this folder.
-     2) Uncomment the two lines below by removing the /* * / marks.
-     If you do nothing, the gradient + G mark will be used, which
-     still looks intentional.
-     ============================================================ */
   :root{
     --login-bg-image: url('school.jpg');
     --login-logo-image: url('school-crest.png');
@@ -90,7 +82,7 @@
   label { font-size: 11.5px; color: var(--muted); font-weight: 700;
     display: block; margin-bottom: 5px; letter-spacing: .04em; text-transform: uppercase; }
 
-  /* ======================= LOGIN ======================= */
+  /* LOGIN */
   .login-wrap {
     flex: 1; display: flex; align-items: center; justify-content: center;
     padding: 20px; position: relative; overflow: hidden;
@@ -156,7 +148,7 @@
   .login-footer .credit { display: block; margin-top: 6px; color: var(--brown-light);
     letter-spacing: .08em; font-size: 10px; }
 
-  /* ======================= APP SHELL ======================= */
+  /* APP SHELL */
   .app-layout { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
   .topbar {
     background: #fff; border-bottom: 3px solid var(--gold);
@@ -225,7 +217,6 @@
   .panel { display: none; }
   .panel.active { display: block; }
 
-  /* ======================= CARDS & TABLES ======================= */
   .card {
     background: var(--surface); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 22px;
@@ -276,40 +267,26 @@
   .score-input { width: 64px; padding: 5px 6px; text-align: center; font-size: 13px; }
   .dmn-select { width: 100%; min-width: 110px; padding: 5px 6px; font-size: 12px; }
 
-  /* ======================= REPORT CARD ======================= */
+  /* Report card print extras */
   .report { position: relative; overflow: hidden; padding: 24px;
     border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
   .report .watermark { position: absolute; inset: 0;
     background-repeat: no-repeat; background-position: center; background-size: 55% auto;
     opacity: .06; pointer-events: none; z-index: 0; }
   .report > *:not(.watermark) { position: relative; z-index: 1; }
-  .report-head { text-align: center; padding: 14px 10px 16px;
-    border-bottom: 2px solid var(--gold); margin-bottom: 16px; }
-  .report-head img { max-width: 80px; max-height: 80px; object-fit: contain; margin-bottom: 8px; }
-  .report-head h2 { font-size: 19px; font-weight: 800; }
-  .report-head .motto { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .report-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px; margin-bottom: 14px; font-size: 13px; }
-  .report-meta label { margin-bottom: 2px; }
-  .report-meta strong { display: block; font-size: 14px; color: var(--ink); }
-  .domain-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;
-    margin-top: 14px; padding: 12px; background: var(--surface-2);
-    border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 12.5px; }
-  .domain-row div { text-align: center; }
-  .domain-row strong { display: block; font-size: 10.5px; color: var(--brown);
-    text-transform: uppercase; margin-bottom: 3px; letter-spacing: .05em; }
-  .principal-block { margin-top: 18px; padding-top: 16px; border-top: 2px solid #2d3748; }
-  .principal-block h5 { font-size: 12px; color: #2d3748; text-transform: uppercase;
-    letter-spacing: .06em; margin-bottom: 8px; }
-  .principal-block p { font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
-  .sig-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; }
-  .sig-cell { text-align: center; flex: 1; }
-  .sig-cell .img { min-height: 50px; display: flex; align-items: flex-end;
-    justify-content: center; margin-bottom: 4px; }
-  .sig-cell .img img { max-height: 60px; max-width: 160px; object-fit: contain; }
-  .sig-cell .line { border-top: 1px solid #2d3748; padding-top: 4px;
-    font-weight: 700; font-size: 13px; }
-  .sig-cell .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  #reportCard input[data-local] {
+    border: 0 !important;
+    border-bottom: 1px dotted #bbb !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+  #reportCard input[data-local]:focus {
+    border-bottom-color: var(--blue) !important;
+    outline: none !important;
+    background: #fffbe6 !important;
+    box-shadow: none !important;
+  }
 
   .chat-message { padding: 10px 14px; border-radius: var(--radius-sm);
     margin: 8px 0; font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
@@ -330,7 +307,6 @@
   .toast.ok { background: var(--ok); border-left-color: var(--gold); }
   .toast.err { background: var(--err); border-left-color: #fca5a5; }
 
-  /* ======================= RESPONSIVE ======================= */
   @media (max-width: 900px) {
     .body-layout { grid-template-columns: 1fr; }
     .sidebar {
@@ -357,15 +333,16 @@
     .report { border: none; padding: 0; box-shadow: none; }
     .report .watermark { opacity: .08 !important;
       -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .principal-block, .domain-row, .sig-row { page-break-inside: avoid; }
+    #reportCard { border: none !important; padding: 0 !important; max-width: 100% !important;
+      box-shadow: none !important; font-size: 10px; }
+    #reportCard tr { page-break-inside: avoid; }
+    #reportCard input { border: none !important; background: transparent !important; }
   }
 </style>
 </head>
 <body>
 
-<!-- ============================================================
-     LOGIN
-     ============================================================ -->
+<!-- LOGIN -->
 <div id="loginView" class="login-wrap">
   <div class="login-card">
     <div class="login-logo" id="loginLogo"><span>G</span></div>
@@ -388,9 +365,7 @@
   </div>
 </div>
 
-<!-- ============================================================
-     APP SHELL
-     ============================================================ -->
+<!-- APP -->
 <div id="appView" class="app-layout" style="display:none">
   <header class="topbar">
     <div class="brand">
@@ -419,13 +394,11 @@
 
 <script>
 /* ============================================================
-   CONFIG — new deployment
+   CONFIG
    ============================================================ */
 const API = 'https://script.google.com/macros/s/AKfycbyW6Jy16aXU8Ix4GKIHwyBavO1Os3jDj6mE-rSLslz-RtpzTBXG0a9mjE1GVItczsOt/exec';
 
-/* ============================================================
-   SESSION
-   ============================================================ */
+/* SESSION */
 const S = {
   token: localStorage.getItem('gs_token') || '',
   user: JSON.parse(localStorage.getItem('gs_user') || 'null'),
@@ -471,9 +444,7 @@ function logout() {
   document.getElementById('appView').style.display = 'none';
 }
 
-/* ============================================================
-   HELPERS
-   ============================================================ */
+/* HELPERS */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function q(id){ return document.getElementById(id); }
 function toast(msg, kind) {
@@ -501,9 +472,7 @@ async function loadSubjects(className) {
   return subs;
 }
 
-/* ============================================================
-   DOMAIN ITEMS
-   ============================================================ */
+/* DOMAIN ITEMS */
 const AFFECTIVE_ITEMS = [
   ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
   ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
@@ -516,9 +485,7 @@ const PSYCHOMOTOR_ITEMS = [
 ];
 const DMN_RATINGS = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
 
-/* ============================================================
-   IMAGE FALLBACK
-   ============================================================ */
+/* LOGO FALLBACK */
 function applyLogoFallback() {
   const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--login-logo-image').trim();
   if (!cssBg || cssBg === 'none') return;
@@ -533,9 +500,7 @@ function applyLogoFallback() {
   });
 }
 
-/* ============================================================
-   LOGIN
-   ============================================================ */
+/* LOGIN */
 async function doLogin() {
   const email = q('loginEmail').value.trim();
   const password = q('loginPassword').value;
@@ -558,9 +523,7 @@ async function doLogin() {
   } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
-/* ============================================================
-   BOOT
-   ============================================================ */
+/* BOOT */
 function boot() {
   if (!S.token || !S.user) { logout(); return; }
   q('loginView').style.display = 'none';
@@ -580,9 +543,7 @@ function boot() {
   else toast('Unknown role: ' + S.user.role, 'err');
 }
 
-/* ============================================================
-   SIDEBAR + NAV
-   ============================================================ */
+/* SIDEBAR */
 function buildNav(items, defaultTab) {
   const sidebar = q('sidebar');
   sidebar.innerHTML = items.map(g => `
@@ -601,9 +562,7 @@ function setNav(tabId) {
   if (nav && nav.dataset.onload) try { window[nav.dataset.onload](); } catch (e) {}
 }
 
-/* ============================================================
-   DOMAIN EDITOR
-   ============================================================ */
+/* DOMAIN EDITOR */
 let DMN_KIND = 'affective';
 
 function domainEditorHtml() {
@@ -709,9 +668,7 @@ async function saveDomainRating(sel, className, term, year) {
   } catch (e) { sel.style.background = '#fef2f2'; toast('Save failed: ' + e.message, 'err'); }
 }
 
-/* ============================================================
-   ADMIN
-   ============================================================ */
+/* ADMIN */
 async function renderAdmin() {
   q('roleTag').textContent = 'Administrator · Jesus, Our Teacher';
 
@@ -869,14 +826,12 @@ async function renderAdmin() {
     ]},
   ], 'teachers');
 
-  // Wire the nav → on-load hooks
   document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
   document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
   document.querySelector('.nav-item[data-tab="template"]').dataset.onload = 'loadTemplate';
   document.querySelector('.nav-item[data-tab="parents"]').dataset.onload = 'loadParentAccounts';
 
-  // Populate selectors
   const classes = await loadClasses();
   ['tClass','pubClass','remClass','linkClass'].forEach(id => {
     q(id).innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
@@ -891,7 +846,6 @@ async function renderAdmin() {
   await loadTeachers();
 }
 
-/* ---- Admin: teachers ---- */
 async function createTeacher() {
   const name = q('tName').value.trim();
   const email = q('tEmail').value.trim();
@@ -939,7 +893,6 @@ async function deleteTeacher(email) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Admin: submissions ---- */
 async function loadSubmissions() {
   const box = q('submissionsBox'); if (!box) return;
   const status = q('subFilter') ? q('subFilter').value : '';
@@ -978,7 +931,6 @@ async function unlockSubmission(teacherEmail, className, subject, term, isDomain
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Admin: publish ---- */
 async function publishClass(publish) {
   const className = q('pubClass').value, term = q('pubTerm').value, year = q('pubYear').value.trim();
   if (!confirm(`${publish ? 'Publish' : 'Unpublish'} ${className} / ${term} / ${year}?`)) return;
@@ -993,7 +945,6 @@ async function publishClass(publish) {
   } catch (e) { q('pubStatus').textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
-/* ---- Admin: principal remarks ---- */
 async function loadRemarksList() {
   const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
   const box = q('remCard'); if (!box) return;
@@ -1043,7 +994,6 @@ async function generateRemarksForClass() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Admin: template ---- */
 async function loadTemplate() {
   try {
     const t = await api('adminGetReportTemplate');
@@ -1100,7 +1050,6 @@ async function saveTemplate() {
   }
 }
 
-/* ---- Admin: parents ---- */
 async function createParent() {
   const name = q('parName').value.trim(), email = q('parEmail').value.trim(), password = q('parPass').value;
   if (!name || !email || password.length < 6) return toast('Name, email, password ≥ 6 required', 'err');
@@ -1158,9 +1107,7 @@ async function unlinkWard(email, studentId, className) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ============================================================
-   CLASS TEACHER
-   ============================================================ */
+/* CLASS TEACHER */
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
   const CLASS_NAME = S.user.class;
@@ -1290,9 +1237,7 @@ async function ctSubmit(subject, term) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ============================================================
-   SUBJECT TEACHER
-   ============================================================ */
+/* SUBJECT TEACHER */
 async function renderSubjectTeacher() {
   q('roleTag').textContent = 'Subject Teacher · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1397,9 +1342,7 @@ async function stLoadHistory() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ============================================================
-   STUDENT
-   ============================================================ */
+/* STUDENT */
 async function renderStudent() {
   q('roleTag').textContent = 'Student · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1425,9 +1368,7 @@ async function studentLoad() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ============================================================
-   PARENT
-   ============================================================ */
+/* PARENT */
 async function renderParent() {
   q('roleTag').textContent = 'Parent Portal · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1485,108 +1426,294 @@ async function parentLoad() {
   }
 }
 
-function domainTable(title, kind, data, show) {
-  if (!show) return '';
-  const items = kind === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
-  if (!data) return `
-    <div class="card" style="margin-top:14px">
-      <h2 style="font-size:13px">${esc(title)}</h2>
-      <div class="empty" style="padding:14px">Not recorded for this term.</div>
-    </div>`;
-  const rows = items.map(([k, l]) => {
-    const v = Number(data[k]);
-    const has = v >= 1 && v <= 5;
-    return `<tr><td>${esc(l)}</td>
-      <td style="text-align:center;font-weight:700">${has ? v : '—'}</td>
-      <td>${has ? esc(DMN_RATINGS[v]) : '—'}</td></tr>`;
-  }).join('');
-  return `
-    <div class="card" style="margin-top:14px">
-      <h2 style="font-size:13px">${esc(title)}</h2>
-      <div class="table-wrap" style="margin-top:8px"><table>
-        <thead><tr><th>Item</th><th style="text-align:center;width:80px">Score</th><th>Rating</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>
-    </div>`;
+/* ============================================================
+   REPORT CARD — new design
+   ============================================================ */
+const DOMAIN_ITEMS_AFF = [
+  ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
+  ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
+  ['obedience','Obedience'],['neatness','Neatness'],['responsibility','Responsibility'],['self_control','Self-control']
+];
+const DOMAIN_ITEMS_PSY = [
+  ['handwriting','Handwriting'],['drawing','Drawing & painting'],
+  ['handwork','Handwork / practical'],['sports','Sports & physical'],
+  ['coordination','Coordination & dexterity'],['tools','Use of tools & equipment']
+];
+const RATING_GRADE = { 5:'A', 4:'B', 3:'C', 2:'D', 1:'E' };
+const RATING_WORD  = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
+
+function localCardKey(sid, cls, term, year, field) { return `gtmc_card_${field}_${sid}_${cls}_${term}_${year}`; }
+function getLocal(sid, cls, term, year, field) { try { return localStorage.getItem(localCardKey(sid,cls,term,year,field)) || ''; } catch (e) { return ''; } }
+function setLocal(sid, cls, term, year, field, value) { try { localStorage.setItem(localCardKey(sid,cls,term,year,field), value); } catch (e) {} }
+
+function remarkForGrade(g) {
+  return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
 }
 
 function renderParentReport(r) {
   const t = r.template || {};
-  const primary = /^#[0-9a-f]{6}$/i.test(t.primaryColor || '') ? t.primaryColor : '#1e3a8a';
-  const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="">` : '';
-  const watermark = t.logoUrl ? `<div class="watermark" style="background-image:url('${esc(t.logoUrl)}')"></div>` : '';
-  const showTests = t.showTests !== false, showExam = t.showExam !== false;
-  const showTotals = t.showSubjectTotals !== false, showGrade = t.showGrade !== false;
+  const d = r.domains || {};
+  const sid = r.student.studentId, cls = r.student.className, term = r.term, year = r.academicYear;
 
-  const cols = ['<th>Subject</th>'];
-  if (showTests) cols.push('<th style="text-align:center">T1</th><th style="text-align:center">T2</th><th style="text-align:center">T3</th>');
-  if (showExam) cols.push('<th style="text-align:center">Exam</th>');
-  if (showTotals) cols.push('<th style="text-align:center">Total</th>');
-  if (showGrade) cols.push('<th style="text-align:center">Grade</th>');
+  const schoolName = esc(t.schoolName || 'GREATER TOMORROW MODEL COLLEGE');
+  const schoolAddr = esc(t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti');
+  const motto      = esc(t.schoolMotto || 'Jesus, Our Teacher');
+  const logo = t.logoUrl
+    ? `<img src="${esc(t.logoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`
+    : `<div style="font-family:Georgia,serif;font-size:30px;color:#1e3a8a;font-weight:900">G</div>`;
 
-  const rows = (r.subjects || []).map(s => {
-    let h = `<td><strong>${esc(s.subject)}</strong></td>`;
-    if (showTests) h += `<td style="text-align:center">${s.T1 ?? '—'}</td><td style="text-align:center">${s.T2 ?? '—'}</td><td style="text-align:center">${s.T3 ?? '—'}</td>`;
-    if (showExam) h += `<td style="text-align:center">${s.Exam ?? '—'}</td>`;
-    if (showTotals) h += `<td style="text-align:center;font-weight:700;color:var(--blue)">${s.total ?? '—'}</td>`;
-    if (showGrade) h += `<td style="text-align:center">${esc(s.grade || '—')}</td>`;
-    return `<tr>${h}</tr>`;
+  const subjects = r.subjects || [];
+  const rows = subjects.map((s, i) => {
+    const ca = (Number(s.T1) || 0) + (Number(s.T2) || 0) + (Number(s.T3) || 0);
+    return `
+      <tr>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${i + 1}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:left">${esc(s.subject)}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T1 ?? '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T2 ?? '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T3 ?? '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${ca || '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center">${s.Exam ?? '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${s.total ?? '—'}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${esc(s.grade || '—')}</td>
+        <td style="border:1px solid #333;padding:3px;text-align:center;font-size:9px">${esc(remarkForGrade(s.grade))}</td>
+      </tr>`;
   }).join('');
 
-  const d = r.domains || {};
-  const domainBlock = (t.showAffective !== false || t.showPsychomotor !== false || t.showAttendance !== false) ? `
-    <div class="domain-row">
-      ${t.showAttendance !== false ? `<div><strong>Days Opened</strong>${d.days_opened ?? '—'}</div><div><strong>Days Present</strong>${d.days_present ?? '—'}</div>` : ''}
-      ${t.showAffective !== false ? `<div><strong>Affective</strong>${esc(d.affective || '—')}</div>` : ''}
-      ${t.showPsychomotor !== false ? `<div><strong>Psychomotor</strong>${esc(d.psychomotor || '—')}</div>` : ''}
-    </div>` : '';
+  const domainCol = (data, key) => {
+    const v = Number(data?.[key]);
+    if (!(v >= 1 && v <= 5)) return '<span style="color:#999">—</span>';
+    return `<strong>${RATING_GRADE[v]}</strong> <span style="font-size:8.5px;color:#555">${RATING_WORD[v]}</span>`;
+  };
+  const affRows = DOMAIN_ITEMS_AFF.map(([k, l]) =>
+    `<tr>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.affective, k)}</td>
+    </tr>`).join('');
+  const psyRows = DOMAIN_ITEMS_PSY.map(([k, l]) =>
+    `<tr>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.psychomotor, k)}</td>
+    </tr>`).join('');
 
-  const affTable = domainTable('Affective Domain', 'affective', r.affective, t.showAffective !== false);
-  const psyTable = domainTable('Psychomotor Domain', 'psychomotor', r.psychomotor, t.showPsychomotor !== false);
+  const scale = (t.gradeScale || []).slice().sort((a, b) => Number(b.min) - Number(a.min));
+  const gradeRows = scale.map(g =>
+    `<tr>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${Number(g.min)}–${Number(g.max) === 100 ? 100 : Number(g.max)}</td>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:center;font-weight:700">${esc(g.grade)}</td>
+      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9px">${esc(g.remark || '')}</td>
+    </tr>`).join('');
 
-  const principal = t.showPrincipalRemark !== false ? `
-    <div class="principal-block">
-      <h5>Principal's Report</h5>
-      <p>${esc(r.principalRemark || '')}</p>
-      <div class="sig-row">
-        <div class="sig-cell">
-          <div class="img">${t.principalSignatureUrl ? `<img src="${esc(t.principalSignatureUrl)}" alt="">` : ''}</div>
-          <div class="line">${esc(t.principalName || 'The Principal')}</div>
-          <div class="label">Principal's Signature</div>
-        </div>
-        <div class="sig-cell">
-          <div class="img">${t.schoolStampUrl ? `<img src="${esc(t.schoolStampUrl)}" alt="">` : ''}</div>
-          <div class="line">School Stamp</div>
-          <div class="label">Official Stamp</div>
-        </div>
-        <div class="sig-cell">
-          <div class="line">${new Date().toLocaleDateString('en-GB')}</div>
-          <div class="label">Date</div>
-        </div>
-      </div>
-    </div>` : '';
+  const totalObtained = subjects.reduce((s, x) => s + (Number(x.total) || 0), 0);
+  const overallPct = r.overallAverage == null ? '—' : r.overallAverage;
+  const daysOpen = d.days_opened ?? '—';
+  const daysPresent = d.days_present ?? '—';
+  const daysAbsent = (Number(daysOpen) && Number(daysPresent)) ? (Number(daysOpen) - Number(daysPresent)) : '—';
+
+  const chartItems = subjects.slice(0, 8);
+  const chart = chartItems.map(s => {
+    const score = Number(s.total) || 0;
+    const pct = Math.max(0, Math.min(100, score));
+    const color = score >= 70 ? '#15803d' : score >= 50 ? '#1e3a8a' : score >= 40 ? '#b45309' : '#b91c1c';
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+      <div style="font-size:8px;font-weight:700;color:#333;margin-bottom:2px">${score}</div>
+      <div style="width:60%;height:${Math.max(6, pct * 0.9)}px;background:${color};border-radius:2px 2px 0 0"></div>
+      <div style="font-size:8px;margin-top:3px;text-align:center;line-height:1.1;color:#333;word-break:break-all">${esc(s.subject.substring(0, 8))}</div>
+    </div>`;
+  }).join('');
+
+  const sex      = getLocal(sid, cls, term, year, 'sex');
+  const age      = getLocal(sid, cls, term, year, 'age');
+  const tRemark  = getLocal(sid, cls, term, year, 'teacher_remark');
+  const nextTerm = getLocal(sid, cls, term, year, 'next_term');
+  const termEnds = getLocal(sid, cls, term, year, 'term_ends');
 
   q('pReportBox').innerHTML = `
-    <div class="report">
-      ${watermark}
-      <div class="report-head" style="border-color:${esc(primary)}">
+  <div id="reportCard"
+    style="background:#fff;color:#111;padding:16px 18px;font-family:'Inter','Segoe UI',Arial,sans-serif;
+           font-size:11px;line-height:1.35;border:1px solid #333;max-width:1000px;margin:0 auto">
+
+    <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;
+                border-bottom:3px solid #f5b800;padding-bottom:10px;margin-bottom:10px">
+      <div style="width:110px;height:110px;border-radius:8px;border:2px solid #f5b800;
+                  background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
         ${logo}
-        <h2 style="color:${esc(primary)}">${esc(t.schoolName || 'Greater Tomorrow Model Schools')}</h2>
-        <div class="motto">${esc(t.schoolMotto || 'Jesus, our Teacher')}</div>
       </div>
-      <div class="report-meta">
-        <div><label>Student</label><strong>${esc(r.student.name)}</strong></div>
-        <div><label>ID</label><strong>${esc(r.student.studentId)}</strong></div>
-        <div><label>Class</label><strong>${esc(r.student.className)}</strong></div>
-        <div><label>Term</label><strong>${esc(r.term)}</strong></div>
-        <div><label>Year</label><strong>${esc(r.academicYear)}</strong></div>
-        ${t.showAnnualAverage !== false ? `<div><label>Overall</label><strong>${r.overallAverage == null ? '—' : r.overallAverage + '%'}</strong></div>` : ''}
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:900;letter-spacing:.5px;color:#111;text-transform:uppercase;line-height:1.1">${schoolName}</div>
+        <div style="font-size:11px;color:#333;margin-top:3px">${schoolAddr}</div>
+        <div style="font-size:11px;color:#333;font-weight:600">Terminal Continuous Assessment Result</div>
+        <div style="font-size:11px;font-style:italic;color:#6b4423;margin-top:2px">Motto: ${motto}</div>
       </div>
-      <div class="table-wrap"><table><thead><tr>${cols.join('')}</tr></thead><tbody>${rows}</tbody></table></div>
-      ${domainBlock}
-      ${affTable}
-      ${psyTable}
-      ${principal}
-    </div>`;
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
+      <tr>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:80px">NAME</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.name)}</td>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:60px">CLASS</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(cls)}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">ADM. NO</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(sid)}</td>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SEX</td>
+        <td style="border:1px solid #333;padding:0">
+          <input data-local="sex" value="${esc(sex)}" placeholder="e.g. F"
+            style="width:100%;border:0;padding:3px 8px;font-size:10.5px;background:transparent">
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">TERM</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(term)}</td>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">AGE</td>
+        <td style="border:1px solid #333;padding:0">
+          <input data-local="age" value="${esc(age)}" placeholder="e.g. 13"
+            style="width:100%;border:0;padding:3px 8px;font-size:10.5px;background:transparent">
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SESSION</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(year)}</td>
+        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">OVERALL</td>
+        <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+      </tr>
+    </table>
+
+    <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-weight:900;text-align:center;background:#2d3748;color:#fff;padding:3px;font-size:10.5px;
+                    text-transform:uppercase;letter-spacing:.5px">Subject Performance</div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead>
+            <tr style="background:#f2f2f2">
+              <th style="border:1px solid #333;padding:3px;width:22px">SN</th>
+              <th style="border:1px solid #333;padding:3px;text-align:left">SUBJECTS</th>
+              <th style="border:1px solid #333;padding:3px;width:30px">1ST</th>
+              <th style="border:1px solid #333;padding:3px;width:30px">2ND</th>
+              <th style="border:1px solid #333;padding:3px;width:30px">3RD</th>
+              <th style="border:1px solid #333;padding:3px;width:38px">C.A</th>
+              <th style="border:1px solid #333;padding:3px;width:34px">EXAM</th>
+              <th style="border:1px solid #333;padding:3px;width:38px">TOTAL</th>
+              <th style="border:1px solid #333;padding:3px;width:32px">GRD</th>
+              <th style="border:1px solid #333;padding:3px">REMARK</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+            <tr style="background:#f2f2f2;font-weight:800">
+              <td colspan="7" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
+              <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtained}</td>
+              <td style="border:1px solid #333;padding:3px;text-align:center">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+              <td style="border:1px solid #333;padding:3px"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div style="border:2px solid #2d3748;margin-bottom:8px">
+          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                      text-transform:uppercase;letter-spacing:.5px">Affective Domain</div>
+          <table style="width:100%;border-collapse:collapse">${affRows}</table>
+        </div>
+
+        <div style="border:2px solid #2d3748;margin-bottom:8px">
+          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                      text-transform:uppercase;letter-spacing:.5px">Psychomotor Domain</div>
+          <table style="width:100%;border-collapse:collapse">${psyRows}</table>
+        </div>
+
+        <div style="border:2px solid #2d3748">
+          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                      text-transform:uppercase;letter-spacing:.5px">Grading Scale</div>
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f2f2f2">
+                <th style="border:1px solid #999;padding:2px;font-size:9px">Range</th>
+                <th style="border:1px solid #999;padding:2px;font-size:9px">Grade</th>
+                <th style="border:1px solid #999;padding:2px;font-size:9px;text-align:left">Remark</th>
+              </tr>
+            </thead>
+            <tbody>${gradeRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
+      <div style="border:2px solid #2d3748">
+        <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                    text-transform:uppercase;letter-spacing:.5px">Performance in Subjects (%)</div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:130px;padding:8px 6px 4px;border-bottom:1px solid #ccc">
+          ${chart}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="border:2px solid #2d3748;flex:1">
+          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                      text-transform:uppercase;letter-spacing:.5px">Attendance</div>
+          <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+            <tr><td style="padding:3px 6px">Times School Opened</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysOpen}</td></tr>
+            <tr><td style="padding:3px 6px">Times Present</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysPresent}</td></tr>
+            <tr><td style="padding:3px 6px">Times Absent</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysAbsent}</td></tr>
+          </table>
+        </div>
+        <div style="border:2px solid #2d3748;flex:1">
+          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+                      text-transform:uppercase;letter-spacing:.5px">Next Term</div>
+          <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+            <tr>
+              <td style="padding:3px 6px">Next term begins</td>
+              <td style="padding:0"><input data-local="next_term" value="${esc(nextTerm)}" placeholder="date"
+                style="width:100%;border:0;padding:3px 6px;font-size:9.5px;background:transparent;text-align:right"></td>
+            </tr>
+            <tr>
+              <td style="padding:3px 6px">Term ends</td>
+              <td style="padding:0"><input data-local="term_ends" value="${esc(termEnds)}" placeholder="date"
+                style="width:100%;border:0;padding:3px 6px;font-size:9.5px;background:transparent;text-align:right"></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
+      <tr>
+        <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700;width:150px">CLASS TEACHER'S REMARK</td>
+        <td style="border:1px solid #333;padding:0">
+          <input data-local="teacher_remark" value="${esc(tRemark)}" placeholder="Type teacher's remark here"
+            style="width:100%;border:0;padding:6px 8px;font-size:10.5px;background:transparent">
+        </td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700">PRINCIPAL'S REMARK</td>
+        <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(r.principalRemark || '')}</td>
+      </tr>
+    </table>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
+        CLASS TEACHER'S SIGNATURE
+      </div>
+      <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
+        ${esc(t.principalName || 'PRINCIPAL')} <br><span style="font-weight:400;font-size:9px">PRINCIPAL'S SIGNATURE</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:9px;color:#666;margin-top:12px;font-style:italic">
+      Report generated on ${new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })}.
+      Please contact the school if you notice any discrepancy.
+    </div>
+  </div>
+  `;
+
+  q('pReportBox').querySelectorAll('[data-local]').forEach(input => {
+    input.addEventListener('change', () => {
+      setLocal(sid, cls, term, year, input.dataset.local, input.value);
+      toast('Saved on this device', 'ok');
+    });
+  });
 }
 
 async function parentAsk() {
@@ -1609,9 +1736,7 @@ async function parentAsk() {
   } catch (e) { chat.innerHTML = `<div class="chat-message ai">${esc(e.message)}</div>`; }
 }
 
-/* ============================================================
-   START
-   ============================================================ */
+/* START */
 applyLogoFallback();
 if (S.token && S.user) boot();
 </script>
