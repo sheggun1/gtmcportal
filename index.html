@@ -5,152 +5,398 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Greater Tomorrow Model College — Grade System</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
+  /* ============================================================
+     THEME — put your school image here
+     ------------------------------------------------------------
+     1) Save the Facebook photo as school.jpg in this folder.
+     2) Uncomment the two lines below by removing the /* * / marks.
+     If you do nothing, the gradient + G mark will be used, which
+     still looks intentional.
+     ============================================================ */
+  /*
   :root{
-    --bg:#f7f5f0;--card:#fff;--ink:#2b1d0e;--muted:#7a6a58;--line:#e5dccf;
-    --brown:#6b4423;--brown-dark:#4a2f18;--gold:#e6b422;
-    --blue:#1e3a8a;--blue-dark:#172d6b;
-    --ok:#15803d;--err:#b91c1c;
+    --login-bg-image: url('school.jpg');
+    --login-logo-image: url('school.jpg');
   }
-  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column}
+  */
 
-  .login-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#3a2413 0%,#6b4423 45%,#4a2f18 100%)}
-  .login-card{background:#fff;padding:36px 32px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.4);border-top:5px solid var(--gold)}
-  .login-logo{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:var(--gold);font-family:Georgia,serif;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:3px solid var(--gold)}
-  .login-card h1{text-align:center;font-size:18px;color:var(--brown);margin-bottom:6px;text-transform:uppercase;letter-spacing:.02em}
-  .login-card .motto{text-align:center;color:var(--blue);font-style:italic;font-size:12px;font-weight:700;margin-bottom:22px}
-  .login-card label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;margin-top:10px}
-  .login-card input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
-  .login-card input:focus{outline:none;border-color:var(--brown);box-shadow:0 0 0 3px rgba(107,68,35,.12)}
-  .login-card button{width:100%;padding:12px;margin-top:18px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;font-weight:700;font-size:15px;cursor:pointer}
-  .login-card button:hover{background:linear-gradient(135deg,var(--blue-dark),#0f1f4a)}
-  .login-card button:disabled{opacity:.5;cursor:not-allowed}
-  .login-err{color:var(--err);font-size:13px;text-align:center;margin-top:12px;min-height:18px;font-weight:600}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --surface-2: #faf9f6;
+    --ink: #1a1410;
+    --muted: #7a6a58;
+    --line: #e8e1d4;
+    --line-strong: #d8cdb9;
 
-  header.topbar{background:#fff;border-bottom:3px solid var(--gold);padding:0 22px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-  .brand{display:flex;align-items:center;gap:12px}
-  .logo-mini{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:var(--gold);font-family:Georgia,serif;font-weight:800;display:flex;align-items:center;justify-content:center;border:2.5px solid var(--gold)}
-  .brand-text .name{font-size:12px;font-weight:800;color:var(--brown)}
-  .brand-text .tag{font-size:10px;color:var(--blue);letter-spacing:.1em;text-transform:uppercase;font-weight:700}
-  .user{display:flex;gap:12px;align-items:center;font-size:12px}
-  .user .who{text-align:right;line-height:1.15}
-  .user .uname{font-weight:700}
-  .user .urole{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.06em}
-  button.btn{font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;border:1px solid transparent;border-radius:7px;background:var(--brown);color:#fff;cursor:pointer}
-  button.btn:hover{background:var(--brown-dark)}
-  button.btn.sec{background:#fff;color:var(--brown);border-color:var(--line)}
-  button.btn.sec:hover{background:#faf7f2}
-  button.btn.ok{background:var(--ok)}
-  button.btn.ok:hover{background:#166534}
-  button.btn.blue{background:var(--blue)}
-  button.btn.blue:hover{background:var(--blue-dark)}
-  button.btn.danger{background:var(--err)}
-  button.btn.danger:hover{background:#991b1b}
-  button.btn.sm{padding:5px 10px;font-size:12px}
-  button.btn:disabled{opacity:.5;cursor:not-allowed}
-  main{padding:22px;max-width:1400px;margin:0 auto;width:100%;flex:1}
-  .page-head{margin-bottom:18px}
-  .page-head h1{font-size:22px;font-weight:800;color:var(--brown);margin-bottom:4px}
-  .page-head p{color:var(--muted);font-size:13px}
+    --brown: #6b4423;
+    --brown-dark: #4a2f18;
+    --brown-light: #8b5e34;
 
-  .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:18px;overflow-x:auto}
-  .tab{padding:10px 18px;font-weight:700;font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;margin-bottom:-2px}
-  .tab.active{color:var(--brown);border-bottom-color:var(--gold)}
-  .section{display:none}.section.active{display:block}
+    --gold: #e6b422;
+    --gold-dark: #c9981a;
+    --gold-light: #f5d76e;
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(43,29,14,.06)}
-  .card h2{font-size:15px;font-weight:800;color:var(--brown);margin-bottom:10px}
-  .card .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
-  label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
-  input,select,textarea{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:7px;font-family:inherit;font-size:13px;background:#fff;color:var(--ink)}
-  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brown);box-shadow:0 0 0 3px rgba(107,68,35,.12)}
-  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .check{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:12px;background:#fbf9f5}
-  .check input{width:auto}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left}
-  th{background:#faf7f2;font-size:11px;color:var(--brown);text-transform:uppercase;letter-spacing:.05em}
-  .empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px}
-  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:#e0e7ff;color:#1e3a8a}
-  .badge.ok{background:#d1fae5;color:#065f46}
-  .badge.warn{background:#fef3c7;color:#92400e}
-  .badge.err{background:#fee2e2;color:#991b1b}
-  .portal-note{padding:10px 14px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;margin:10px 0;font-size:12.5px}
-  .score-input{width:64px;padding:4px 6px;text-align:center;font-size:13px}
-  .dmn-select{width:100%;min-width:110px;padding:4px 6px;font-size:12px;border-radius:5px;border:1px solid var(--line);background:#fff;color:var(--ink)}
-  .dmn-select:focus{outline:none;border-color:var(--brown);box-shadow:0 0 0 2px rgba(107,68,35,.12)}
+    --blue: #1e3a8a;
+    --blue-dark: #172d6b;
 
-  .report{position:relative;overflow:hidden;padding:20px;border:1px solid var(--line);border-radius:12px;background:#fff}
-  .report .watermark{position:absolute;inset:0;background-repeat:no-repeat;background-position:center;background-size:55% auto;opacity:.06;pointer-events:none;z-index:0}
-  .report > *:not(.watermark){position:relative;z-index:1}
-  .report-head{text-align:center;padding:12px 10px;border-bottom:2px solid var(--gold);margin-bottom:14px}
-  .report-head img{max-width:80px;max-height:80px;object-fit:contain;margin-bottom:6px}
-  .report-head h2{font-size:18px;font-weight:800}
-  .report-head .motto{color:var(--muted);font-size:12px;margin-top:2px}
-  .report-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:12px;font-size:13px}
-  .report-meta label{margin-bottom:2px}
-  .report-meta strong{display:block;font-size:14px;color:var(--ink)}
-  .domain-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:12px;padding:10px;background:#fbf9f5;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
-  .domain-row div{text-align:center}
-  .domain-row strong{display:block;font-size:11px;color:var(--brown);text-transform:uppercase;margin-bottom:3px}
-  .principal-block{margin-top:16px;padding-top:14px;border-top:2px solid #2d3748}
-  .principal-block h5{font-size:12px;color:#2d3748;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-  .principal-block p{font-size:13px;line-height:1.5;margin-bottom:14px}
-  .sig-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-end}
-  .sig-cell{text-align:center;flex:1}
-  .sig-cell .img{min-height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px}
-  .sig-cell .img img{max-height:60px;max-width:160px;object-fit:contain}
-  .sig-cell .line{border-top:1px solid #2d3748;padding-top:4px;font-weight:700;font-size:13px}
-  .sig-cell .label{font-size:11px;color:var(--muted);margin-top:2px}
+    --ok: #15803d;
+    --warn: #b45309;
+    --err: #b91c1c;
 
-  .chat-message{padding:10px 14px;border-radius:8px;margin:8px 0;font-size:13px;white-space:pre-wrap}
-  .chat-message.user{background:#eff6ff;margin-left:20px}
-  .chat-message.ai{background:#f0fdf4;margin-right:20px}
-
-  .toast{position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:10px;background:#2b1d0e;color:#fff;font-weight:600;font-size:13px;opacity:0;transform:translateY(12px);transition:.22s;pointer-events:none;z-index:1000;max-width:340px}
-  .toast.on{opacity:1;transform:translateY(0)}
-  .toast.ok{background:var(--ok)}.toast.err{background:var(--err)}
-
-  @media print{
-    body{background:#fff}
-    header,button,.toolbar-tab,.card.toolbar,h1,p.page-sub{display:none!important}
-    main{padding:0;max-width:none}
-    .report{border:none;padding:0;box-shadow:none}
-    .report .watermark{opacity:.08!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .principal-block,.domain-row,.sig-row{page-break-inside:avoid}
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(26,20,16,.06);
+    --shadow: 0 2px 8px rgba(26,20,16,.06), 0 1px 2px rgba(26,20,16,.04);
+    --shadow-lg: 0 12px 32px rgba(26,20,16,.12);
   }
-  @media(max-width:640px){
-    header{padding:0 12px}
-    .brand-text .tag{display:none}
-    .user .who{display:none}
-    main{padding:14px}
-    .card{padding:14px}
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    font-size: 14px; line-height: 1.5;
+    color: var(--ink); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  button {
+    font-family: inherit; font-size: 13.5px; font-weight: 600;
+    padding: 9px 16px; border: 1px solid transparent; border-radius: var(--radius-sm);
+    background: var(--brown); color: #fff; cursor: pointer;
+    transition: background .15s, box-shadow .15s, transform .05s;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--brown-dark); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.sec { background: #fff; color: var(--brown); border-color: var(--line-strong); }
+  button.sec:hover { background: var(--surface-2); }
+  button.ok { background: var(--ok); }
+  button.ok:hover { background: #166534; }
+  button.blue { background: var(--blue); }
+  button.blue:hover { background: var(--blue-dark); }
+  button.danger { background: var(--err); }
+  button.danger:hover { background: #991b1b; }
+  button.sm { padding: 5px 10px; font-size: 12.5px; }
+  input, select, textarea {
+    font-family: inherit; font-size: 13.5px; padding: 9px 12px;
+    border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+    background: #fff; color: var(--ink); width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--brown);
+    box-shadow: 0 0 0 3px rgba(107,68,35,.12);
+  }
+  label { font-size: 11.5px; color: var(--muted); font-weight: 700;
+    display: block; margin-bottom: 5px; letter-spacing: .04em; text-transform: uppercase; }
+
+  /* ======================= LOGIN ======================= */
+  .login-wrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 20px; position: relative; overflow: hidden;
+    background:
+      var(--login-bg-image, none) center/cover no-repeat,
+      linear-gradient(135deg, #2c1a0d 0%, #6b4423 45%, #3a2413 100%);
+  }
+  .login-wrap::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(230,180,34,.18) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(30,58,138,.32) 0%, transparent 55%),
+      rgba(20,12,5,.55);
+    pointer-events: none;
+  }
+  .login-card {
+    position: relative; z-index: 1; width: 100%; max-width: 440px;
+    background: #fff; border-radius: var(--radius-lg);
+    padding: 40px 36px 32px;
+    box-shadow: var(--shadow-lg), 0 30px 80px rgba(0,0,0,.35);
+    border-top: 5px solid var(--gold);
+  }
+  .login-logo {
+    width: 86px; height: 86px; margin: 0 auto 18px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-family: Georgia, serif; font-size: 36px; font-weight: 800;
+    border: 3px solid var(--gold); overflow: hidden;
+    background-image: var(--login-logo-image, none);
+    background-size: cover; background-position: center;
+    box-shadow: 0 10px 26px rgba(30,58,138,.35);
+  }
+  .login-logo span { display: block; }
+  .login-logo.has-image span { display: none; }
+  .login-card h1 {
+    text-align: center; font-size: 19px; color: var(--brown);
+    letter-spacing: .02em; line-height: 1.25;
+    margin-bottom: 8px; text-transform: uppercase; font-weight: 800;
+  }
+  .login-card .motto { text-align: center; color: var(--blue); font-style: italic;
+    font-size: 12px; font-weight: 700; letter-spacing: .04em; margin-bottom: 4px; }
+  .login-card .tag { text-align: center; font-size: 10.5px; color: var(--muted);
+    margin-bottom: 24px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  .login-divider { height: 1px; background: var(--line); margin: 0 0 20px; position: relative; }
+  .login-divider::after {
+    content: 'Sign in to your account'; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); background: #fff; padding: 0 12px;
+    font-size: 10px; color: var(--muted); font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+  }
+  .login-card input { margin-bottom: 12px; }
+  .login-card button.primary-btn {
+    width: 100%; margin-top: 6px; padding: 12px; font-size: 15px; font-weight: 700;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    letter-spacing: .03em;
+  }
+  .login-card button.primary-btn:hover { background: linear-gradient(135deg, var(--blue-dark) 0%, #0f1f4a 100%); }
+  .login-err { color: var(--err); font-size: 13px; margin-top: 12px;
+    min-height: 18px; text-align: center; font-weight: 600; }
+  .login-footer { text-align: center; margin-top: 22px; padding-top: 16px;
+    border-top: 1px solid var(--line); font-size: 10px; color: var(--muted);
+    letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  .login-footer .credit { display: block; margin-top: 6px; color: var(--brown-light);
+    letter-spacing: .08em; font-size: 10px; }
+
+  /* ======================= APP SHELL ======================= */
+  .app-layout { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar {
+    background: #fff; border-bottom: 3px solid var(--gold);
+    height: 64px; padding: 0 24px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 40;
+    box-shadow: var(--shadow-sm);
+  }
+  .topbar .brand { display: flex; align-items: center; gap: 14px; }
+  .topbar .brand-logo {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+    color: var(--gold); font-family: Georgia, serif; font-weight: 800; font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2.5px solid var(--gold); overflow: hidden;
+    background-image: var(--login-logo-image, none);
+    background-size: cover; background-position: center;
+  }
+  .topbar .brand-logo span { display: block; }
+  .topbar .brand-logo.has-image span { display: none; }
+  .topbar .brand-text .name { font-size: 13px; font-weight: 800; color: var(--brown); letter-spacing: .02em; }
+  .topbar .brand-text .tag { font-size: 10px; color: var(--blue);
+    letter-spacing: .12em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
+  .topbar .user { display: flex; align-items: center; gap: 14px; }
+  .topbar .user .who { text-align: right; line-height: 1.15; }
+  .topbar .user .who .uname { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .topbar .user .who .urole { font-size: 10.5px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-top: 1px; }
+
+  .body-layout { flex: 1; display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
+  .sidebar {
+    background: #fff; border-right: 1px solid var(--line);
+    padding: 20px 12px; overflow-y: auto;
+  }
+  .sidebar .group { margin-bottom: 22px; }
+  .sidebar .group-title {
+    font-size: 10.5px; color: var(--muted); font-weight: 800;
+    text-transform: uppercase; letter-spacing: .1em;
+    padding: 0 12px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; user-select: none;
+    border: 1px solid transparent; margin-bottom: 2px;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  .nav-item:hover { background: var(--surface-2); }
+  .nav-item.active {
+    background: #fff8e6; color: var(--brown);
+    border-color: var(--gold-light);
+    box-shadow: inset 3px 0 0 var(--gold);
+  }
+  .nav-item .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--line-strong); flex-shrink: 0;
+  }
+  .nav-item.active .dot { background: var(--gold-dark); }
+
+  main.content { padding: 26px; overflow-y: auto; }
+
+  .page-head { margin-bottom: 22px; }
+  .page-head h1 { font-size: 22px; font-weight: 800; color: var(--brown); letter-spacing: -.01em; margin-bottom: 4px; }
+  .page-head p { color: var(--muted); font-size: 13px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ======================= CARDS & TABLES ======================= */
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px;
+    box-shadow: var(--shadow-sm); margin-bottom: 18px;
+  }
+  .card h2 { font-size: 15px; font-weight: 800; color: var(--brown);
+    letter-spacing: -.01em; margin-bottom: 6px; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
+
+  .grid { display: grid; gap: 12px; }
+  .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  .check {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+    font-size: 12.5px; background: var(--surface-2); cursor: pointer;
+  }
+  .check input { width: auto; }
+
+  .table-wrap { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { background: var(--surface-2); font-weight: 700; color: var(--brown);
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fbfaf7; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .badge.info { background: #e0e7ff; color: #1e3a8a; }
+  .badge.ok { background: #d1fae5; color: #065f46; }
+  .badge.warn { background: #fef3c7; color: #92400e; }
+  .badge.err { background: #fee2e2; color: #991b1b; }
+  .badge.gold { background: var(--gold-light); color: var(--brown-dark); border: 1px solid var(--gold); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--muted);
+    font-size: 13px; font-style: italic; }
+
+  .portal-note { padding: 12px 14px; border-radius: var(--radius-sm);
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
+    margin: 10px 0; font-size: 12.5px; }
+
+  .score-input { width: 64px; padding: 5px 6px; text-align: center; font-size: 13px; }
+  .dmn-select { width: 100%; min-width: 110px; padding: 5px 6px; font-size: 12px; }
+
+  /* ======================= REPORT CARD ======================= */
+  .report { position: relative; overflow: hidden; padding: 24px;
+    border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+  .report .watermark { position: absolute; inset: 0;
+    background-repeat: no-repeat; background-position: center; background-size: 55% auto;
+    opacity: .06; pointer-events: none; z-index: 0; }
+  .report > *:not(.watermark) { position: relative; z-index: 1; }
+  .report-head { text-align: center; padding: 14px 10px 16px;
+    border-bottom: 2px solid var(--gold); margin-bottom: 16px; }
+  .report-head img { max-width: 80px; max-height: 80px; object-fit: contain; margin-bottom: 8px; }
+  .report-head h2 { font-size: 19px; font-weight: 800; }
+  .report-head .motto { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .report-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 14px; font-size: 13px; }
+  .report-meta label { margin-bottom: 2px; }
+  .report-meta strong { display: block; font-size: 14px; color: var(--ink); }
+  .domain-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;
+    margin-top: 14px; padding: 12px; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 12.5px; }
+  .domain-row div { text-align: center; }
+  .domain-row strong { display: block; font-size: 10.5px; color: var(--brown);
+    text-transform: uppercase; margin-bottom: 3px; letter-spacing: .05em; }
+  .principal-block { margin-top: 18px; padding-top: 16px; border-top: 2px solid #2d3748; }
+  .principal-block h5 { font-size: 12px; color: #2d3748; text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 8px; }
+  .principal-block p { font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+  .sig-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; }
+  .sig-cell { text-align: center; flex: 1; }
+  .sig-cell .img { min-height: 50px; display: flex; align-items: flex-end;
+    justify-content: center; margin-bottom: 4px; }
+  .sig-cell .img img { max-height: 60px; max-width: 160px; object-fit: contain; }
+  .sig-cell .line { border-top: 1px solid #2d3748; padding-top: 4px;
+    font-weight: 700; font-size: 13px; }
+  .sig-cell .label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .chat-message { padding: 10px 14px; border-radius: var(--radius-sm);
+    margin: 8px 0; font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
+  .chat-message.user { background: #eff6ff; margin-left: 22px; }
+  .chat-message.ai { background: #f0fdf4; margin-right: 22px; }
+
+  .toast {
+    position: fixed; bottom: 22px; right: 22px;
+    background: var(--brown-dark); color: #fff;
+    padding: 13px 20px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; max-width: 340px;
+    opacity: 0; transform: translateY(12px);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none; z-index: 1000;
+    box-shadow: var(--shadow-lg); border-left: 4px solid var(--gold);
+  }
+  .toast.on { opacity: 1; transform: translateY(0); }
+  .toast.ok { background: var(--ok); border-left-color: var(--gold); }
+  .toast.err { background: var(--err); border-left-color: #fca5a5; }
+
+  /* ======================= RESPONSIVE ======================= */
+  @media (max-width: 900px) {
+    .body-layout { grid-template-columns: 1fr; }
+    .sidebar {
+      display: flex; overflow-x: auto; padding: 8px 12px;
+      border-right: none; border-bottom: 1px solid var(--line);
+      gap: 4px;
+    }
+    .sidebar .group { display: flex; gap: 4px; margin: 0; }
+    .sidebar .group-title { display: none; }
+    .nav-item { white-space: nowrap; padding: 8px 12px; margin: 0; }
+    .nav-item.active { box-shadow: inset 0 -3px 0 var(--gold); }
+  }
+  @media (max-width: 640px) {
+    main.content { padding: 16px; }
+    .topbar { padding: 0 14px; height: 58px; }
+    .topbar .brand-text .tag { display: none; }
+    .topbar .user .who { display: none; }
+    .card { padding: 16px; }
+  }
+  @media print {
+    body { background: #fff; }
+    header, .sidebar, button, .card.toolbar, h1, .page-head { display: none !important; }
+    main.content { padding: 0; }
+    .report { border: none; padding: 0; box-shadow: none; }
+    .report .watermark { opacity: .08 !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .principal-block, .domain-row, .sig-row { page-break-inside: avoid; }
   }
 </style>
 </head>
 <body>
 
-<!-- ================= LOGIN ================= -->
+<!-- ============================================================
+     LOGIN
+     ============================================================ -->
 <div id="loginView" class="login-wrap">
   <div class="login-card">
-    <div class="login-logo">G</div>
-    <h1>Greater Tomorrow Model College</h1>
+    <div class="login-logo" id="loginLogo"><span>G</span></div>
+    <h1>Greater Tomorrow<br>Model College</h1>
     <div class="motto">“Jesus, Our Teacher”</div>
+    <div class="tag">Known for Moral and Academic Excellence</div>
+    <div class="login-divider"></div>
+
     <label>Email or Student ID</label>
-    <input id="loginEmail" placeholder="you@school.com" autocomplete="username">
+    <input id="loginEmail" autocomplete="username" placeholder="you@school.com">
     <label>Password</label>
-    <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button id="loginBtn" onclick="doLogin()">Sign In</button>
+    <input id="loginPassword" type="password" autocomplete="current-password"
+      placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="primary-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
     <div id="loginErr" class="login-err"></div>
+    <div class="login-footer">
+      Greater Tomorrow Model College Ado
+      <span class="credit">Created and designed by Veehicee</span>
+    </div>
   </div>
 </div>
 
-<!-- ================= APP ================= -->
-<div id="appView" style="display:none;min-height:100vh;flex-direction:column">
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div id="appView" class="app-layout" style="display:none">
   <header class="topbar">
     <div class="brand">
-      <div class="logo-mini">G</div>
+      <div class="brand-logo" id="topLogo"><span>G</span></div>
       <div class="brand-text">
         <div class="name">GREATER TOMORROW MODEL COLLEGE</div>
         <div class="tag" id="roleTag">Jesus, Our Teacher</div>
@@ -161,19 +407,27 @@
         <div class="uname" id="userLabel"></div>
         <div class="urole" id="userRole"></div>
       </div>
-      <button class="btn sec sm" onclick="logout()">Logout</button>
+      <button class="sec sm" onclick="logout()">Logout</button>
     </div>
   </header>
-  <main id="main"></main>
+
+  <div class="body-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content" id="main"></main>
+  </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <script>
-/* ================= CONFIG ================= */
-const API = 'https://script.google.com/macros/s/AKfycbwLPGtBMs9BqxqRIOge5qiGTX_Vha1VxOxXfdKz0SDX62Nru5cdKzNNkipii9zpiayN/exec';
+/* ============================================================
+   CONFIG — new deployment
+   ============================================================ */
+const API = 'https://script.google.com/macros/s/AKfycbyW6Jy16aXU8Ix4GKIHwyBavO1Os3jDj6mE-rSLslz-RtpzTBXG0a9mjE1GVItczsOt/exec';
 
-/* ================= SESSION ================= */
+/* ============================================================
+   SESSION
+   ============================================================ */
 const S = {
   token: localStorage.getItem('gs_token') || '',
   user: JSON.parse(localStorage.getItem('gs_user') || 'null'),
@@ -181,31 +435,35 @@ const S = {
 };
 
 async function api(action, payload = {}) {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(Object.assign({ action, token: S.token }, payload)),
-    redirect: 'follow'
-  });
+  let res;
+  try {
+    res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action, token: S.token }, payload)),
+      redirect: 'follow'
+    });
+  } catch (e) { throw new Error('Network error — check internet or API URL'); }
+
   const raw = await res.text();
   let json;
   try { json = JSON.parse(raw); } catch (e) {
     throw new Error('Non-JSON (' + res.status + '): ' + raw.slice(0, 180));
   }
   if (!json || json.success !== true) {
-    if (/session/i.test((json && json.error) || '')) logout();
-    if (/^unknown action/i.test((json && json.error) || '')) {
-      throw new Error('Deployment is stale. Redeploy. Detail: ' + json.error);
-    }
-    throw new Error((json && json.error) || 'Request failed');
+    const msg = (json && json.error) || 'Request failed';
+    if (/session/i.test(msg)) logout();
+    if (/^unknown action/i.test(msg))
+      throw new Error('Deployment is stale. Redeploy Apps Script and confirm API URL.');
+    throw new Error(msg);
   }
   return json.data;
 }
 
-function saveSession(token, user) {
-  S.token = token; S.user = user;
-  localStorage.setItem('gs_token', token);
-  localStorage.setItem('gs_user', JSON.stringify(user));
+function saveSession(t, u) {
+  S.token = t; S.user = u;
+  localStorage.setItem('gs_token', t);
+  localStorage.setItem('gs_user', JSON.stringify(u));
 }
 function logout() {
   localStorage.removeItem('gs_token');
@@ -215,13 +473,11 @@ function logout() {
   document.getElementById('appView').style.display = 'none';
 }
 
-/* ================= HELPERS ================= */
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-function q(id) { return document.getElementById(id); }
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function q(id){ return document.getElementById(id); }
 function toast(msg, kind) {
   const el = q('toast');
   el.textContent = msg;
@@ -247,7 +503,41 @@ async function loadSubjects(className) {
   return subs;
 }
 
-/* ================= LOGIN ================= */
+/* ============================================================
+   DOMAIN ITEMS
+   ============================================================ */
+const AFFECTIVE_ITEMS = [
+  ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
+  ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
+  ['obedience','Obedience'],['neatness','Neatness'],['responsibility','Responsibility'],['self_control','Self-control']
+];
+const PSYCHOMOTOR_ITEMS = [
+  ['handwriting','Handwriting'],['drawing','Drawing and painting'],
+  ['handwork','Handwork / practical skills'],['sports','Sports and physical activities'],
+  ['coordination','Coordination and dexterity'],['tools','Use of tools and equipment']
+];
+const DMN_RATINGS = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
+
+/* ============================================================
+   IMAGE FALLBACK
+   ============================================================ */
+function applyLogoFallback() {
+  const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--login-logo-image').trim();
+  if (!cssBg || cssBg === 'none') return;
+  ['loginLogo', 'topLogo'].forEach(id => {
+    const el = q(id);
+    if (!el) return;
+    const probe = new Image();
+    const url = cssBg.replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'');
+    probe.onload = () => el.classList.add('has-image');
+    probe.onerror = () => el.classList.remove('has-image');
+    probe.src = url;
+  });
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
 async function doLogin() {
   const email = q('loginEmail').value.trim();
   const password = q('loginPassword').value;
@@ -259,34 +549,30 @@ async function doLogin() {
   try {
     try {
       const r = await api('login', { email, password });
-      saveSession(r.token, r.user);
-      boot();
-      return;
+      saveSession(r.token, r.user); boot(); return;
     } catch (e) { staffErr = e; }
     try {
       const r = await api('parentLogin', { email, password });
-      saveSession(r.token, r.user);
-      boot();
-      return;
+      saveSession(r.token, r.user); boot(); return;
     } catch (e2) {
       err.textContent = (staffErr && staffErr.message) || e2.message;
     }
-  } finally {
-    btn.disabled = false; btn.textContent = 'Sign In';
-  }
+  } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
-/* ================= BOOT ================= */
+/* ============================================================
+   BOOT
+   ============================================================ */
 function boot() {
   if (!S.token || !S.user) { logout(); return; }
   q('loginView').style.display = 'none';
-  const av = q('appView');
-  av.style.display = 'flex';
+  q('appView').style.display = 'flex';
   q('userLabel').textContent = S.user.name || S.user.email;
   q('userRole').textContent = roleList().map(r => ({
-    admin:'Administrator', class_teacher:'Class Teacher',
-    subject_teacher:'Subject Teacher', student:'Student', parent:'Parent'
+    admin:'Administrator', class_teacher:'Class Teacher', subject_teacher:'Subject Teacher',
+    student:'Student', parent:'Parent'
   })[r] || r).join(' · ');
+  applyLogoFallback();
 
   if (hasRole('admin')) renderAdmin();
   else if (hasRole('class_teacher')) renderClassTeacher();
@@ -296,30 +582,30 @@ function boot() {
   else toast('Unknown role: ' + S.user.role, 'err');
 }
 
-/* ================= DOMAIN ITEM DEFINITIONS ================= */
-const AFFECTIVE_ITEMS = [
-  ['punctuality', 'Punctuality'],
-  ['attendance', 'Attendance'],
-  ['honesty', 'Honesty'],
-  ['cooperation', 'Cooperation'],
-  ['leadership', 'Leadership'],
-  ['club_participation', 'Club participation'],
-  ['obedience', 'Obedience'],
-  ['neatness', 'Neatness'],
-  ['responsibility', 'Responsibility'],
-  ['self_control', 'Self-control']
-];
-const PSYCHOMOTOR_ITEMS = [
-  ['handwriting', 'Handwriting'],
-  ['drawing', 'Drawing and painting'],
-  ['handwork', 'Handwork / practical skills'],
-  ['sports', 'Sports and physical activities'],
-  ['coordination', 'Coordination and dexterity'],
-  ['tools', 'Use of tools and equipment']
-];
-const DMN_RATINGS = { 5: 'Excellent', 4: 'Very Good', 3: 'Good', 2: 'Fair', 1: 'Needs Improvement' };
+/* ============================================================
+   SIDEBAR + NAV
+   ============================================================ */
+function buildNav(items, defaultTab) {
+  const sidebar = q('sidebar');
+  sidebar.innerHTML = items.map(g => `
+    <div class="group">
+      ${g.title ? `<div class="group-title">${esc(g.title)}</div>` : ''}
+      ${g.tabs.map(t => `<div class="nav-item" data-tab="${t.id}" onclick="setNav('${t.id}')">
+        <span class="dot"></span><span>${esc(t.label)}</span>
+      </div>`).join('')}
+    </div>`).join('');
+  setNav(defaultTab);
+}
+function setNav(tabId) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tabId));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tabId));
+  const nav = document.querySelector('.nav-item[data-tab="' + tabId + '"]');
+  if (nav && nav.dataset.onload) try { window[nav.dataset.onload](); } catch (e) {}
+}
 
-/* ================= DOMAIN EDITOR (shared by admin & class teacher) ================= */
+/* ============================================================
+   DOMAIN EDITOR
+   ============================================================ */
 let DMN_KIND = 'affective';
 
 function domainEditorHtml() {
@@ -327,17 +613,17 @@ function domainEditorHtml() {
     <div class="card">
       <h2>Affective &amp; Psychomotor Domains</h2>
       <div class="sub">Rate every item 1–5 per student, per term, per academic year. Ratings save as you change them.</div>
-      <div class="grid">
+      <div class="grid cols-4">
         <div><label>Class</label><select id="dmnClass"></select></div>
         <div><label>Term</label><select id="dmnTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
         <div><label>Academic Year</label><input id="dmnYear" value="2026/2027"></div>
-        <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="reloadDomainEditor()">Load</button></div>
+        <div style="display:flex;align-items:flex-end"><button class="blue" onclick="reloadDomainEditor()">Load</button></div>
       </div>
     </div>
     <div class="card">
-      <div class="tabs" id="dmnKindTabs" style="margin-bottom:12px">
-        <div class="tab active" data-kind="affective" onclick="switchDomainKind('affective')">Affective Domain</div>
-        <div class="tab" data-kind="psychomotor" onclick="switchDomainKind('psychomotor')">Psychomotor Domain</div>
+      <div class="row" style="gap:6px;margin-bottom:14px;border-bottom:2px solid var(--line);padding-bottom:8px">
+        <button class="sec sm" data-kind="affective" onclick="switchDomainKind('affective')" id="tabAffBtn">Affective Domain</button>
+        <button class="sec sm" data-kind="psychomotor" onclick="switchDomainKind('psychomotor')" id="tabPsyBtn">Psychomotor Domain</button>
       </div>
       <div id="domainEditorBox"><div class="empty">Load a class and term.</div></div>
     </div>`;
@@ -345,57 +631,50 @@ function domainEditorHtml() {
 
 function switchDomainKind(kind) {
   DMN_KIND = kind;
-  document.querySelectorAll('#dmnKindTabs .tab').forEach(t => t.classList.toggle('active', t.dataset.kind === kind));
+  q('tabAffBtn').className = 'sm ' + (kind === 'affective' ? 'blue' : 'sec');
+  q('tabPsyBtn').className = 'sm ' + (kind === 'psychomotor' ? 'blue' : 'sec');
   reloadDomainEditor();
 }
 
 async function initDomainSelector() {
   const classes = await loadClasses();
   const sel = q('dmnClass');
-  if (!sel.dataset.filled) {
-    sel.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
-    sel.dataset.filled = '1';
-    // Class teachers are locked to their own class
-    if (!hasRole('admin') && S.user.class) {
-      sel.value = S.user.class;
-      sel.disabled = true;
-    }
-  }
+  if (!sel || sel.dataset.filled) return;
+  sel.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
+  sel.dataset.filled = '1';
+  if (!hasRole('admin') && S.user.class) { sel.value = S.user.class; sel.disabled = true; }
 }
 
 async function reloadDomainEditor() {
   await initDomainSelector();
   const className = hasRole('admin') ? q('dmnClass').value : S.user.class;
   const term = q('dmnTerm').value;
-  const academicYear = q('dmnYear').value.trim();
+  const year = q('dmnYear').value.trim();
   const box = q('domainEditorBox');
-  if (!className || !term || !academicYear) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
+  if (!className || !term || !year) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
   box.innerHTML = '<div class="empty">Loading…</div>';
 
   try {
     const [students, existing] = await Promise.all([
       api('getStudents', { className }),
-      api('getDomainAssessments', { kind: DMN_KIND, className, term, academicYear })
+      api('getDomainAssessments', { kind: DMN_KIND, className, term, academicYear: year })
     ]);
-    if (!students.length) { box.innerHTML = '<div class="empty">No students in this class.</div>'; return; }
-
-    const byStudent = {};
-    (existing || []).forEach(r => { byStudent[r.student_id] = r; });
-
+    if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
+    const byStudent = {}; (existing || []).forEach(r => { byStudent[r.student_id] = r; });
     const items = DMN_KIND === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
 
-    const headerHtml = `<th style="min-width:170px">Student</th>` +
-      items.map(([key, label]) => `<th style="text-align:center;min-width:120px">${esc(label)}</th>`).join('');
+    const head = `<th style="min-width:170px">Student</th>` +
+      items.map(([k, l]) => `<th style="text-align:center;min-width:110px">${esc(l)}</th>`).join('');
 
-    const rowsHtml = students.map(st => {
+    const rows = students.map(st => {
       const row = byStudent[st.student_id] || {};
-      const cells = items.map(([key]) => {
-        const val = row[key];
+      const cells = items.map(([k]) => {
+        const v = row[k];
         const opts = ['',1,2,3,4,5].map(n =>
-          `<option value="${n}" ${String(val || '') === String(n) ? 'selected' : ''}>${n === '' ? '—' : n + ' · ' + DMN_RATINGS[n]}</option>`
+          `<option value="${n}" ${String(v || '') === String(n) ? 'selected' : ''}>${n === '' ? '—' : n + ' · ' + DMN_RATINGS[n]}</option>`
         ).join('');
         return `<td style="text-align:center">
-          <select class="dmn-select" data-student="${esc(st.student_id)}" data-item="${key}">${opts}</select>
+          <select class="dmn-select" data-student="${esc(st.student_id)}" data-item="${k}">${opts}</select>
         </td>`;
       }).join('');
       return `<tr>
@@ -407,64 +686,50 @@ async function reloadDomainEditor() {
     box.innerHTML = `
       <div style="overflow-x:auto">
         <table>
-          <thead><tr>${headerHtml}</tr></thead>
-          <tbody>${rowsHtml}</tbody>
+          <thead><tr>${head}</tr></thead>
+          <tbody>${rows}</tbody>
         </table>
       </div>
-      <p class="portal-note" style="margin-top:12px">
+      <p class="portal-note" style="margin-top:14px">
         Ratings: <strong>5</strong> Excellent · <strong>4</strong> Very Good · <strong>3</strong> Good · <strong>2</strong> Fair · <strong>1</strong> Needs Improvement.
         Each change saves immediately.
       </p>`;
 
     box.querySelectorAll('select.dmn-select').forEach(sel => {
-      sel.addEventListener('change', () => saveDomainRating(sel, className, term, academicYear));
+      sel.addEventListener('change', () => saveDomainRating(sel, className, term, year));
     });
-  } catch (e) {
-    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
-  }
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-async function saveDomainRating(sel, className, term, academicYear) {
-  const studentId = sel.dataset.student;
-  const item = sel.dataset.item;
-  const value = sel.value;
+async function saveDomainRating(sel, className, term, year) {
+  const studentId = sel.dataset.student, item = sel.dataset.item, value = sel.value;
   sel.style.background = '#fffbea';
   try {
-    await api('saveDomainAssessment', { kind: DMN_KIND, className, term, academicYear, studentId, item, value });
+    await api('saveDomainAssessment', { kind: DMN_KIND, className, term, academicYear: year, studentId, item, value });
     sel.style.background = '#f0fdf4';
     setTimeout(() => { sel.style.background = ''; }, 800);
-  } catch (e) {
-    sel.style.background = '#fef2f2';
-    toast('Save failed: ' + e.message, 'err');
-  }
+  } catch (e) { sel.style.background = '#fef2f2'; toast('Save failed: ' + e.message, 'err'); }
 }
 
-/* ================= ADMIN ================= */
+/* ============================================================
+   ADMIN
+   ============================================================ */
 async function renderAdmin() {
   q('roleTag').textContent = 'Administrator · Jesus, Our Teacher';
-  const c = q('main');
-  c.innerHTML = `
-    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, domains, publishing, principal remarks and the report template.</p></div>
-    <div class="tabs" id="adminTabs">
-      <div class="tab active" data-tab="teachers" onclick="showTab('adminTabs','teachers')">Teachers</div>
-      <div class="tab" data-tab="dmn" onclick="showTab('adminTabs','dmn'); reloadDomainEditor();">Affective &amp; Psychomotor</div>
-      <div class="tab" data-tab="publish" onclick="showTab('adminTabs','publish')">Publish</div>
-      <div class="tab" data-tab="remarks" onclick="showTab('adminTabs','remarks'); loadRemarksList();">Principal Remarks</div>
-      <div class="tab" data-tab="template" onclick="showTab('adminTabs','template'); loadTemplate();">Report Template</div>
-      <div class="tab" data-tab="parents" onclick="showTab('adminTabs','parents'); loadParentAccounts();">Parent Portal</div>
-    </div>
 
-    <div class="section active" data-tab="teachers">
+  q('main').innerHTML = `
+    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, domains, publishing, remarks, and the report template.</p></div>
+    <div class="panel active" data-panel="teachers">
       <div class="card">
         <h2>Create Teacher</h2>
         <div class="sub">A teacher may hold multiple roles (e.g. Class Teacher + Subject Teacher).</div>
-        <div class="grid">
+        <div class="grid cols-4">
           <div><label>Full Name</label><input id="tName"></div>
           <div><label>Email</label><input id="tEmail" type="email"></div>
           <div><label>Password</label><input id="tPass"></div>
           <div><label>Class (for class teachers)</label><select id="tClass"><option value="">— none —</option></select></div>
         </div>
-        <div class="grid" style="margin-top:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div class="grid cols-3" style="margin-top:12px">
           <label class="check"><input type="checkbox" id="roleCT"> Class Teacher</label>
           <label class="check"><input type="checkbox" id="roleST"> Subject Teacher</label>
           <label class="check"><input type="checkbox" id="roleAD"> Administrator</label>
@@ -473,53 +738,69 @@ async function renderAdmin() {
           <label>Subjects (Ctrl/Cmd to multi-select)</label>
           <select id="tSubjects" multiple size="6"></select>
         </div>
-        <div class="row" style="margin-top:14px"><button class="btn ok" onclick="createTeacher()">Create Teacher</button></div>
+        <div class="row" style="margin-top:14px"><button class="ok" onclick="createTeacher()">Create Teacher</button></div>
       </div>
       <div class="card">
         <h2>All Teachers</h2>
-        <button class="btn sec sm" onclick="loadTeachers()">Refresh</button>
+        <button class="sec sm" onclick="loadTeachers()">Refresh</button>
         <div id="teachersBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
 
-    <div class="section" data-tab="dmn">
-      ${domainEditorHtml()}
+    <div class="panel" data-panel="submissions">
+      <div class="card">
+        <h2>Score Submissions</h2>
+        <div class="sub">All submissions with lock status. Unlock when a teacher needs to edit.</div>
+        <div class="row" style="margin-bottom:12px">
+          <select id="subFilter" onchange="loadSubmissions()" style="max-width:200px">
+            <option value="">All statuses</option>
+            <option value="locked">Locked only</option>
+            <option value="unlocked">Unlocked only</option>
+          </select>
+          <button class="sec sm" onclick="loadSubmissions()">Refresh</button>
+        </div>
+        <div id="submissionsBox"><div class="empty">Loading…</div></div>
+      </div>
     </div>
 
-    <div class="section" data-tab="publish">
+    <div class="panel" data-panel="domains">${domainEditorHtml()}</div>
+
+    <div class="panel" data-panel="publish">
       <div class="card">
         <h2>Publish Whole Class</h2>
-        <div class="grid">
+        <div class="sub">Publishing makes results visible to parents for the selected term/year.</div>
+        <div class="grid cols-4">
           <div><label>Class</label><select id="pubClass"></select></div>
           <div><label>Term</label><select id="pubTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
           <div><label>Academic Year</label><input id="pubYear" value="2026/2027"></div>
         </div>
         <div class="row" style="margin-top:14px">
-          <button class="btn ok" onclick="publishClass(true)">Publish Class</button>
-          <button class="btn danger" onclick="publishClass(false)">Unpublish Class</button>
+          <button class="ok" onclick="publishClass(true)">Publish Class</button>
+          <button class="danger" onclick="publishClass(false)">Unpublish Class</button>
         </div>
-        <div id="pubStatus" class="portal-note">Choose class, term and year, then publish.</div>
+        <div id="pubStatus" class="portal-note">Choose class, term and year.</div>
       </div>
     </div>
 
-    <div class="section" data-tab="remarks">
+    <div class="panel" data-panel="remarks">
       <div class="card">
         <h2>Principal Remarks</h2>
-        <div class="grid">
+        <div class="sub">Auto-generated from each student's overall percentage. Admin can override.</div>
+        <div class="grid cols-4">
           <div><label>Class</label><select id="remClass"></select></div>
           <div><label>Term</label><select id="remTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
           <div><label>Academic Year</label><input id="remYear" value="2026/2027"></div>
-          <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="loadRemarksList()">Load</button></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadRemarksList()">Load</button></div>
         </div>
-        <div class="row" style="margin-top:12px"><button class="btn ok" onclick="generateRemarksForClass()">Generate for Whole Class</button></div>
+        <div class="row" style="margin-top:12px"><button class="ok" onclick="generateRemarksForClass()">Generate for Whole Class</button></div>
       </div>
       <div class="card" id="remCard"><div class="empty">Load a class.</div></div>
     </div>
 
-    <div class="section" data-tab="template">
+    <div class="panel" data-panel="template">
       <div class="card">
         <h2>Report Template</h2>
-        <div class="grid">
+        <div class="grid cols-3">
           <div><label>School Name</label><input id="tplSchoolName"></div>
           <div><label>School Motto</label><input id="tplMotto"></div>
           <div><label>Logo URL (https)</label><input id="tplLogo"></div>
@@ -529,8 +810,8 @@ async function renderAdmin() {
           <div><label>Primary Colour</label><input id="tplPrimary" type="color" value="#1e3a8a"></div>
           <div><label>Secondary Colour</label><input id="tplSecondary" type="color" value="#ffffff"></div>
         </div>
-        <h3 style="margin:14px 0 8px;font-size:12px;color:var(--brown);text-transform:uppercase">Show on report card</h3>
-        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+        <h3 style="margin:16px 0 10px;font-size:12px;color:var(--brown);text-transform:uppercase">Show on report card</h3>
+        <div class="grid cols-3">
           <label class="check"><input type="checkbox" id="tplShowTests"> Test scores</label>
           <label class="check"><input type="checkbox" id="tplShowExam"> Exam score</label>
           <label class="check"><input type="checkbox" id="tplShowTotals"> Subject totals</label>
@@ -541,39 +822,63 @@ async function renderAdmin() {
           <label class="check"><input type="checkbox" id="tplShowPsychomotor"> Psychomotor</label>
           <label class="check"><input type="checkbox" id="tplShowAverage"> Overall average</label>
         </div>
-        <div class="row" style="margin-top:14px"><button class="btn ok" onclick="saveTemplate()">Save Template</button></div>
+        <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button></div>
         <div id="tplStatus"></div>
       </div>
     </div>
 
-    <div class="section" data-tab="parents">
+    <div class="panel" data-panel="parents">
       <div class="card">
         <h2>Create Parent Account</h2>
-        <div class="grid">
+        <div class="grid cols-3">
           <div><label>Name</label><input id="parName"></div>
           <div><label>Email</label><input id="parEmail" type="email"></div>
           <div><label>Password (min 6)</label><input id="parPass" type="password"></div>
         </div>
-        <div class="row" style="margin-top:12px"><button class="btn ok" onclick="createParent()">Create Parent</button></div>
+        <div class="row" style="margin-top:12px"><button class="ok" onclick="createParent()">Create Parent</button></div>
       </div>
       <div class="card">
         <h2>Link a Ward</h2>
-        <div class="grid">
+        <div class="grid cols-4">
           <div><label>Parent Email</label><input id="linkEmail" type="email"></div>
           <div><label>Class</label><select id="linkClass" onchange="loadLinkStudents()"></select></div>
           <div><label>Student</label><select id="linkStudent"><option>Select class first</option></select></div>
           <div><label>Relationship</label><select id="linkRel"><option>Parent</option><option>Father</option><option>Mother</option><option>Guardian</option></select></div>
         </div>
-        <div class="row" style="margin-top:12px"><button class="btn ok" onclick="linkWard()">Link Ward</button></div>
+        <div class="row" style="margin-top:12px"><button class="ok" onclick="linkWard()">Link Ward</button></div>
       </div>
       <div class="card">
         <h2>Parent Accounts</h2>
-        <button class="btn sec sm" onclick="loadParentAccounts()">Refresh</button>
+        <button class="sec sm" onclick="loadParentAccounts()">Refresh</button>
         <div id="parentsBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
   `;
 
+  buildNav([
+    { title: 'People', tabs: [
+      { id: 'teachers', label: 'Teachers' },
+      { id: 'parents', label: 'Parent Portal' },
+    ]},
+    { title: 'Academics', tabs: [
+      { id: 'submissions', label: 'Submissions' },
+      { id: 'domains', label: 'Affective & Psychomotor' },
+      { id: 'remarks', label: 'Principal Remarks' },
+    ]},
+    { title: 'Publishing', tabs: [
+      { id: 'publish', label: 'Publish Results' },
+      { id: 'template', label: 'Report Template' },
+    ]},
+  ], 'teachers');
+
+  // Wire the nav → on-load hooks
+  document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
+  document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
+  document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
+  document.querySelector('.nav-item[data-tab="template"]').dataset.onload = 'loadTemplate';
+  document.querySelector('.nav-item[data-tab="parents"]').dataset.onload = 'loadParentAccounts';
+
+  // Populate selectors
   const classes = await loadClasses();
   ['tClass','pubClass','remClass','linkClass'].forEach(id => {
     q(id).innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
@@ -584,19 +889,11 @@ async function renderAdmin() {
   q('roleST').addEventListener('change', () => {
     q('subjectsWrap').style.display = q('roleST').checked ? 'block' : 'none';
   });
-  await initDomainSelector();
+
   await loadTeachers();
 }
 
-function showTab(groupId, tabId) {
-  const group = q(groupId);
-  if (!group) return;
-  group.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
-  const main = group.parentElement;
-  main.querySelectorAll(':scope > .section').forEach(s => s.classList.toggle('active', s.dataset.tab === tabId));
-}
-
-/* ---- admin: teachers ---- */
+/* ---- Admin: teachers ---- */
 async function createTeacher() {
   const name = q('tName').value.trim();
   const email = q('tEmail').value.trim();
@@ -609,8 +906,7 @@ async function createTeacher() {
   if (!name || !email || !password) return toast('Name, email, password required', 'err');
   if (!roles.length) return toast('Pick at least one role', 'err');
   const subjects = roles.indexOf('subject_teacher') !== -1
-    ? Array.from(q('tSubjects').selectedOptions).map(o => o.value).join(',')
-    : '';
+    ? Array.from(q('tSubjects').selectedOptions).map(o => o.value).join(',') : '';
   try {
     await api('createTeacher', { name, email, password, role: roles.join(','), class: cls, subjects });
     toast('Teacher created', 'ok');
@@ -620,19 +916,22 @@ async function createTeacher() {
 }
 
 async function loadTeachers() {
-  const box = q('teachersBox');
+  const box = q('teachersBox'); if (!box) return;
   try {
     const rows = await api('getTeachers');
     if (!rows.length) { box.innerHTML = '<div class="empty">No teachers yet.</div>'; return; }
-    box.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Class</th><th></th></tr></thead>
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Class</th><th></th></tr></thead>
       <tbody>${rows.map(t => `
         <tr>
           <td><strong>${esc(t.name)}</strong></td>
           <td>${esc(t.email)}</td>
-          <td>${(t.roles && t.roles.length ? t.roles : String(t.role).split(',')).map(r => `<span class="badge">${esc(r)}</span>`).join(' ')}</td>
+          <td>${(t.roles && t.roles.length ? t.roles : String(t.role).split(',')).map(r =>
+            `<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
           <td>${esc(t.class || '—')}</td>
-          <td>${t.active === false ? '' : `<button class="btn danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td>
-        </tr>`).join('')}</tbody></table>`;
+          <td>${t.active === false ? '' :
+            `<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td>
+        </tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
@@ -642,15 +941,53 @@ async function deleteTeacher(email) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- admin: publish ---- */
+/* ---- Admin: submissions ---- */
+async function loadSubmissions() {
+  const box = q('submissionsBox'); if (!box) return;
+  const status = q('subFilter') ? q('subFilter').value : '';
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await api('getSubmissions', status ? { status } : {});
+    if (!rows.length) { box.innerHTML = '<div class="empty">No submissions.</div>'; return; }
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Term</th><th>Status</th><th>When</th><th></th></tr></thead>
+      <tbody>${rows.map(r => {
+        const when = r.timestamp ? new Date(r.timestamp).toLocaleString() : '—';
+        const locked = r.status === 'locked';
+        const isDomains = r.subject === '__DOMAINS__';
+        const subjectLabel = isDomains ? 'Domains (behaviour)' : r.subject;
+        return `<tr>
+          <td>${esc(r.teacher_email)}</td>
+          <td>${esc(r.class)}</td>
+          <td><strong>${esc(subjectLabel)}</strong></td>
+          <td>${esc(r.term)}</td>
+          <td><span class="badge ${locked ? 'warn' : 'ok'}">${esc(r.status)}</span></td>
+          <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
+          <td>${locked ? `<button class="blue sm"
+            onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}',${isDomains})">Unlock</button>` : ''}</td>
+        </tr>`;
+      }).join('')}</tbody></table></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function unlockSubmission(teacherEmail, className, subject, term, isDomains) {
+  const label = isDomains ? `Domains / ${className} / ${term}` : `${subject} / ${className} / ${term}`;
+  if (!confirm(`Unlock ${label}?`)) return;
+  try {
+    if (isDomains) await api('unlockDomains', { teacherEmail, className, term });
+    else await api('unlockScores', { teacherEmail, className, subject, term });
+    toast('Unlocked', 'ok'); loadSubmissions();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---- Admin: publish ---- */
 async function publishClass(publish) {
-  const className = q('pubClass').value, term = q('pubTerm').value;
-  const academicYear = q('pubYear').value.trim();
-  if (!confirm(`${publish ? 'Publish' : 'Unpublish'} the whole of ${className} / ${term} / ${academicYear}?`)) return;
+  const className = q('pubClass').value, term = q('pubTerm').value, year = q('pubYear').value.trim();
+  if (!confirm(`${publish ? 'Publish' : 'Unpublish'} ${className} / ${term} / ${year}?`)) return;
   try {
     const r = publish
-      ? await api('adminPublishClass', { className, term, academicYear })
-      : await api('adminUnpublishClass', { className, term, academicYear });
+      ? await api('adminPublishClass', { className, term, academicYear: year })
+      : await api('adminUnpublishClass', { className, term, academicYear: year });
     q('pubStatus').textContent = publish
       ? `Published: ${r.created} new, ${r.updated} updated, ${r.already} already (of ${r.total}).`
       : `Unpublished: ${r.changed} result(s).`;
@@ -658,40 +995,40 @@ async function publishClass(publish) {
   } catch (e) { q('pubStatus').textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
-/* ---- admin: principal remarks ---- */
+/* ---- Admin: principal remarks ---- */
 async function loadRemarksList() {
-  const className = q('remClass').value, term = q('remTerm').value;
-  const academicYear = q('remYear').value.trim();
-  const box = q('remCard');
+  const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
+  const box = q('remCard'); if (!box) return;
   box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const students = await api('getStudents', { className });
     if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
     const info = await Promise.all(students.map(s =>
-      api('adminPreviewPrincipalRemark', { className, studentId: s.student_id, term, academicYear })
+      api('adminPreviewPrincipalRemark', { className, studentId: s.student_id, term, academicYear: year })
         .catch(err => ({ error: err.message }))
     ));
-    box.innerHTML = `<table><thead><tr><th>Student</th><th>Overall %</th><th>Source</th><th>Remark</th></tr></thead>
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Overall %</th><th>Source</th><th>Remark</th></tr></thead>
       <tbody>${info.map((r, i) => `
         <tr data-student="${esc(students[i].student_id)}">
           <td><strong>${esc(students[i].name)}</strong></td>
           <td>${r.error ? '—' : (r.overallPercent != null ? r.overallPercent + '%' : '—')}</td>
-          <td>${r.error ? `<span class="badge err">${esc(r.error)}</span>` : `<span class="badge ${r.source === 'override' ? 'warn' : ''}">${esc(r.source)}</span>`}</td>
+          <td>${r.error ? `<span class="badge err">${esc(r.error)}</span>` :
+            `<span class="badge ${r.source === 'override' ? 'warn' : 'info'}">${esc(r.source)}</span>`}</td>
           <td><textarea rows="2" style="width:100%">${esc(r.remark || '')}</textarea></td>
-        </tr>`).join('')}</tbody></table>
-      <div class="row" style="margin-top:12px"><button class="btn ok" onclick="saveAllRemarks()">Save All</button></div>`;
+        </tr>`).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="ok" onclick="saveAllRemarks()">Save All</button></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
 async function saveAllRemarks() {
   const rows = document.querySelectorAll('#remCard tbody tr');
-  const className = q('remClass').value, term = q('remTerm').value;
-  const academicYear = q('remYear').value.trim();
+  const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
   let ok = 0, fail = 0;
   for (const tr of rows) {
     const studentId = tr.dataset.student;
     const remark = tr.querySelector('textarea').value.trim();
-    try { await api('adminSetPrincipalRemark', { className, studentId, term, academicYear, remark }); ok++; }
+    try { await api('adminSetPrincipalRemark', { className, studentId, term, academicYear: year, remark }); ok++; }
     catch (e) { fail++; }
   }
   toast(`Saved ${ok}${fail ? ' · failed ' + fail : ''}`, fail ? 'err' : 'ok');
@@ -699,22 +1036,21 @@ async function saveAllRemarks() {
 }
 
 async function generateRemarksForClass() {
-  const className = q('remClass').value, term = q('remTerm').value;
-  const academicYear = q('remYear').value.trim();
+  const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
   if (!confirm(`Generate principal remarks for ${className} / ${term}?`)) return;
   try {
-    const r = await api('adminGeneratePrincipalRemarksForClass', { className, term, academicYear });
+    const r = await api('adminGeneratePrincipalRemarksForClass', { className, term, academicYear: year });
     toast(`Created ${r.created} · skipped ${r.skipped} · no-score ${r.noScore}`, 'ok');
     loadRemarksList();
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- admin: template ---- */
+/* ---- Admin: template ---- */
 async function loadTemplate() {
   try {
     const t = await api('adminGetReportTemplate');
-    const sv = (id, v) => { const e = q(id); if (e) e.value = v == null ? '' : v; };
-    const sc = (id, v) => { const e = q(id); if (e) e.checked = v === true; };
+    const sv = (id, v) => { const el = q(id); if (el) el.value = v == null ? '' : v; };
+    const sc = (id, v) => { const el = q(id); if (el) el.checked = v === true; };
     sv('tplSchoolName', t.schoolName || 'Greater Tomorrow Model Schools');
     sv('tplMotto', t.schoolMotto || 'Jesus, our Teacher');
     sv('tplLogo', t.logoUrl || '');
@@ -732,7 +1068,8 @@ async function loadTemplate() {
     sc('tplShowAffective', t.showAffective !== false);
     sc('tplShowPsychomotor', t.showPsychomotor !== false);
     sc('tplShowAverage', t.showAnnualAverage !== false);
-  } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
+  } catch (e) { q('tplStatus').innerHTML =
+    `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
 
 async function saveTemplate() {
@@ -757,12 +1094,15 @@ async function saveTemplate() {
   };
   try {
     await api('adminSaveReportTemplate', { template });
-    q('tplStatus').innerHTML = '<div class="portal-note" style="background:#f0fdf4;border-color:#a7f3d0;color:#065f46">Template saved.</div>';
+    q('tplStatus').innerHTML = `<div class="portal-note" style="background:#f0fdf4;border-color:#a7f3d0;color:#065f46">Template saved.</div>`;
     toast('Template saved', 'ok');
-  } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; toast(e.message, 'err'); }
+  } catch (e) {
+    q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`;
+    toast(e.message, 'err');
+  }
 }
 
-/* ---- admin: parents ---- */
+/* ---- Admin: parents ---- */
 async function createParent() {
   const name = q('parName').value.trim(), email = q('parEmail').value.trim(), password = q('parPass').value;
   if (!name || !email || password.length < 6) return toast('Name, email, password ≥ 6 required', 'err');
@@ -795,20 +1135,22 @@ async function linkWard() {
 }
 
 async function loadParentAccounts() {
-  const box = q('parentsBox');
+  const box = q('parentsBox'); if (!box) return;
   try {
     const list = await api('adminGetParentAccounts');
     if (!list.length) { box.innerHTML = '<div class="empty">No parent accounts.</div>'; return; }
-    box.innerHTML = `<table><thead><tr><th>Name</th><th>Email</th><th>Password</th><th>Wards</th></tr></thead>
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Password</th><th>Wards</th></tr></thead>
       <tbody>${list.map(a => `
         <tr>
           <td><strong>${esc(a.name)}</strong></td>
           <td>${esc(a.email)}</td>
           <td style="font-family:ui-monospace,monospace;font-size:11px">${esc(a.password || '')}</td>
           <td>${(a.wards || []).length
-            ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)} <button class="btn danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('')
+            ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)}
+                <button class="danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('')
             : '<span style="color:var(--muted)">None</span>'}</td>
-        </tr>`).join('')}</tbody></table>`;
+        </tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
@@ -818,62 +1160,74 @@ async function unlinkWard(email, studentId, className) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ================= CLASS TEACHER ================= */
+/* ============================================================
+   CLASS TEACHER
+   ============================================================ */
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
   const CLASS_NAME = S.user.class;
   if (!CLASS_NAME) { q('main').innerHTML = '<div class="card"><div class="empty">No class assigned. Contact admin.</div></div>'; return; }
 
   q('main').innerHTML = `
-    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage roster, enter scores, rate domains.</p></div>
-    <div class="tabs" id="ctTabs">
-      <div class="tab active" data-tab="students" onclick="showTab('ctTabs','students')">Students</div>
-      <div class="tab" data-tab="scores" onclick="showTab('ctTabs','scores')">Scores</div>
-      <div class="tab" data-tab="dmn" onclick="showTab('ctTabs','dmn'); reloadDomainEditor();">Affective &amp; Psychomotor</div>
-    </div>
-    <div class="section active" data-tab="students">
+    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage your class roster, enter scores, rate domains.</p></div>
+
+    <div class="panel active" data-panel="students">
       <div class="card">
         <h2>Add Students</h2>
         <div class="sub">One per line. Optional ID prefix: <code>STU001, John Doe</code></div>
         <textarea id="bulkNames" style="min-height:120px;font-family:ui-monospace,monospace"></textarea>
-        <div class="row" style="margin-top:10px"><button class="btn ok" onclick="ctAddBulk()">Add All</button></div>
+        <div class="row" style="margin-top:10px"><button class="ok" onclick="ctAddBulk()">Add All</button></div>
       </div>
       <div class="card">
         <h2>Class Roster</h2>
-        <button class="btn sec sm" onclick="ctLoadStudents()">Refresh</button>
+        <button class="sec sm" onclick="ctLoadStudents()">Refresh</button>
         <div id="ctStudents" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
-    <div class="section" data-tab="scores">
+
+    <div class="panel" data-panel="scores">
       <div class="card">
-        <div class="grid">
+        <div class="grid cols-3">
           <div><label>Subject</label><select id="ctSubject"></select></div>
           <div><label>Term</label><select id="ctTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-          <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="ctLoadScores()">Load</button></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="ctLoadScores()">Load</button></div>
         </div>
       </div>
       <div class="card" id="ctScoreCard"><div class="empty">Load a subject and term.</div></div>
     </div>
-    <div class="section" data-tab="dmn">
-      ${domainEditorHtml()}
-    </div>`;
+
+    <div class="panel" data-panel="domains">${domainEditorHtml()}</div>
+  `;
+
+  buildNav([
+    { title: 'My Class', tabs: [
+      { id: 'students', label: 'Students' },
+      { id: 'scores', label: 'Scores' },
+    ]},
+    { title: 'Behaviour', tabs: [
+      { id: 'domains', label: 'Affective & Psychomotor' },
+    ]},
+  ], 'students');
+
+  document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
 
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
   await initDomainSelector();
-  ctLoadStudents();
+  await ctLoadStudents();
 }
 
 async function ctLoadStudents() {
-  const box = q('ctStudents');
+  const box = q('ctStudents'); if (!box) return;
   try {
     const rows = await api('getStudents', { className: S.user.class });
     if (!rows.length) { box.innerHTML = '<div class="empty">No students yet.</div>'; return; }
-    box.innerHTML = `<table><thead><tr><th>ID</th><th>Name</th><th></th></tr></thead>
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th></th></tr></thead>
       <tbody>${rows.map(s => `
         <tr><td style="font-family:ui-monospace;font-size:12px">${esc(s.student_id)}</td>
         <td><strong>${esc(s.name)}</strong></td>
-        <td><button class="btn danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td></tr>`).join('')}</tbody></table>`;
+        <td><button class="danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
@@ -896,8 +1250,7 @@ async function ctRemove(id) {
 
 async function ctLoadScores() {
   const subject = q('ctSubject').value, term = q('ctTerm').value;
-  const box = q('ctScoreCard');
-  box.innerHTML = '<div class="empty">Loading…</div>';
+  const box = q('ctScoreCard'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const [students, scores] = await Promise.all([
       api('getStudents', { className: S.user.class }),
@@ -907,17 +1260,18 @@ async function ctLoadScores() {
     const map = {}; scores.forEach(s => map[s.student_id] = s);
     box.innerHTML = `
       <h2>${esc(subject)} · ${esc(term)}</h2>
-      <table><thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
-      <tbody>${students.map(st => {
-        const sc = map[st.student_id] || {};
-        const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
-        return `<tr data-student="${esc(st.student_id)}">
-          <td><strong>${esc(st.name)}</strong></td>
-          ${['T1','T2','T3','Exam'].map(f => `<td><input class="score-input" type="number" min="0" max="${f==='Exam'?70:10}" data-f="${f}" value="${sc[f] ?? ''}"></td>`).join('')}
-          <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
-        </tr>`;
-      }).join('')}</tbody></table>
-      <div class="row" style="margin-top:12px"><button class="btn ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
+      <div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
+        <tbody>${students.map(st => {
+          const sc = map[st.student_id] || {};
+          const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
+          return `<tr data-student="${esc(st.student_id)}">
+            <td><strong>${esc(st.name)}</strong></td>
+            ${['T1','T2','T3','Exam'].map(f => `<td><input class="score-input" type="number" min="0" max="${f==='Exam'?70:10}" data-f="${f}" value="${sc[f] ?? ''}"></td>`).join('')}
+            <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
     box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => ctSaveCell(inp, subject, term)));
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -926,8 +1280,7 @@ async function ctSaveCell(inp, subject, term) {
   const tr = inp.closest('tr');
   try {
     await api('saveScore', { className: S.user.class, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
-    inp.style.background = '#f0fdf4';
-    setTimeout(() => { inp.style.background = ''; }, 800);
+    inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
     const total = Array.from(tr.querySelectorAll('input')).reduce((a, i) => a + (Number(i.value) || 0), 0);
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast('Save failed: ' + e.message, 'err'); inp.style.background = '#fef2f2'; }
@@ -939,33 +1292,41 @@ async function ctSubmit(subject, term) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ================= SUBJECT TEACHER ================= */
+/* ============================================================
+   SUBJECT TEACHER
+   ============================================================ */
 async function renderSubjectTeacher() {
   q('roleTag').textContent = 'Subject Teacher · Jesus, Our Teacher';
   q('main').innerHTML = `
     <div class="page-head"><h1>Subject Teacher</h1><p>Enter scores for your assigned subjects.</p></div>
-    <div class="tabs" id="stTabs">
-      <div class="tab active" data-tab="entry" onclick="showTab('stTabs','entry')">Score Entry</div>
-      <div class="tab" data-tab="history" onclick="showTab('stTabs','history'); stLoadHistory();">My Submissions</div>
-    </div>
-    <div class="section active" data-tab="entry">
+    <div class="panel active" data-panel="entry">
       <div class="card">
-        <div class="grid">
+        <div class="grid cols-4">
           <div><label>Class</label><select id="stClass" onchange="stFillSubjects()"></select></div>
           <div><label>Subject</label><select id="stSubject"></select></div>
           <div><label>Term</label><select id="stTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-          <div style="display:flex;align-items:flex-end"><button class="btn blue" onclick="stLoadScores()">Load</button></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="stLoadScores()">Load</button></div>
         </div>
       </div>
       <div class="card" id="stScoreCard"><div class="empty">Load a class, subject, term.</div></div>
     </div>
-    <div class="section" data-tab="history">
+    <div class="panel" data-panel="history">
       <div class="card">
         <h2>My Submissions</h2>
-        <button class="btn sec sm" onclick="stLoadHistory()">Refresh</button>
+        <button class="sec sm" onclick="stLoadHistory()">Refresh</button>
         <div id="stHistory" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
-    </div>`;
+    </div>
+  `;
+
+  buildNav([
+    { title: 'Academics', tabs: [
+      { id: 'entry', label: 'Score Entry' },
+      { id: 'history', label: 'My Submissions' },
+    ]},
+  ], 'entry');
+
+  document.querySelector('.nav-item[data-tab="history"]').dataset.onload = 'stLoadHistory';
 
   const classes = await loadClasses();
   q('stClass').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
@@ -985,8 +1346,7 @@ async function stFillSubjects() {
 async function stLoadScores() {
   const className = q('stClass').value, subject = q('stSubject').value, term = q('stTerm').value;
   if (!subject) return toast('No subject', 'err');
-  const box = q('stScoreCard');
-  box.innerHTML = '<div class="empty">Loading…</div>';
+  const box = q('stScoreCard'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const [students, scores] = await Promise.all([
       api('getStudents', { className }),
@@ -996,17 +1356,18 @@ async function stLoadScores() {
     const map = {}; scores.forEach(s => map[s.student_id] = s);
     box.innerHTML = `
       <h2>${esc(subject)} · ${esc(className)} · ${esc(term)}</h2>
-      <table><thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
-      <tbody>${students.map(st => {
-        const sc = map[st.student_id] || {};
-        const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
-        return `<tr data-student="${esc(st.student_id)}">
-          <td><strong>${esc(st.name)}</strong></td>
-          ${['T1','T2','T3','Exam'].map(f => `<td><input class="score-input" type="number" min="0" max="${f==='Exam'?70:10}" data-f="${f}" value="${sc[f] ?? ''}"></td>`).join('')}
-          <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
-        </tr>`;
-      }).join('')}</tbody></table>
-      <div class="row" style="margin-top:12px"><button class="btn ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
+      <div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
+        <tbody>${students.map(st => {
+          const sc = map[st.student_id] || {};
+          const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
+          return `<tr data-student="${esc(st.student_id)}">
+            <td><strong>${esc(st.name)}</strong></td>
+            ${['T1','T2','T3','Exam'].map(f => `<td><input class="score-input" type="number" min="0" max="${f==='Exam'?70:10}" data-f="${f}" value="${sc[f] ?? ''}"></td>`).join('')}
+            <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
     box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => stSaveCell(inp, className, subject, term)));
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -1015,8 +1376,7 @@ async function stSaveCell(inp, className, subject, term) {
   const tr = inp.closest('tr');
   try {
     await api('saveScore', { className, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
-    inp.style.background = '#f0fdf4';
-    setTimeout(() => { inp.style.background = ''; }, 800);
+    inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
     const total = Array.from(tr.querySelectorAll('input')).reduce((a, i) => a + (Number(i.value) || 0), 0);
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast('Save failed: ' + e.message, 'err'); inp.style.background = '#fef2f2'; }
@@ -1029,16 +1389,19 @@ async function stSubmit(className, subject, term) {
 }
 
 async function stLoadHistory() {
-  const box = q('stHistory');
+  const box = q('stHistory'); if (!box) return;
   try {
     const rows = await api('getSubmissions');
     if (!rows.length) { box.innerHTML = '<div class="empty">No submissions.</div>'; return; }
-    box.innerHTML = `<table><thead><tr><th>Class</th><th>Subject</th><th>Term</th><th>Status</th></tr></thead>
-      <tbody>${rows.map(r => `<tr><td>${esc(r.class)}</td><td>${esc(r.subject)}</td><td>${esc(r.term)}</td><td><span class="badge">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table>`;
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Class</th><th>Subject</th><th>Term</th><th>Status</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.class)}</td><td>${esc(r.subject)}</td><td>${esc(r.term)}</td><td><span class="badge">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ================= STUDENT ================= */
+/* ============================================================
+   STUDENT
+   ============================================================ */
 async function renderStudent() {
   q('roleTag').textContent = 'Student · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1046,49 +1409,52 @@ async function renderStudent() {
     <div class="card">
       <div class="row">
         <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
-        <button class="btn blue" onclick="studentLoad()">Load</button>
+        <button class="blue" onclick="studentLoad()">Load</button>
       </div>
     </div>
     <div class="card" id="studentBox"><div class="empty">Select a term.</div></div>`;
+  buildNav([{ title: 'Academics', tabs: [{ id: 'results', label: 'My Results' }] }], 'results');
 }
 
 async function studentLoad() {
-  const box = q('studentBox');
-  box.innerHTML = '<div class="empty">Loading…</div>';
+  const box = q('studentBox'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const rows = await api('getStudentScores', {
-      className: S.user.class, term: q('studentTerm').value, studentId: S.user.email
-    });
+    const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, studentId: S.user.email });
     if (!rows.length) { box.innerHTML = '<div class="empty">No scores.</div>'; return; }
-    box.innerHTML = `<table><thead><tr><th>Subject</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
-      <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total}</strong></td></tr>`).join('')}</tbody></table>`;
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Subject</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total}</strong></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ================= PARENT ================= */
+/* ============================================================
+   PARENT
+   ============================================================ */
 async function renderParent() {
   q('roleTag').textContent = 'Parent Portal · Jesus, Our Teacher';
   q('main').innerHTML = `
     <div class="page-head"><h1>Parent Portal</h1><p>View published results for your ward.</p></div>
     <div class="card toolbar">
-      <div class="grid">
+      <div class="grid cols-3">
         <div><label>Ward</label><select id="pWard"></select></div>
         <div><label>Term</label><select id="pTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
         <div><label>Academic Year</label><input id="pYear" value="2026/2027"></div>
       </div>
       <div class="row" style="margin-top:10px">
-        <button class="btn blue" onclick="parentLoad()">Load Result</button>
-        <button class="btn sec" onclick="window.print()">Print</button>
+        <button class="blue" onclick="parentLoad()">Load Result</button>
+        <button class="sec" onclick="window.print()">Print</button>
       </div>
       <div id="pStatus" class="portal-note">Choose ward, term and year.</div>
     </div>
-    <div id="pReportBox"></div>
+    <div class="panel active" data-panel="report"><div id="pReportBox"></div></div>
     <div class="card">
       <h2>Ask Academic Assistant</h2>
       <div id="pChat"><div class="empty">Load a result first.</div></div>
       <textarea id="pQuestion" style="margin-top:10px;min-height:70px" placeholder="Which subjects should my child focus on?"></textarea>
-      <div class="row" style="margin-top:8px"><button class="btn" onclick="parentAsk()">Ask</button></div>
+      <div class="row" style="margin-top:8px"><button onclick="parentAsk()">Ask</button></div>
     </div>`;
+
+  buildNav([{ title: 'Results', tabs: [{ id: 'report', label: 'Report Card' }] }], 'report');
 
   try {
     const wards = await api('parentGetWards');
@@ -1107,14 +1473,18 @@ async function parentLoad() {
   const idx = q('pWard').value;
   if (idx === '') return;
   const ward = window.__WARDS[Number(idx)];
-  const term = q('pTerm').value, academicYear = q('pYear').value.trim();
+  const term = q('pTerm').value, year = q('pYear').value.trim();
   q('pStatus').textContent = 'Loading…';
   try {
-    const r = await api('parentGetResult', { className: ward.className, studentId: ward.studentId, term, academicYear });
+    const r = await api('parentGetResult', { className: ward.className, studentId: ward.studentId, term, academicYear: year });
     window.__CURRENT_RESULT = r;
     q('pStatus').textContent = 'Loaded.';
     renderParentReport(r);
-  } catch (e) { q('pStatus').textContent = e.message; q('pReportBox').innerHTML = ''; toast(e.message, 'err'); }
+  } catch (e) {
+    q('pStatus').textContent = e.message;
+    q('pReportBox').innerHTML = '';
+    toast(e.message, 'err');
+  }
 }
 
 function domainTable(title, kind, data, show) {
@@ -1122,23 +1492,22 @@ function domainTable(title, kind, data, show) {
   const items = kind === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
   if (!data) return `
     <div class="card" style="margin-top:14px">
-      <h2 style="font-size:13px;color:var(--brown);text-transform:uppercase;letter-spacing:.05em">${esc(title)}</h2>
+      <h2 style="font-size:13px">${esc(title)}</h2>
       <div class="empty" style="padding:14px">Not recorded for this term.</div>
     </div>`;
-  const rows = items.map(([key, label]) => {
-    const v = Number(data[key]);
+  const rows = items.map(([k, l]) => {
+    const v = Number(data[k]);
     const has = v >= 1 && v <= 5;
-    return `<tr><td>${esc(label)}</td>
+    return `<tr><td>${esc(l)}</td>
       <td style="text-align:center;font-weight:700">${has ? v : '—'}</td>
       <td>${has ? esc(DMN_RATINGS[v]) : '—'}</td></tr>`;
   }).join('');
   return `
     <div class="card" style="margin-top:14px">
-      <h2 style="font-size:13px;color:var(--brown);text-transform:uppercase;letter-spacing:.05em">${esc(title)}</h2>
-      <table style="margin-top:8px">
-        <thead><tr><th>Item</th><th style="text-align:center;width:70px">Score</th><th>Rating</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <h2 style="font-size:13px">${esc(title)}</h2>
+      <div class="table-wrap" style="margin-top:8px"><table>
+        <thead><tr><th>Item</th><th style="text-align:center;width:80px">Score</th><th>Rating</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
     </div>`;
 }
 
@@ -1173,8 +1542,8 @@ function renderParentReport(r) {
       ${t.showPsychomotor !== false ? `<div><strong>Psychomotor</strong>${esc(d.psychomotor || '—')}</div>` : ''}
     </div>` : '';
 
-  const affectiveTable = domainTable('Affective Domain', 'affective', r.affective, t.showAffective !== false);
-  const psychomotorTable = domainTable('Psychomotor Domain', 'psychomotor', r.psychomotor, t.showPsychomotor !== false);
+  const affTable = domainTable('Affective Domain', 'affective', r.affective, t.showAffective !== false);
+  const psyTable = domainTable('Psychomotor Domain', 'psychomotor', r.psychomotor, t.showPsychomotor !== false);
 
   const principal = t.showPrincipalRemark !== false ? `
     <div class="principal-block">
@@ -1214,10 +1583,10 @@ function renderParentReport(r) {
         <div><label>Year</label><strong>${esc(r.academicYear)}</strong></div>
         ${t.showAnnualAverage !== false ? `<div><label>Overall</label><strong>${r.overallAverage == null ? '—' : r.overallAverage + '%'}</strong></div>` : ''}
       </div>
-      <table><thead><tr>${cols.join('')}</tr></thead><tbody>${rows}</tbody></table>
+      <div class="table-wrap"><table><thead><tr>${cols.join('')}</tr></thead><tbody>${rows}</tbody></table></div>
       ${domainBlock}
-      ${affectiveTable}
-      ${psychomotorTable}
+      ${affTable}
+      ${psyTable}
       ${principal}
     </div>`;
 }
@@ -1225,8 +1594,7 @@ function renderParentReport(r) {
 async function parentAsk() {
   const question = q('pQuestion').value.trim();
   if (!question) return toast('Type a question', 'err');
-  const idx = q('pWard').value;
-  if (idx === '') return toast('No ward', 'err');
+  const idx = q('pWard').value; if (idx === '') return toast('No ward', 'err');
   const ward = window.__WARDS[Number(idx)];
   const r = window.__CURRENT_RESULT;
   if (!r) return toast('Load a result first', 'err');
@@ -1243,7 +1611,10 @@ async function parentAsk() {
   } catch (e) { chat.innerHTML = `<div class="chat-message ai">${esc(e.message)}</div>`; }
 }
 
-/* ================= START ================= */
+/* ============================================================
+   START
+   ============================================================ */
+applyLogoFallback();
 if (S.token && S.user) boot();
 </script>
 </body>
