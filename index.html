@@ -275,19 +275,6 @@
     opacity: .06; pointer-events: none; z-index: 0; }
   .report > *:not(.watermark) { position: relative; z-index: 1; }
 
-  #reportCard input[data-local] {
-    border: 0 !important;
-    border-bottom: 1px dotted #bbb !important;
-    background: transparent !important;
-    border-radius: 0 !important;
-  }
-  #reportCard input[data-local]:focus {
-    border-bottom-color: var(--blue) !important;
-    outline: none !important;
-    background: #fffbe6 !important;
-    box-shadow: none !important;
-  }
-
   .chat-message { padding: 10px 14px; border-radius: var(--radius-sm);
     margin: 8px 0; font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
   .chat-message.user { background: #eff6ff; margin-left: 22px; }
@@ -336,7 +323,6 @@
     #reportCard { border: none !important; padding: 0 !important; max-width: 100% !important;
       box-shadow: none !important; font-size: 10px; }
     #reportCard tr { page-break-inside: avoid; }
-    #reportCard input { border: none !important; background: transparent !important; }
   }
 </style>
 </head>
@@ -394,9 +380,9 @@
 
 <script>
 /* ============================================================
-   CONFIG
+   CONFIG — current deployment
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbyW6Jy16aXU8Ix4GKIHwyBavO1Os3jDj6mE-rSLslz-RtpzTBXG0a9mjE1GVItczsOt/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyzOdmX0nfAI6M3Xv73OVqWpeE0ov-3yBy6AjEY3K4kKw8ZeQxh8i5nX9FZNFDQjoCt/exec';
 
 /* SESSION */
 const S = {
@@ -757,6 +743,7 @@ async function renderAdmin() {
         <h2>Report Template</h2>
         <div class="grid cols-3">
           <div><label>School Name</label><input id="tplSchoolName"></div>
+          <div><label>School Address</label><input id="tplAddress"></div>
           <div><label>School Motto</label><input id="tplMotto"></div>
           <div><label>Logo URL (https)</label><input id="tplLogo"></div>
           <div><label>Principal Name</label><input id="tplPrincipalName"></div>
@@ -1000,6 +987,7 @@ async function loadTemplate() {
     const sv = (id, v) => { const el = q(id); if (el) el.value = v == null ? '' : v; };
     const sc = (id, v) => { const el = q(id); if (el) el.checked = v === true; };
     sv('tplSchoolName', t.schoolName || 'Greater Tomorrow Model Schools');
+    sv('tplAddress', t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti');
     sv('tplMotto', t.schoolMotto || 'Jesus, our Teacher');
     sv('tplLogo', t.logoUrl || '');
     sv('tplPrincipalName', t.principalName || 'The Principal');
@@ -1023,6 +1011,7 @@ async function loadTemplate() {
 async function saveTemplate() {
   const template = {
     schoolName: q('tplSchoolName').value.trim(),
+    schoolAddress: q('tplAddress').value.trim(),
     schoolMotto: q('tplMotto').value.trim(),
     logoUrl: q('tplLogo').value.trim(),
     principalName: q('tplPrincipalName').value.trim(),
@@ -1426,9 +1415,6 @@ async function parentLoad() {
   }
 }
 
-/* ============================================================
-   REPORT CARD — new design
-   ============================================================ */
 const DOMAIN_ITEMS_AFF = [
   ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
   ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
@@ -1442,10 +1428,6 @@ const DOMAIN_ITEMS_PSY = [
 const RATING_GRADE = { 5:'A', 4:'B', 3:'C', 2:'D', 1:'E' };
 const RATING_WORD  = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
 
-function localCardKey(sid, cls, term, year, field) { return `gtmc_card_${field}_${sid}_${cls}_${term}_${year}`; }
-function getLocal(sid, cls, term, year, field) { try { return localStorage.getItem(localCardKey(sid,cls,term,year,field)) || ''; } catch (e) { return ''; } }
-function setLocal(sid, cls, term, year, field, value) { try { localStorage.setItem(localCardKey(sid,cls,term,year,field), value); } catch (e) {} }
-
 function remarkForGrade(g) {
   return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
 }
@@ -1453,7 +1435,7 @@ function remarkForGrade(g) {
 function renderParentReport(r) {
   const t = r.template || {};
   const d = r.domains || {};
-  const sid = r.student.studentId, cls = r.student.className, term = r.term, year = r.academicYear;
+  const cal = r.calendar || {};
 
   const schoolName = esc(t.schoolName || 'GREATER TOMORROW MODEL COLLEGE');
   const schoolAddr = esc(t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti');
@@ -1506,9 +1488,19 @@ function renderParentReport(r) {
 
   const totalObtained = subjects.reduce((s, x) => s + (Number(x.total) || 0), 0);
   const overallPct = r.overallAverage == null ? '—' : r.overallAverage;
-  const daysOpen = d.days_opened ?? '—';
-  const daysPresent = d.days_present ?? '—';
-  const daysAbsent = (Number(daysOpen) && Number(daysPresent)) ? (Number(daysOpen) - Number(daysPresent)) : '—';
+
+  /* Attendance numbers — prefer admin calendar for "days opened",
+     fall back to daysPresent from the domains tab */
+  const daysOpen    = cal.days_school_opened || d.days_opened || '—';
+  const daysPresent = r.daysPresent ?? d.days_present ?? '—';
+  const daysAbsent  = (Number(daysOpen) && Number(daysPresent)) ? (Number(daysOpen) - Number(daysPresent)) : '—';
+
+  /* Teacher remark — now served by the backend */
+  const tRemark = r.teacherRemark || '';
+
+  /* Calendar dates — served by the backend */
+  const nextTerm = cal.next_term_begins || '';
+  const vacates  = cal.school_vacates || '';
 
   const chartItems = subjects.slice(0, 8);
   const chart = chartItems.map(s => {
@@ -1522,17 +1514,12 @@ function renderParentReport(r) {
     </div>`;
   }).join('');
 
-  const sex      = getLocal(sid, cls, term, year, 'sex');
-  const age      = getLocal(sid, cls, term, year, 'age');
-  const tRemark  = getLocal(sid, cls, term, year, 'teacher_remark');
-  const nextTerm = getLocal(sid, cls, term, year, 'next_term');
-  const termEnds = getLocal(sid, cls, term, year, 'term_ends');
-
   q('pReportBox').innerHTML = `
   <div id="reportCard"
     style="background:#fff;color:#111;padding:16px 18px;font-family:'Inter','Segoe UI',Arial,sans-serif;
            font-size:11px;line-height:1.35;border:1px solid #333;max-width:1000px;margin:0 auto">
 
+    <!-- HEADER -->
     <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;
                 border-bottom:3px solid #f5b800;padding-bottom:10px;margin-bottom:10px">
       <div style="width:110px;height:110px;border-radius:8px;border:2px solid #f5b800;
@@ -1542,44 +1529,35 @@ function renderParentReport(r) {
       <div style="text-align:center">
         <div style="font-size:22px;font-weight:900;letter-spacing:.5px;color:#111;text-transform:uppercase;line-height:1.1">${schoolName}</div>
         <div style="font-size:11px;color:#333;margin-top:3px">${schoolAddr}</div>
-        <div style="font-size:11px;color:#333;font-weight:600">Terminal Continuous Assessment Result</div>
+        <div style="font-size:11px;color:#333;font-weight:700">TERMINAL REPORT SHEET</div>
+        <div style="font-size:11px;color:#333;font-weight:600">${esc(r.term)} &mdash; ${esc(r.academicYear)} SESSION</div>
         <div style="font-size:11px;font-style:italic;color:#6b4423;margin-top:2px">Motto: ${motto}</div>
       </div>
     </div>
 
+    <!-- BIO DATA -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
       <tr>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:80px">NAME</td>
         <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.name)}</td>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:60px">CLASS</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(cls)}</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.className)}</td>
       </tr>
       <tr>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">ADM. NO</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(sid)}</td>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SEX</td>
-        <td style="border:1px solid #333;padding:0">
-          <input data-local="sex" value="${esc(sex)}" placeholder="e.g. F"
-            style="width:100%;border:0;padding:3px 8px;font-size:10.5px;background:transparent">
-        </td>
-      </tr>
-      <tr>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.studentId)}</td>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">TERM</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(term)}</td>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">AGE</td>
-        <td style="border:1px solid #333;padding:0">
-          <input data-local="age" value="${esc(age)}" placeholder="e.g. 13"
-            style="width:100%;border:0;padding:3px 8px;font-size:10.5px;background:transparent">
-        </td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(r.term)}</td>
       </tr>
       <tr>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SESSION</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(year)}</td>
+        <td style="border:1px solid #333;padding:3px 8px">${esc(r.academicYear)}</td>
         <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">OVERALL</td>
         <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPct === '—' ? '—' : overallPct + '%'}</td>
       </tr>
     </table>
 
+    <!-- SUBJECTS + SIDE PANELS -->
     <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
       <div>
         <div style="font-weight:900;text-align:center;background:#2d3748;color:#fff;padding:3px;font-size:10.5px;
@@ -1641,6 +1619,7 @@ function renderParentReport(r) {
       </div>
     </div>
 
+    <!-- CHART + ATTENDANCE + DATES -->
     <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
       <div style="border:2px solid #2d3748">
         <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
@@ -1663,28 +1642,18 @@ function renderParentReport(r) {
           <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
                       text-transform:uppercase;letter-spacing:.5px">Next Term</div>
           <table style="width:100%;border-collapse:collapse;font-size:9.5px">
-            <tr>
-              <td style="padding:3px 6px">Next term begins</td>
-              <td style="padding:0"><input data-local="next_term" value="${esc(nextTerm)}" placeholder="date"
-                style="width:100%;border:0;padding:3px 6px;font-size:9.5px;background:transparent;text-align:right"></td>
-            </tr>
-            <tr>
-              <td style="padding:3px 6px">Term ends</td>
-              <td style="padding:0"><input data-local="term_ends" value="${esc(termEnds)}" placeholder="date"
-                style="width:100%;border:0;padding:3px 6px;font-size:9.5px;background:transparent;text-align:right"></td>
-            </tr>
+            <tr><td style="padding:3px 6px">Next term begins</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(nextTerm || '—')}</td></tr>
+            <tr><td style="padding:3px 6px">School vacates</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(vacates || '—')}</td></tr>
           </table>
         </div>
       </div>
     </div>
 
+    <!-- COMMENTS -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
       <tr>
         <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700;width:150px">CLASS TEACHER'S REMARK</td>
-        <td style="border:1px solid #333;padding:0">
-          <input data-local="teacher_remark" value="${esc(tRemark)}" placeholder="Type teacher's remark here"
-            style="width:100%;border:0;padding:6px 8px;font-size:10.5px;background:transparent">
-        </td>
+        <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(tRemark || '—')}</td>
       </tr>
       <tr>
         <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700">PRINCIPAL'S REMARK</td>
@@ -1692,6 +1661,7 @@ function renderParentReport(r) {
       </tr>
     </table>
 
+    <!-- SIGNATURES -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
       <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
         CLASS TEACHER'S SIGNATURE
@@ -1707,13 +1677,6 @@ function renderParentReport(r) {
     </div>
   </div>
   `;
-
-  q('pReportBox').querySelectorAll('[data-local]').forEach(input => {
-    input.addEventListener('change', () => {
-      setLocal(sid, cls, term, year, input.dataset.local, input.value);
-      toast('Saved on this device', 'ok');
-    });
-  });
 }
 
 async function parentAsk() {
