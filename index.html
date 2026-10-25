@@ -95,7 +95,6 @@
   .login-footer .credit { display:block; margin-top:6px; color:var(--brown-light);
     letter-spacing:.08em; font-size:10px; }
 
-  /* APP SHELL */
   .app-layout { flex:1; display:flex; flex-direction:column; min-height:100vh; }
   .topbar { background:#fff; border-bottom:3px solid var(--gold);
     height:64px; padding:0 24px; display:flex; align-items:center;
@@ -710,7 +709,6 @@ async function renderAdmin() {
   await loadTeachers();
 }
 
-/* ---- Admin teachers ---- */
 async function createTeacher() {
   const name = q('tName').value.trim();
   const email = q('tEmail').value.trim();
@@ -785,7 +783,6 @@ async function unlockSubmission(teacherEmail, className, subject, term, isDomain
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Domains (shared admin + class teacher) ---- */
 let DMN_KIND = 'affective';
 const AFFECTIVE_ITEMS = [
   ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
@@ -1176,7 +1173,6 @@ async function deleteAnnouncement(id) {
 
 function initReportCards() {}
 
-/* -------- Bulk caches for PDF -------- */
 const _bulkCache = {};
 
 async function loadBulkForClass(className, term, academicYear) {
@@ -1210,7 +1206,8 @@ async function buildReportPayload(className, studentId, studentName, term, acade
       subject: subj,
       T1: row.T1, T2: row.T2, T3: row.T3, Exam: row.Exam,
       total, complete,
-      grade: total === null ? '' : gradeFor(total, template.gradeScale)
+      grade: total === null ? '' : gradeFor(total, template.gradeScale),
+      term1Total: null, term2Total: null, term3Total: null, cumulative: null
     };
   });
   const completeTotals = subjectResults.filter(r => r.total !== null);
@@ -1279,11 +1276,38 @@ function gradeFor(score, scale) {
   return item ? String(item.grade || '') : '';
 }
 
+function ratingLabel(data, key) {
+  const v = Number(data && data[key]);
+  if (!(v >= 1 && v <= 5)) return '—';
+  return v + ' (' + DMN_RATINGS[v] + ')';
+}
+function remarkForGrade(g) {
+  return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
+}
+
 function pdfRenderPage(doc, r) {
   const t = r.template || {};
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 20;
   let y = margin;
+
+  function hasAnyScore(s) {
+    return ['T1','T2','T3','Exam'].some(function (f) {
+      const v = s[f];
+      return v !== '' && v !== null && v !== undefined && isFinite(Number(v));
+    });
+  }
+  const visibleSubjects = (r.subjects || []).filter(hasAnyScore);
+
+  const completeVisible = visibleSubjects.filter(s => s.total !== null);
+  const totalObtainedVisible = completeVisible.reduce((a, s) => a + (Number(s.total) || 0), 0);
+  const totalObtainableVisible = visibleSubjects.length * 100;
+  const overallPctVisible = (completeVisible.length === visibleSubjects.length && visibleSubjects.length)
+    ? Math.round(totalObtainedVisible / totalObtainableVisible * 100 * 100) / 100
+    : null;
+
+  const showCumulativeColsPdf = (r.term === 'Term2' || r.term === 'Term3');
+  const showTerm3ColPdf       = (r.term === 'Term3');
 
   const primary = t.primaryColor || '#1e3a8a';
   doc.setFontSize(16); doc.setTextColor(primary);
@@ -1308,7 +1332,7 @@ function pdfRenderPage(doc, r) {
   const bio = [
     ['NAME', r.student.name, 'CLASS', r.student.className],
     ['ADM. NO', r.student.studentId, 'TERM', r.term],
-    ['SESSION', r.academicYear, 'OVERALL', r.overallAverage != null ? r.overallAverage + '%' : '—']
+    ['SESSION', r.academicYear, 'OVERALL', overallPctVisible != null ? overallPctVisible + '%' : '—']
   ];
   doc.setFontSize(8.5);
   bio.forEach(row => {
@@ -1320,20 +1344,42 @@ function pdfRenderPage(doc, r) {
     y += 12;
   });
 
-  const subjectRows = r.subjects.filter(s => s.total !== null).map((s, i) => [
-    i + 1, s.subject, s.T1 ?? '—', s.T2 ?? '—', s.T3 ?? '—', s.Exam ?? '—',
-    s.total, s.grade || '—', remarkForGrade(s.grade)
-  ]);
+  const baseHead = ['SN','Subject','1st','2nd','3rd','Exam','Total','Grade','Remark'];
+  const cumHead = [];
+  if (showCumulativeColsPdf) {
+    cumHead.push('Term1');
+    cumHead.push('Term2');
+    if (showTerm3ColPdf) cumHead.push('Term3');
+    cumHead.push('Cumul.');
+  }
+
+  const subjectRows = visibleSubjects.map((s, i) => {
+    const row = [
+      i + 1, s.subject, s.T1 ?? '—', s.T2 ?? '—', s.T3 ?? '—', s.Exam ?? '—',
+      s.total != null ? s.total : '—', s.grade || '—', remarkForGrade(s.grade)
+    ];
+    if (showCumulativeColsPdf) {
+      row.push(s.term1Total != null ? s.term1Total : '—');
+      row.push(s.term2Total != null ? s.term2Total : '—');
+      if (showTerm3ColPdf) row.push(s.term3Total != null ? s.term3Total : '—');
+      row.push(s.cumulative != null ? s.cumulative : '—');
+    }
+    return row;
+  });
   if (subjectRows.length && doc.autoTable) {
     doc.autoTable({
       startY: y,
-      head: [['SN','Subject','1st','2nd','3rd','Exam','Total','Grade','Remark']],
+      head: [baseHead.concat(cumHead)],
       body: subjectRows,
-      styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [45,55,72], textColor: 255, fontSize: 8 },
-      columnStyles: { 0:{cellWidth:14}, 1:{cellWidth:110}, 7:{cellWidth:20} }
+      styles: { fontSize: 7.5, cellPadding: 1.5 },
+      headStyles: { fillColor: [45,55,72], textColor: 255, fontSize: 7.5 },
+      columnStyles: { 0:{cellWidth:14}, 1:{cellWidth:100}, 7:{cellWidth:20} }
     });
     y = doc.lastAutoTable.finalY + 10;
+  } else if (!subjectRows.length) {
+    doc.setFontSize(10); doc.setTextColor(150,150,150);
+    doc.text('No scores have been entered for any subject this term.', pageW/2, y, { align: 'center' });
+    y += 14;
   }
 
   const affItems = AFFECTIVE_ITEMS.map(([k,l]) => [l, ratingLabel(r.affective, k)]);
@@ -1384,16 +1430,6 @@ function pdfRenderPage(doc, r) {
   doc.setFontSize(8);
   doc.text('CLASS TEACHER SIGNATURE', (margin + half - 20)/2, baseY + 40, { align:'center' });
   doc.text((t.principalName || 'PRINCIPAL') + ' (SIGNATURE)', (half + 20 + pageW - margin)/2, baseY + 40, { align:'center' });
-}
-
-function ratingLabel(data, key) {
-  const v = Number(data && data[key]);
-  if (!(v >= 1 && v <= 5)) return '—';
-  return v + ' (' + DMN_RATINGS[v] + ')';
-}
-
-function remarkForGrade(g) {
-  return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
 }
 
 async function exportClassPDF() {
@@ -1873,21 +1909,53 @@ function renderParentReport(r) {
     ? `<img src="${esc(t.logoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px" alt="">`
     : `<div style="font-family:Georgia,serif;font-size:30px;color:#1e3a8a;font-weight:900">G</div>`;
 
-  const subjects = r.subjects || [];
-  const rows = subjects.map((s, i) => {
-    const ca = (Number(s.T1) || 0) + (Number(s.T2) || 0) + (Number(s.T3) || 0);
-    return `<tr>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${i + 1}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:left">${esc(s.subject)}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T1 ?? '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T2 ?? '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T3 ?? '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${ca || '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center">${s.Exam ?? '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${s.total ?? '—'}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${esc(s.grade || '—')}</td>
-      <td style="border:1px solid #333;padding:3px;text-align:center;font-size:9px">${esc(remarkForGrade(s.grade))}</td>
-    </tr>`;
+  function hasAnyScoreInCurrentTerm(s) {
+    return ['T1','T2','T3','Exam'].some(function (f) {
+      const v = s[f];
+      return v !== '' && v !== null && v !== undefined && isFinite(Number(v));
+    });
+  }
+  const visibleSubjects = (r.subjects || []).filter(hasAnyScoreInCurrentTerm);
+
+  const completeVisible = visibleSubjects.filter(s => s.total !== null);
+  const totalObtainedVisible = completeVisible.reduce((a, s) => a + (Number(s.total) || 0), 0);
+  const totalObtainableVisible = visibleSubjects.length * 100;
+  const overallPctVisible = (completeVisible.length === visibleSubjects.length && visibleSubjects.length)
+    ? Math.round(totalObtainedVisible / totalObtainableVisible * 100 * 100) / 100
+    : null;
+
+  const showTests = t.showTests !== false;
+  const showExam  = t.showExam !== false;
+  const showTotals = t.showSubjectTotals !== false;
+  const showGrade  = t.showGrade !== false;
+  const showCumulativeCols = (r.term === 'Term2' || r.term === 'Term3');
+  const showTerm3Col       = (r.term === 'Term3');
+
+  const cols = ['<th>Subject</th>'];
+  if (showTests) cols.push('<th style="text-align:center">T1</th><th style="text-align:center">T2</th><th style="text-align:center">T3</th>');
+  if (showExam) cols.push('<th style="text-align:center">Exam</th>');
+  if (showTotals) cols.push('<th style="text-align:center">Total</th>');
+  if (showGrade) cols.push('<th style="text-align:center">Grade</th>');
+  if (showCumulativeCols) {
+    cols.push('<th style="text-align:center">Term 1 Total</th>');
+    cols.push('<th style="text-align:center">Term 2 Total</th>');
+    if (showTerm3Col) cols.push('<th style="text-align:center">Term 3 Total</th>');
+    cols.push('<th style="text-align:center">Cumulative</th>');
+  }
+
+  const rows = visibleSubjects.map(s => {
+    let h = `<td><strong>${esc(s.subject)}</strong></td>`;
+    if (showTests) h += `<td style="text-align:center">${s.T1 ?? '—'}</td><td style="text-align:center">${s.T2 ?? '—'}</td><td style="text-align:center">${s.T3 ?? '—'}</td>`;
+    if (showExam) h += `<td style="text-align:center">${s.Exam ?? '—'}</td>`;
+    if (showTotals) h += `<td style="text-align:center;font-weight:700;color:#1e3a8a">${s.total != null ? s.total : '—'}</td>`;
+    if (showGrade) h += `<td style="text-align:center">${esc(s.grade || '—')}</td>`;
+    if (showCumulativeCols) {
+      h += `<td style="text-align:center">${s.term1Total != null ? s.term1Total : '—'}</td>`;
+      h += `<td style="text-align:center">${s.term2Total != null ? s.term2Total : '—'}</td>`;
+      if (showTerm3Col) h += `<td style="text-align:center">${s.term3Total != null ? s.term3Total : '—'}</td>`;
+      h += `<td style="text-align:center;font-weight:700;color:#1e3a8a">${s.cumulative != null ? s.cumulative : '—'}</td>`;
+    }
+    return `<tr>${h}</tr>`;
   }).join('');
 
   const domainCol = (data, key) => {
@@ -1908,9 +1976,6 @@ function renderParentReport(r) {
       <td style="border:1px solid #999;padding:2px 4px;text-align:center;font-weight:700">${esc(g.grade)}</td>
       <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9px">${esc(g.remark || '')}</td></tr>`).join('');
 
-  const totalObtained = subjects.reduce((s, x) => s + (Number(x.total) || 0), 0);
-  const overallPct = r.overallAverage == null ? '—' : r.overallAverage;
-
   const daysOpen    = cal.days_school_opened || d.days_opened || '—';
   const daysPresent = r.daysPresent ?? d.days_present ?? '—';
   const daysAbsent  = (Number(daysOpen) && Number(daysPresent)) ? (Number(daysOpen) - Number(daysPresent)) : '—';
@@ -1918,7 +1983,7 @@ function renderParentReport(r) {
   const nextTerm = cal.next_term_begins || '';
   const vacates  = cal.school_vacates || '';
 
-  const chartItems = subjects.slice(0, 8);
+  const chartItems = visibleSubjects.slice(0, 8);
   const chart = chartItems.map(s => {
     const score = Number(s.total) || 0;
     const pct = Math.max(0, Math.min(100, score));
@@ -1935,8 +2000,8 @@ function renderParentReport(r) {
   if (r.term2Average != null) cParts.push(['Term 2', r.term2Average]);
   if (r.term3Average != null) cParts.push(['Term 3', r.term3Average]);
   if (r.cumulativeAverage != null) cParts.push(['Cumulative', r.cumulativeAverage]);
-  const showCumulative = r.term !== 'Term1' && cParts.length > 1;
-  const cumulativeRow = showCumulative ? `
+  const showCumulativeLine = r.term !== 'Term1' && cParts.length > 1;
+  const cumulativeRow = showCumulativeLine ? `
     <div style="display:grid;grid-template-columns:repeat(${cParts.length},1fr);gap:6px;margin:10px 0;
                 padding:10px;background:#faf7f2;border:1px solid #e5dccf;border-radius:6px">
       ${cParts.map(([label, val]) => `
@@ -1958,6 +2023,12 @@ function renderParentReport(r) {
   const stampImg = t.schoolStampUrl
     ? `<img src="${esc(t.schoolStampUrl)}" alt="Stamp" style="max-height:70px;max-width:100px;object-fit:contain"
         onerror="this.style.display='none'">` : '';
+
+  const emptySubjectsMsg = visibleSubjects.length === 0
+    ? `<div style="padding:16px;text-align:center;color:#7a6a58;font-style:italic;border:1px dashed #e5dccf;border-radius:6px;margin-bottom:10px">
+         No scores have been entered for any subject this term.
+       </div>`
+    : '';
 
   q('pReportBox').innerHTML = `
     ${debtBanner}
@@ -1994,36 +2065,27 @@ function renderParentReport(r) {
           <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SESSION</td>
           <td style="border:1px solid #333;padding:3px 8px">${esc(r.academicYear)}</td>
           <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">OVERALL</td>
-          <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+          <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPctVisible == null ? '—' : overallPctVisible + '%'}</td>
         </tr>
       </table>
 
       ${cumulativeRow}
+      ${emptySubjectsMsg}
 
       <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
         <div>
           <div style="font-weight:900;text-align:center;background:#2d3748;color:#fff;padding:3px;font-size:10.5px;
             text-transform:uppercase;letter-spacing:.5px">Subject Performance</div>
           <table style="width:100%;border-collapse:collapse;font-size:10px">
-            <thead><tr style="background:#f2f2f2">
-              <th style="border:1px solid #333;padding:3px;width:22px">SN</th>
-              <th style="border:1px solid #333;padding:3px;text-align:left">SUBJECTS</th>
-              <th style="border:1px solid #333;padding:3px;width:30px">1ST</th>
-              <th style="border:1px solid #333;padding:3px;width:30px">2ND</th>
-              <th style="border:1px solid #333;padding:3px;width:30px">3RD</th>
-              <th style="border:1px solid #333;padding:3px;width:38px">C.A</th>
-              <th style="border:1px solid #333;padding:3px;width:34px">EXAM</th>
-              <th style="border:1px solid #333;padding:3px;width:38px">TOTAL</th>
-              <th style="border:1px solid #333;padding:3px;width:32px">GRD</th>
-              <th style="border:1px solid #333;padding:3px">REMARK</th>
-            </tr></thead>
+            <thead><tr style="background:#f2f2f2">${cols.join('')}</tr></thead>
             <tbody>
-              ${rows}
+              ${rows || '<tr><td colspan="20" style="text-align:center;padding:10px;color:#999">No subjects</td></tr>'}
               <tr style="background:#f2f2f2;font-weight:800">
-                <td colspan="7" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
-                <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtained}</td>
-                <td style="border:1px solid #333;padding:3px;text-align:center">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+                <td colspan="${showCumulativeCols ? (showTerm3Col ? 10 : 9) : 7}" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
+                <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtainedVisible}</td>
+                <td style="border:1px solid #333;padding:3px;text-align:center">${overallPctVisible == null ? '—' : overallPctVisible + '%'}</td>
                 <td style="border:1px solid #333;padding:3px"></td>
+                ${showCumulativeCols ? `<td colspan="${showTerm3Col ? 4 : 3}" style="border:1px solid #333;padding:3px"></td>` : ''}
               </tr>
             </tbody>
           </table>
