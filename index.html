@@ -4,325 +4,234 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Greater Tomorrow Model College — Grade System</title>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --login-bg-image: url('school.jpg');
     --login-logo-image: url('school-crest.png');
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f5f3ee;
-    --surface: #ffffff;
-    --surface-2: #faf9f6;
-    --ink: #1a1410;
-    --muted: #7a6a58;
-    --line: #e8e1d4;
-    --line-strong: #d8cdb9;
-
-    --brown: #6b4423;
-    --brown-dark: #4a2f18;
-    --brown-light: #8b5e34;
-
-    --gold: #e6b422;
-    --gold-dark: #c9981a;
-    --gold-light: #f5d76e;
-
-    --blue: #1e3a8a;
-    --blue-dark: #172d6b;
-
-    --ok: #15803d;
-    --warn: #b45309;
-    --err: #b91c1c;
-
-    --radius-sm: 6px;
-    --radius: 10px;
-    --radius-lg: 14px;
-    --shadow-sm: 0 1px 2px rgba(26,20,16,.06);
-    --shadow: 0 2px 8px rgba(26,20,16,.06), 0 1px 2px rgba(26,20,16,.04);
-    --shadow-lg: 0 12px 32px rgba(26,20,16,.12);
+    --bg:#f5f3ee; --surface:#fff; --surface-2:#faf9f6;
+    --ink:#1a1410; --muted:#7a6a58; --line:#e8e1d4; --line-strong:#d8cdb9;
+    --brown:#6b4423; --brown-dark:#4a2f18; --brown-light:#8b5e34;
+    --gold:#e6b422; --gold-dark:#c9981a; --gold-light:#f5d76e;
+    --blue:#1e3a8a; --blue-dark:#172d6b;
+    --ok:#15803d; --warn:#b45309; --err:#b91c1c;
+    --radius-sm:6px; --radius:10px; --radius-lg:14px;
+    --shadow-sm:0 1px 2px rgba(26,20,16,.06);
+    --shadow:0 2px 8px rgba(26,20,16,.06),0 1px 2px rgba(26,20,16,.04);
+    --shadow-lg:0 12px 32px rgba(26,20,16,.12);
   }
-  html, body { height: 100%; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-    font-size: 14px; line-height: 1.5;
-    color: var(--ink); background: var(--bg);
-    -webkit-font-smoothing: antialiased;
-    display: flex; flex-direction: column; min-height: 100vh;
-  }
-  button {
-    font-family: inherit; font-size: 13.5px; font-weight: 600;
-    padding: 9px 16px; border: 1px solid transparent; border-radius: var(--radius-sm);
-    background: var(--brown); color: #fff; cursor: pointer;
-    transition: background .15s, box-shadow .15s, transform .05s;
-    white-space: nowrap;
-  }
-  button:hover { background: var(--brown-dark); }
-  button:active { transform: translateY(1px); }
-  button:disabled { opacity: .55; cursor: not-allowed; }
-  button.sec { background: #fff; color: var(--brown); border-color: var(--line-strong); }
-  button.sec:hover { background: var(--surface-2); }
-  button.ok { background: var(--ok); }
-  button.ok:hover { background: #166534; }
-  button.blue { background: var(--blue); }
-  button.blue:hover { background: var(--blue-dark); }
-  button.danger { background: var(--err); }
-  button.danger:hover { background: #991b1b; }
-  button.sm { padding: 5px 10px; font-size: 12.5px; }
-  input, select, textarea {
-    font-family: inherit; font-size: 13.5px; padding: 9px 12px;
-    border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-    background: #fff; color: var(--ink); width: 100%;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  input:focus, select:focus, textarea:focus {
-    outline: none; border-color: var(--brown);
-    box-shadow: 0 0 0 3px rgba(107,68,35,.12);
-  }
-  label { font-size: 11.5px; color: var(--muted); font-weight: 700;
-    display: block; margin-bottom: 5px; letter-spacing: .04em; text-transform: uppercase; }
+  html,body { height:100%; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+    font-size:14px; line-height:1.5; color:var(--ink); background:var(--bg);
+    -webkit-font-smoothing:antialiased; display:flex; flex-direction:column; min-height:100vh; }
+  button { font-family:inherit; font-size:13.5px; font-weight:600; padding:9px 16px;
+    border:1px solid transparent; border-radius:var(--radius-sm);
+    background:var(--brown); color:#fff; cursor:pointer;
+    transition:background .15s,transform .05s; white-space:nowrap; }
+  button:hover { background:var(--brown-dark); }
+  button:active { transform:translateY(1px); }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  button.sec { background:#fff; color:var(--brown); border-color:var(--line-strong); }
+  button.sec:hover { background:var(--surface-2); }
+  button.ok { background:var(--ok); } button.ok:hover { background:#166534; }
+  button.blue { background:var(--blue); } button.blue:hover { background:var(--blue-dark); }
+  button.danger { background:var(--err); } button.danger:hover { background:#991b1b; }
+  button.sm { padding:5px 10px; font-size:12.5px; }
+  input,select,textarea { font-family:inherit; font-size:13.5px; padding:9px 12px;
+    border:1px solid var(--line-strong); border-radius:var(--radius-sm);
+    background:#fff; color:var(--ink); width:100%; }
+  input:focus,select:focus,textarea:focus {
+    outline:none; border-color:var(--brown); box-shadow:0 0 0 3px rgba(107,68,35,.12); }
+  label { font-size:11.5px; color:var(--muted); font-weight:700;
+    display:block; margin-bottom:5px; letter-spacing:.04em; text-transform:uppercase; }
 
   /* LOGIN */
-  .login-wrap {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    padding: 20px; position: relative; overflow: hidden;
-    background:
-      var(--login-bg-image, none) center/cover no-repeat,
-      linear-gradient(135deg, #2c1a0d 0%, #6b4423 45%, #3a2413 100%);
-  }
-  .login-wrap::before {
-    content: ''; position: absolute; inset: 0;
+  .login-wrap { flex:1; display:flex; align-items:center; justify-content:center; padding:20px;
+    position:relative; overflow:hidden;
+    background: var(--login-bg-image, none) center/cover no-repeat,
+      linear-gradient(135deg,#2c1a0d 0%,#6b4423 45%,#3a2413 100%); }
+  .login-wrap::before { content:''; position:absolute; inset:0;
     background:
       radial-gradient(circle at 15% 20%, rgba(230,180,34,.18) 0%, transparent 45%),
       radial-gradient(circle at 85% 80%, rgba(30,58,138,.32) 0%, transparent 55%),
-      rgba(20,12,5,.55);
-    pointer-events: none;
-  }
-  .login-card {
-    position: relative; z-index: 1; width: 100%; max-width: 440px;
-    background: #fff; border-radius: var(--radius-lg);
-    padding: 40px 36px 32px;
-    box-shadow: var(--shadow-lg), 0 30px 80px rgba(0,0,0,.35);
-    border-top: 5px solid var(--gold);
-  }
-  .login-logo {
-    width: 86px; height: 86px; margin: 0 auto 18px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--gold); font-family: Georgia, serif; font-size: 36px; font-weight: 800;
-    border: 3px solid var(--gold); overflow: hidden;
-    background-image: var(--login-logo-image, none);
-    background-size: cover; background-position: center;
-    box-shadow: 0 10px 26px rgba(30,58,138,.35);
-  }
-  .login-logo span { display: block; }
-  .login-logo.has-image span { display: none; }
-  .login-card h1 {
-    text-align: center; font-size: 19px; color: var(--brown);
-    letter-spacing: .02em; line-height: 1.25;
-    margin-bottom: 8px; text-transform: uppercase; font-weight: 800;
-  }
-  .login-card .motto { text-align: center; color: var(--blue); font-style: italic;
-    font-size: 12px; font-weight: 700; letter-spacing: .04em; margin-bottom: 4px; }
-  .login-card .tag { text-align: center; font-size: 10.5px; color: var(--muted);
-    margin-bottom: 24px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
-  .login-divider { height: 1px; background: var(--line); margin: 0 0 20px; position: relative; }
-  .login-divider::after {
-    content: 'Sign in to your account'; position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%); background: #fff; padding: 0 12px;
-    font-size: 10px; color: var(--muted); font-weight: 700;
-    letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
-  }
-  .login-card input { margin-bottom: 12px; }
-  .login-card button.primary-btn {
-    width: 100%; margin-top: 6px; padding: 12px; font-size: 15px; font-weight: 700;
-    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
-    letter-spacing: .03em;
-  }
-  .login-card button.primary-btn:hover { background: linear-gradient(135deg, var(--blue-dark) 0%, #0f1f4a 100%); }
-  .login-err { color: var(--err); font-size: 13px; margin-top: 12px;
-    min-height: 18px; text-align: center; font-weight: 600; }
-  .login-footer { text-align: center; margin-top: 22px; padding-top: 16px;
-    border-top: 1px solid var(--line); font-size: 10px; color: var(--muted);
-    letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
-  .login-footer .credit { display: block; margin-top: 6px; color: var(--brown-light);
-    letter-spacing: .08em; font-size: 10px; }
+      rgba(20,12,5,.55); pointer-events:none; }
+  .login-card { position:relative; z-index:1; width:100%; max-width:440px;
+    background:#fff; border-radius:var(--radius-lg); padding:40px 36px 32px;
+    box-shadow:var(--shadow-lg),0 30px 80px rgba(0,0,0,.35); border-top:5px solid var(--gold); }
+  .login-logo { width:86px; height:86px; margin:0 auto 18px; border-radius:50%;
+    background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--gold); font-family:Georgia,serif; font-size:36px; font-weight:800;
+    border:3px solid var(--gold); overflow:hidden;
+    background-image:var(--login-logo-image, none);
+    background-size:cover; background-position:center;
+    box-shadow:0 10px 26px rgba(30,58,138,.35); }
+  .login-logo span { display:block; }
+  .login-logo.has-image span { display:none; }
+  .login-card h1 { text-align:center; font-size:19px; color:var(--brown);
+    letter-spacing:.02em; line-height:1.25; margin-bottom:8px; text-transform:uppercase; font-weight:800; }
+  .login-card .motto { text-align:center; color:var(--blue); font-style:italic;
+    font-size:12px; font-weight:700; letter-spacing:.04em; margin-bottom:4px; }
+  .login-card .tag { text-align:center; font-size:10.5px; color:var(--muted);
+    margin-bottom:24px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+  .login-divider { height:1px; background:var(--line); margin:0 0 20px; position:relative; }
+  .login-divider::after { content:'Sign in to your account'; position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%); background:#fff; padding:0 12px;
+    font-size:10px; color:var(--muted); font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; }
+  .login-card input { margin-bottom:12px; }
+  .login-card button.primary-btn { width:100%; margin-top:6px; padding:12px; font-size:15px; font-weight:700;
+    background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%); letter-spacing:.03em; }
+  .login-card button.primary-btn:hover { background:linear-gradient(135deg,var(--blue-dark) 0%,#0f1f4a 100%); }
+  .login-err { color:var(--err); font-size:13px; margin-top:12px;
+    min-height:18px; text-align:center; font-weight:600; }
+  .login-footer { text-align:center; margin-top:22px; padding-top:16px;
+    border-top:1px solid var(--line); font-size:10px; color:var(--muted);
+    letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+  .login-footer .credit { display:block; margin-top:6px; color:var(--brown-light);
+    letter-spacing:.08em; font-size:10px; }
 
   /* APP SHELL */
-  .app-layout { flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
-  .topbar {
-    background: #fff; border-bottom: 3px solid var(--gold);
-    height: 64px; padding: 0 24px; display: flex; align-items: center;
-    justify-content: space-between; position: sticky; top: 0; z-index: 40;
-    box-shadow: var(--shadow-sm);
+  .app-layout { flex:1; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { background:#fff; border-bottom:3px solid var(--gold);
+    height:64px; padding:0 24px; display:flex; align-items:center;
+    justify-content:space-between; position:sticky; top:0; z-index:40; box-shadow:var(--shadow-sm); }
+  .topbar .brand { display:flex; align-items:center; gap:14px; }
+  .topbar .brand-logo { width:42px; height:42px; border-radius:50%;
+    background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+    color:var(--gold); font-family:Georgia,serif; font-weight:800; font-size:17px;
+    display:flex; align-items:center; justify-content:center;
+    border:2.5px solid var(--gold); overflow:hidden;
+    background-image:var(--login-logo-image, none);
+    background-size:cover; background-position:center; }
+  .topbar .brand-logo span { display:block; }
+  .topbar .brand-logo.has-image span { display:none; }
+  .topbar .brand-text .name { font-size:13px; font-weight:800; color:var(--brown); letter-spacing:.02em; }
+  .topbar .brand-text .tag { font-size:10px; color:var(--blue);
+    letter-spacing:.12em; text-transform:uppercase; font-weight:700; margin-top:2px; }
+  .topbar .user { display:flex; align-items:center; gap:14px; }
+  .topbar .user .who { text-align:right; line-height:1.15; }
+  .topbar .user .who .uname { font-size:13px; font-weight:700; color:var(--ink); }
+  .topbar .user .who .urole { font-size:10.5px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.08em; font-weight:700; margin-top:1px; }
+
+  .body-layout { flex:1; display:grid; grid-template-columns:240px 1fr; min-height:0; }
+  .sidebar { background:#fff; border-right:1px solid var(--line); padding:20px 12px; overflow-y:auto; }
+  .sidebar .group { margin-bottom:22px; }
+  .sidebar .group-title { font-size:10.5px; color:var(--muted); font-weight:800;
+    text-transform:uppercase; letter-spacing:.1em; padding:0 12px 6px; }
+  .nav-item { display:flex; align-items:center; gap:10px;
+    padding:9px 12px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; color:var(--ink);
+    cursor:pointer; user-select:none; border:1px solid transparent; margin-bottom:2px;
+    transition:background .12s,color .12s; }
+  .nav-item:hover { background:var(--surface-2); }
+  .nav-item.active { background:#fff8e6; color:var(--brown); border-color:var(--gold-light);
+    box-shadow:inset 3px 0 0 var(--gold); }
+  .nav-item .dot { width:6px; height:6px; border-radius:50%;
+    background:var(--line-strong); flex-shrink:0; }
+  .nav-item.active .dot { background:var(--gold-dark); }
+  .nav-item .count-badge { margin-left:auto; background:var(--err); color:#fff;
+    font-size:10px; font-weight:800; padding:1px 7px; border-radius:20px; }
+
+  main.content { padding:26px; overflow-y:auto; }
+  .page-head { margin-bottom:22px; }
+  .page-head h1 { font-size:22px; font-weight:800; color:var(--brown); letter-spacing:-.01em; margin-bottom:4px; }
+  .page-head p { color:var(--muted); font-size:13px; }
+  .panel { display:none; } .panel.active { display:block; }
+
+  .card { background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-sm); margin-bottom:18px; }
+  .card h2 { font-size:15px; font-weight:800; color:var(--brown); margin-bottom:6px; }
+  .card .sub { color:var(--muted); font-size:12.5px; margin-bottom:14px; }
+
+  .grid { display:grid; gap:12px; }
+  .grid.cols-2 { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+  .grid.cols-3 { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+  .grid.cols-4 { grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .check { display:flex; align-items:center; gap:8px;
+    padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius-sm);
+    font-size:12.5px; background:var(--surface-2); cursor:pointer; }
+  .check input { width:auto; }
+
+  .table-wrap { border:1px solid var(--line); border-radius:var(--radius-sm); overflow:hidden; }
+  table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+  th,td { padding:11px 12px; text-align:left; border-bottom:1px solid var(--line); }
+  th { background:var(--surface-2); font-weight:700; color:var(--brown);
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#fbfaf7; }
+
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px;
+    font-size:10.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
+  .badge.info { background:#e0e7ff; color:#1e3a8a; }
+  .badge.ok   { background:#d1fae5; color:#065f46; }
+  .badge.warn { background:#fef3c7; color:#92400e; }
+  .badge.err  { background:#fee2e2; color:#991b1b; }
+
+  .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; font-style:italic; }
+  .portal-note { padding:12px 14px; border-radius:var(--radius-sm);
+    background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; margin:10px 0; font-size:12.5px; }
+
+  .score-input { width:64px; padding:5px 6px; text-align:center; font-size:13px; }
+  .dmn-select { width:100%; min-width:110px; padding:5px 6px; font-size:12px; }
+
+  /* Debt banner */
+  .debt-banner { background:#fef2f2; border:1px solid #fecaca; color:#991b1b;
+    padding:12px 14px; border-radius:var(--radius-sm); margin-bottom:14px;
+    font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+  .debt-banner strong { color:#7f1d1d; }
+
+  /* Announcement cards */
+  .ann-card { background:#fffdf5; border:1px solid var(--gold-light); border-radius:var(--radius-sm);
+    padding:12px 14px; margin-bottom:10px; }
+  .ann-card .msg { font-size:13.5px; color:var(--ink); margin-bottom:6px; line-height:1.55; }
+  .ann-card .meta { font-size:11px; color:var(--muted); }
+
+  /* Chat */
+  .chat-message { padding:10px 14px; border-radius:var(--radius-sm); margin:8px 0;
+    font-size:13px; white-space:pre-wrap; line-height:1.55; }
+  .chat-message.user { background:#eff6ff; margin-left:22px; }
+  .chat-message.ai { background:#f0fdf4; margin-right:22px; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:22px; right:22px; background:var(--brown-dark); color:#fff;
+    padding:13px 20px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; max-width:340px;
+    opacity:0; transform:translateY(12px); transition:opacity .2s,transform .2s;
+    pointer-events:none; z-index:1000; box-shadow:var(--shadow-lg); border-left:4px solid var(--gold); }
+  .toast.on { opacity:1; transform:translateY(0); }
+  .toast.ok { background:var(--ok); border-left-color:var(--gold); }
+  .toast.err { background:var(--err); border-left-color:#fca5a5; }
+
+  @media (max-width:900px) {
+    .body-layout { grid-template-columns:1fr; }
+    .sidebar { display:flex; overflow-x:auto; padding:8px 12px;
+      border-right:none; border-bottom:1px solid var(--line); gap:4px; }
+    .sidebar .group { display:flex; gap:4px; margin:0; }
+    .sidebar .group-title { display:none; }
+    .nav-item { white-space:nowrap; padding:8px 12px; margin:0; }
+    .nav-item.active { box-shadow:inset 0 -3px 0 var(--gold); }
   }
-  .topbar .brand { display: flex; align-items: center; gap: 14px; }
-  .topbar .brand-logo {
-    width: 42px; height: 42px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--blue), var(--blue-dark));
-    color: var(--gold); font-family: Georgia, serif; font-weight: 800; font-size: 17px;
-    display: flex; align-items: center; justify-content: center;
-    border: 2.5px solid var(--gold); overflow: hidden;
-    background-image: var(--login-logo-image, none);
-    background-size: cover; background-position: center;
-  }
-  .topbar .brand-logo span { display: block; }
-  .topbar .brand-logo.has-image span { display: none; }
-  .topbar .brand-text .name { font-size: 13px; font-weight: 800; color: var(--brown); letter-spacing: .02em; }
-  .topbar .brand-text .tag { font-size: 10px; color: var(--blue);
-    letter-spacing: .12em; text-transform: uppercase; font-weight: 700; margin-top: 2px; }
-  .topbar .user { display: flex; align-items: center; gap: 14px; }
-  .topbar .user .who { text-align: right; line-height: 1.15; }
-  .topbar .user .who .uname { font-size: 13px; font-weight: 700; color: var(--ink); }
-  .topbar .user .who .urole { font-size: 10.5px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-top: 1px; }
-
-  .body-layout { flex: 1; display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
-  .sidebar {
-    background: #fff; border-right: 1px solid var(--line);
-    padding: 20px 12px; overflow-y: auto;
-  }
-  .sidebar .group { margin-bottom: 22px; }
-  .sidebar .group-title {
-    font-size: 10.5px; color: var(--muted); font-weight: 800;
-    text-transform: uppercase; letter-spacing: .1em;
-    padding: 0 12px 6px;
-  }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border-radius: var(--radius-sm);
-    font-size: 13px; font-weight: 600; color: var(--ink);
-    cursor: pointer; user-select: none;
-    border: 1px solid transparent; margin-bottom: 2px;
-    transition: background .12s, color .12s, border-color .12s;
-  }
-  .nav-item:hover { background: var(--surface-2); }
-  .nav-item.active {
-    background: #fff8e6; color: var(--brown);
-    border-color: var(--gold-light);
-    box-shadow: inset 3px 0 0 var(--gold);
-  }
-  .nav-item .dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--line-strong); flex-shrink: 0;
-  }
-  .nav-item.active .dot { background: var(--gold-dark); }
-
-  main.content { padding: 26px; overflow-y: auto; }
-
-  .page-head { margin-bottom: 22px; }
-  .page-head h1 { font-size: 22px; font-weight: 800; color: var(--brown); letter-spacing: -.01em; margin-bottom: 4px; }
-  .page-head p { color: var(--muted); font-size: 13px; }
-
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  .card {
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 22px;
-    box-shadow: var(--shadow-sm); margin-bottom: 18px;
-  }
-  .card h2 { font-size: 15px; font-weight: 800; color: var(--brown);
-    letter-spacing: -.01em; margin-bottom: 6px; }
-  .card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; }
-
-  .grid { display: grid; gap: 12px; }
-  .grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-  .grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-  .check {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
-    font-size: 12.5px; background: var(--surface-2); cursor: pointer;
-  }
-  .check input { width: auto; }
-
-  .table-wrap { border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
-  th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--line); }
-  th { background: var(--surface-2); font-weight: 700; color: var(--brown);
-    font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: #fbfaf7; }
-
-  .badge {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-  }
-  .badge.info { background: #e0e7ff; color: #1e3a8a; }
-  .badge.ok { background: #d1fae5; color: #065f46; }
-  .badge.warn { background: #fef3c7; color: #92400e; }
-  .badge.err { background: #fee2e2; color: #991b1b; }
-  .badge.gold { background: var(--gold-light); color: var(--brown-dark); border: 1px solid var(--gold); }
-
-  .empty { text-align: center; padding: 40px 20px; color: var(--muted);
-    font-size: 13px; font-style: italic; }
-
-  .portal-note { padding: 12px 14px; border-radius: var(--radius-sm);
-    background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
-    margin: 10px 0; font-size: 12.5px; }
-
-  .score-input { width: 64px; padding: 5px 6px; text-align: center; font-size: 13px; }
-  .dmn-select { width: 100%; min-width: 110px; padding: 5px 6px; font-size: 12px; }
-
-  /* Report card print extras */
-  .report { position: relative; overflow: hidden; padding: 24px;
-    border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
-  .report .watermark { position: absolute; inset: 0;
-    background-repeat: no-repeat; background-position: center; background-size: 55% auto;
-    opacity: .06; pointer-events: none; z-index: 0; }
-  .report > *:not(.watermark) { position: relative; z-index: 1; }
-
-  .chat-message { padding: 10px 14px; border-radius: var(--radius-sm);
-    margin: 8px 0; font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
-  .chat-message.user { background: #eff6ff; margin-left: 22px; }
-  .chat-message.ai { background: #f0fdf4; margin-right: 22px; }
-
-  .toast {
-    position: fixed; bottom: 22px; right: 22px;
-    background: var(--brown-dark); color: #fff;
-    padding: 13px 20px; border-radius: var(--radius-sm);
-    font-size: 13px; font-weight: 600; max-width: 340px;
-    opacity: 0; transform: translateY(12px);
-    transition: opacity .2s, transform .2s;
-    pointer-events: none; z-index: 1000;
-    box-shadow: var(--shadow-lg); border-left: 4px solid var(--gold);
-  }
-  .toast.on { opacity: 1; transform: translateY(0); }
-  .toast.ok { background: var(--ok); border-left-color: var(--gold); }
-  .toast.err { background: var(--err); border-left-color: #fca5a5; }
-
-  @media (max-width: 900px) {
-    .body-layout { grid-template-columns: 1fr; }
-    .sidebar {
-      display: flex; overflow-x: auto; padding: 8px 12px;
-      border-right: none; border-bottom: 1px solid var(--line);
-      gap: 4px;
-    }
-    .sidebar .group { display: flex; gap: 4px; margin: 0; }
-    .sidebar .group-title { display: none; }
-    .nav-item { white-space: nowrap; padding: 8px 12px; margin: 0; }
-    .nav-item.active { box-shadow: inset 0 -3px 0 var(--gold); }
-  }
-  @media (max-width: 640px) {
-    main.content { padding: 16px; }
-    .topbar { padding: 0 14px; height: 58px; }
-    .topbar .brand-text .tag { display: none; }
-    .topbar .user .who { display: none; }
-    .card { padding: 16px; }
+  @media (max-width:640px) {
+    main.content { padding:16px; }
+    .topbar { padding:0 14px; height:58px; }
+    .topbar .brand-text .tag { display:none; }
+    .topbar .user .who { display:none; }
+    .card { padding:16px; }
   }
   @media print {
-    body { background: #fff; }
-    header, .sidebar, button, .card.toolbar, h1, .page-head { display: none !important; }
-    main.content { padding: 0; }
-    .report { border: none; padding: 0; box-shadow: none; }
-    .report .watermark { opacity: .08 !important;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    #reportCard { border: none !important; padding: 0 !important; max-width: 100% !important;
-      box-shadow: none !important; font-size: 10px; }
-    #reportCard tr { page-break-inside: avoid; }
+    body { background:#fff; }
+    header, .sidebar, button, .card.toolbar, h1, .page-head { display:none !important; }
+    main.content { padding:0; }
+    #reportCard { border:none !important; padding:0 !important; max-width:100% !important;
+      box-shadow:none !important; font-size:10px; }
+    #reportCard tr { page-break-inside:avoid; }
   }
 </style>
 </head>
@@ -336,7 +245,6 @@
     <div class="motto">“Jesus, Our Teacher”</div>
     <div class="tag">Known for Moral and Academic Excellence</div>
     <div class="login-divider"></div>
-
     <label>Email or Student ID</label>
     <input id="loginEmail" autocomplete="username" placeholder="you@school.com">
     <label>Password</label>
@@ -369,7 +277,6 @@
       <button class="sec sm" onclick="logout()">Logout</button>
     </div>
   </header>
-
   <div class="body-layout">
     <aside class="sidebar" id="sidebar"></aside>
     <main class="content" id="main"></main>
@@ -380,9 +287,9 @@
 
 <script>
 /* ============================================================
-   CONFIG — current deployment
+   CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbyzOdmX0nfAI6M3Xv73OVqWpeE0ov-3yBy6AjEY3K4kKw8ZeQxh8i5nX9FZNFDQjoCt/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwtQv4p4fYQ0cikmRbl-jlZU1i_0jx8iVaBABQu7EgVHXZPUaaD91jD2KDRlCRsHnZZ/exec';
 
 /* SESSION */
 const S = {
@@ -395,18 +302,16 @@ async function api(action, payload = {}) {
   let res;
   try {
     res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify(Object.assign({ action, token: S.token }, payload)),
-      redirect: 'follow'
+      redirect:'follow'
     });
   } catch (e) { throw new Error('Network error — check internet or API URL'); }
-
   const raw = await res.text();
   let json;
-  try { json = JSON.parse(raw); } catch (e) {
-    throw new Error('Non-JSON (' + res.status + '): ' + raw.slice(0, 180));
-  }
+  try { json = JSON.parse(raw); }
+  catch (e) { throw new Error('Non-JSON (' + res.status + '): ' + raw.slice(0,180)); }
   if (!json || json.success !== true) {
     const msg = (json && json.error) || 'Request failed';
     if (/session/i.test(msg)) logout();
@@ -416,34 +321,26 @@ async function api(action, payload = {}) {
   }
   return json.data;
 }
-
-function saveSession(t, u) {
-  S.token = t; S.user = u;
-  localStorage.setItem('gs_token', t);
-  localStorage.setItem('gs_user', JSON.stringify(u));
-}
-function logout() {
-  localStorage.removeItem('gs_token');
-  localStorage.removeItem('gs_user');
-  S.token = ''; S.user = null;
-  document.getElementById('loginView').style.display = 'flex';
-  document.getElementById('appView').style.display = 'none';
+function saveSession(t,u){ S.token=t; S.user=u;
+  localStorage.setItem('gs_token',t); localStorage.setItem('gs_user',JSON.stringify(u)); }
+function logout(){
+  localStorage.removeItem('gs_token'); localStorage.removeItem('gs_user');
+  S.token=''; S.user=null;
+  document.getElementById('loginView').style.display='flex';
+  document.getElementById('appView').style.display='none';
 }
 
 /* HELPERS */
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function q(id){ return document.getElementById(id); }
-function toast(msg, kind) {
+function toast(msg,kind){
   const el = q('toast');
   el.textContent = msg;
   el.className = 'toast on' + (kind ? ' ' + kind : '');
   setTimeout(() => el.className = 'toast', 2600);
 }
-function roleList() {
-  if (!S.user) return [];
-  return String(S.user.role || '').split(',').map(s => s.trim()).filter(Boolean);
-}
-function hasRole(r) { return roleList().indexOf(r) !== -1; }
+function roleList(){ return S.user ? String(S.user.role || '').split(',').map(s=>s.trim()).filter(Boolean) : []; }
+function hasRole(r){ return roleList().indexOf(r) !== -1; }
 
 async function loadClasses() {
   if (S.cache.classes) return S.cache.classes;
@@ -458,26 +355,12 @@ async function loadSubjects(className) {
   return subs;
 }
 
-/* DOMAIN ITEMS */
-const AFFECTIVE_ITEMS = [
-  ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
-  ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
-  ['obedience','Obedience'],['neatness','Neatness'],['responsibility','Responsibility'],['self_control','Self-control']
-];
-const PSYCHOMOTOR_ITEMS = [
-  ['handwriting','Handwriting'],['drawing','Drawing and painting'],
-  ['handwork','Handwork / practical skills'],['sports','Sports and physical activities'],
-  ['coordination','Coordination and dexterity'],['tools','Use of tools and equipment']
-];
-const DMN_RATINGS = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
-
 /* LOGO FALLBACK */
 function applyLogoFallback() {
   const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--login-logo-image').trim();
   if (!cssBg || cssBg === 'none') return;
-  ['loginLogo', 'topLogo'].forEach(id => {
-    const el = q(id);
-    if (!el) return;
+  ['loginLogo','topLogo'].forEach(id => {
+    const el = q(id); if (!el) return;
     const probe = new Image();
     const url = cssBg.replace(/^url\(['"]?/,'').replace(/['"]?\)$/,'');
     probe.onload = () => el.classList.add('has-image');
@@ -503,9 +386,7 @@ async function doLogin() {
     try {
       const r = await api('parentLogin', { email, password });
       saveSession(r.token, r.user); boot(); return;
-    } catch (e2) {
-      err.textContent = (staffErr && staffErr.message) || e2.message;
-    }
+    } catch (e2) { err.textContent = (staffErr && staffErr.message) || e2.message; }
   } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
@@ -537,6 +418,7 @@ function buildNav(items, defaultTab) {
       ${g.title ? `<div class="group-title">${esc(g.title)}</div>` : ''}
       ${g.tabs.map(t => `<div class="nav-item" data-tab="${t.id}" onclick="setNav('${t.id}')">
         <span class="dot"></span><span>${esc(t.label)}</span>
+        ${t.badge ? `<span class="count-badge">${t.badge}</span>` : ''}
       </div>`).join('')}
     </div>`).join('');
   setNav(defaultTab);
@@ -548,118 +430,13 @@ function setNav(tabId) {
   if (nav && nav.dataset.onload) try { window[nav.dataset.onload](); } catch (e) {}
 }
 
-/* DOMAIN EDITOR */
-let DMN_KIND = 'affective';
-
-function domainEditorHtml() {
-  return `
-    <div class="card">
-      <h2>Affective &amp; Psychomotor Domains</h2>
-      <div class="sub">Rate every item 1–5 per student, per term, per academic year. Ratings save as you change them.</div>
-      <div class="grid cols-4">
-        <div><label>Class</label><select id="dmnClass"></select></div>
-        <div><label>Term</label><select id="dmnTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-        <div><label>Academic Year</label><input id="dmnYear" value="2026/2027"></div>
-        <div style="display:flex;align-items:flex-end"><button class="blue" onclick="reloadDomainEditor()">Load</button></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="row" style="gap:6px;margin-bottom:14px;border-bottom:2px solid var(--line);padding-bottom:8px">
-        <button class="sec sm" data-kind="affective" onclick="switchDomainKind('affective')" id="tabAffBtn">Affective Domain</button>
-        <button class="sec sm" data-kind="psychomotor" onclick="switchDomainKind('psychomotor')" id="tabPsyBtn">Psychomotor Domain</button>
-      </div>
-      <div id="domainEditorBox"><div class="empty">Load a class and term.</div></div>
-    </div>`;
-}
-
-function switchDomainKind(kind) {
-  DMN_KIND = kind;
-  q('tabAffBtn').className = 'sm ' + (kind === 'affective' ? 'blue' : 'sec');
-  q('tabPsyBtn').className = 'sm ' + (kind === 'psychomotor' ? 'blue' : 'sec');
-  reloadDomainEditor();
-}
-
-async function initDomainSelector() {
-  const classes = await loadClasses();
-  const sel = q('dmnClass');
-  if (!sel || sel.dataset.filled) return;
-  sel.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
-  sel.dataset.filled = '1';
-  if (!hasRole('admin') && S.user.class) { sel.value = S.user.class; sel.disabled = true; }
-}
-
-async function reloadDomainEditor() {
-  await initDomainSelector();
-  const className = hasRole('admin') ? q('dmnClass').value : S.user.class;
-  const term = q('dmnTerm').value;
-  const year = q('dmnYear').value.trim();
-  const box = q('domainEditorBox');
-  if (!className || !term || !year) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
-  box.innerHTML = '<div class="empty">Loading…</div>';
-
-  try {
-    const [students, existing] = await Promise.all([
-      api('getStudents', { className }),
-      api('getDomainAssessments', { kind: DMN_KIND, className, term, academicYear: year })
-    ]);
-    if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
-    const byStudent = {}; (existing || []).forEach(r => { byStudent[r.student_id] = r; });
-    const items = DMN_KIND === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
-
-    const head = `<th style="min-width:170px">Student</th>` +
-      items.map(([k, l]) => `<th style="text-align:center;min-width:110px">${esc(l)}</th>`).join('');
-
-    const rows = students.map(st => {
-      const row = byStudent[st.student_id] || {};
-      const cells = items.map(([k]) => {
-        const v = row[k];
-        const opts = ['',1,2,3,4,5].map(n =>
-          `<option value="${n}" ${String(v || '') === String(n) ? 'selected' : ''}>${n === '' ? '—' : n + ' · ' + DMN_RATINGS[n]}</option>`
-        ).join('');
-        return `<td style="text-align:center">
-          <select class="dmn-select" data-student="${esc(st.student_id)}" data-item="${k}">${opts}</select>
-        </td>`;
-      }).join('');
-      return `<tr>
-        <td><strong>${esc(st.name)}</strong><br>
-          <small style="color:var(--muted);font-size:11px;font-family:ui-monospace,monospace">${esc(st.student_id)}</small>
-        </td>${cells}</tr>`;
-    }).join('');
-
-    box.innerHTML = `
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr>${head}</tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <p class="portal-note" style="margin-top:14px">
-        Ratings: <strong>5</strong> Excellent · <strong>4</strong> Very Good · <strong>3</strong> Good · <strong>2</strong> Fair · <strong>1</strong> Needs Improvement.
-        Each change saves immediately.
-      </p>`;
-
-    box.querySelectorAll('select.dmn-select').forEach(sel => {
-      sel.addEventListener('change', () => saveDomainRating(sel, className, term, year));
-    });
-  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
-}
-
-async function saveDomainRating(sel, className, term, year) {
-  const studentId = sel.dataset.student, item = sel.dataset.item, value = sel.value;
-  sel.style.background = '#fffbea';
-  try {
-    await api('saveDomainAssessment', { kind: DMN_KIND, className, term, academicYear: year, studentId, item, value });
-    sel.style.background = '#f0fdf4';
-    setTimeout(() => { sel.style.background = ''; }, 800);
-  } catch (e) { sel.style.background = '#fef2f2'; toast('Save failed: ' + e.message, 'err'); }
-}
-
-/* ADMIN */
+/* ===================== ADMIN ===================== */
 async function renderAdmin() {
   q('roleTag').textContent = 'Administrator · Jesus, Our Teacher';
 
   q('main').innerHTML = `
-    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, domains, publishing, remarks, and the report template.</p></div>
+    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, results, debtors, announcements, and report cards.</p></div>
+
     <div class="panel active" data-panel="teachers">
       <div class="card">
         <h2>Create Teacher</h2>
@@ -691,7 +468,6 @@ async function renderAdmin() {
     <div class="panel" data-panel="submissions">
       <div class="card">
         <h2>Score Submissions</h2>
-        <div class="sub">All submissions with lock status. Unlock when a teacher needs to edit.</div>
         <div class="row" style="margin-bottom:12px">
           <select id="subFilter" onchange="loadSubmissions()" style="max-width:200px">
             <option value="">All statuses</option>
@@ -704,20 +480,36 @@ async function renderAdmin() {
       </div>
     </div>
 
-    <div class="panel" data-panel="domains">${domainEditorHtml()}</div>
+    <div class="panel" data-panel="domains">
+      <div class="card">
+        <h2>Affective &amp; Psychomotor Domains</h2>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="dmnClass"></select></div>
+          <div><label>Term</label><select id="dmnTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="dmnYear" value="2026/2027"></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="reloadDomainEditor()">Load</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="gap:6px;margin-bottom:14px;border-bottom:2px solid var(--line);padding-bottom:8px">
+          <button class="sec sm" onclick="switchDomainKind('affective')" id="tabAffBtn">Affective</button>
+          <button class="sec sm" onclick="switchDomainKind('psychomotor')" id="tabPsyBtn">Psychomotor</button>
+        </div>
+        <div id="domainEditorBox"><div class="empty">Load a class and term.</div></div>
+      </div>
+    </div>
 
     <div class="panel" data-panel="publish">
       <div class="card">
         <h2>Publish Whole Class</h2>
-        <div class="sub">Publishing makes results visible to parents for the selected term/year.</div>
         <div class="grid cols-4">
           <div><label>Class</label><select id="pubClass"></select></div>
           <div><label>Term</label><select id="pubTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
           <div><label>Academic Year</label><input id="pubYear" value="2026/2027"></div>
         </div>
         <div class="row" style="margin-top:14px">
-          <button class="ok" onclick="publishClass(true)">Publish Class</button>
-          <button class="danger" onclick="publishClass(false)">Unpublish Class</button>
+          <button class="ok" onclick="publishClass(true)">Publish</button>
+          <button class="danger" onclick="publishClass(false)">Unpublish</button>
         </div>
         <div id="pubStatus" class="portal-note">Choose class, term and year.</div>
       </div>
@@ -726,7 +518,6 @@ async function renderAdmin() {
     <div class="panel" data-panel="remarks">
       <div class="card">
         <h2>Principal Remarks</h2>
-        <div class="sub">Auto-generated from each student's overall percentage. Admin can override.</div>
         <div class="grid cols-4">
           <div><label>Class</label><select id="remClass"></select></div>
           <div><label>Term</label><select id="remTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
@@ -736,6 +527,40 @@ async function renderAdmin() {
         <div class="row" style="margin-top:12px"><button class="ok" onclick="generateRemarksForClass()">Generate for Whole Class</button></div>
       </div>
       <div class="card" id="remCard"><div class="empty">Load a class.</div></div>
+    </div>
+
+    <div class="panel" data-panel="teacherRemarks">
+      <div class="card">
+        <h2>Teacher Remarks</h2>
+        <div class="grid cols-3">
+          <div><label>Class</label><select id="trClass"></select></div>
+          <div><label>Term</label><select id="trTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="trYear" value="2026/2027"></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadTeacherRemarks()">Load</button></div>
+        </div>
+      </div>
+      <div class="card" id="trCard"><div class="empty">Load a class.</div></div>
+    </div>
+
+    <div class="panel" data-panel="calendar">
+      <div class="card">
+        <h2>School Calendar</h2>
+        <div class="grid cols-3">
+          <div><label>Academic Year</label><input id="calYear" value="2026/2027"></div>
+          <div><label>Term</label><select id="calTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadSchoolCalendar()">Load</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Set Calendar</h2>
+        <div class="grid cols-3">
+          <div><label>Next Term Begins</label><input id="calNext" placeholder="e.g. 06/01/2027"></div>
+          <div><label>School Vacates</label><input id="calVacates" placeholder="e.g. 16/12/2026"></div>
+          <div><label>Days School Opened</label><input id="calOpened" type="number" placeholder="62"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="ok" onclick="saveSchoolCalendar()">Save</button></div>
+        <div id="calStatus"></div>
+      </div>
     </div>
 
     <div class="panel" data-panel="template">
@@ -751,18 +576,6 @@ async function renderAdmin() {
           <div><label>School Stamp URL (https)</label><input id="tplStamp"></div>
           <div><label>Primary Colour</label><input id="tplPrimary" type="color" value="#1e3a8a"></div>
           <div><label>Secondary Colour</label><input id="tplSecondary" type="color" value="#ffffff"></div>
-        </div>
-        <h3 style="margin:16px 0 10px;font-size:12px;color:var(--brown);text-transform:uppercase">Show on report card</h3>
-        <div class="grid cols-3">
-          <label class="check"><input type="checkbox" id="tplShowTests"> Test scores</label>
-          <label class="check"><input type="checkbox" id="tplShowExam"> Exam score</label>
-          <label class="check"><input type="checkbox" id="tplShowTotals"> Subject totals</label>
-          <label class="check"><input type="checkbox" id="tplShowGrade"> Grades</label>
-          <label class="check"><input type="checkbox" id="tplShowPrincipal"> Principal remark</label>
-          <label class="check"><input type="checkbox" id="tplShowAttendance"> Attendance</label>
-          <label class="check"><input type="checkbox" id="tplShowAffective"> Affective</label>
-          <label class="check"><input type="checkbox" id="tplShowPsychomotor"> Psychomotor</label>
-          <label class="check"><input type="checkbox" id="tplShowAverage"> Overall average</label>
         </div>
         <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button></div>
         <div id="tplStatus"></div>
@@ -795,6 +608,70 @@ async function renderAdmin() {
         <div id="parentsBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
+
+    <div class="panel" data-panel="debtors">
+      <div class="card">
+        <h2>Debtors</h2>
+        <div class="sub">Enter amounts owed per student. Clearing amount to 0 removes the debt.</div>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="dbClass" onchange="loadDebtsForClass()"></select></div>
+          <div><label>Academic Year</label><input id="dbYear" value="2026/2027"></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadDebtsForClass()">Load</button></div>
+          <div style="display:flex;align-items:flex-end"><button class="sec" onclick="loadAllDebts()">Show All Debtors</button></div>
+        </div>
+      </div>
+      <div class="card" id="dbCard"><div class="empty">Pick a class and Load to enter or edit debts.</div></div>
+    </div>
+
+    <div class="panel" data-panel="announcements">
+      <div class="card">
+        <h2>New Announcement</h2>
+        <div class="sub">Visible to all parents whose ward is in the selected class(es).</div>
+        <div class="grid cols-2">
+          <div>
+            <label>Message</label>
+            <textarea id="annMsg" rows="4" style="min-height:100px" placeholder="Type the announcement…"></textarea>
+          </div>
+          <div>
+            <label>Audience</label>
+            <select id="annAudience"><option value="parents">Parents</option><option value="students">Students</option><option value="both">Both</option></select>
+            <label style="margin-top:10px">Expires At (optional)</label>
+            <input id="annExpires" type="date">
+            <label style="margin-top:10px">Target</label>
+            <select id="annTargetMode" onchange="annTargetModeChanged()">
+              <option value="ALL">All classes</option>
+              <option value="SOME">Specific classes</option>
+            </select>
+            <select id="annClasses" multiple size="6" style="margin-top:6px;display:none"></select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="ok" onclick="createAnnouncement()">Create Announcement</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Existing Announcements</h2>
+        <button class="sec sm" onclick="loadAnnouncementsAdmin()">Refresh</button>
+        <div id="annListBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="reportcards">
+      <div class="card">
+        <h2>Generate Report Cards</h2>
+        <div class="sub">Includes unpublished results. Each PDF page matches the on-screen report card.</div>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="pdfClass"></select></div>
+          <div><label>Term</label><select id="pdfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="pdfYear" value="2026/2027"></div>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="blue" onclick="exportClassPDF()">📄 Download class as one PDF</button>
+          <button class="sec" onclick="exportEachStudentPDF()">📄 Download each student as PDF</button>
+        </div>
+        <div id="pdfStatus" class="portal-note">Choose class, term and year.</div>
+      </div>
+    </div>
   `;
 
   buildNav([
@@ -804,25 +681,37 @@ async function renderAdmin() {
     ]},
     { title: 'Academics', tabs: [
       { id: 'submissions', label: 'Submissions' },
-      { id: 'domains', label: 'Affective & Psychomotor' },
+      { id: 'domains', label: 'Domains' },
       { id: 'remarks', label: 'Principal Remarks' },
+      { id: 'teacherRemarks', label: 'Teacher Remarks' },
+      { id: 'calendar', label: 'School Calendar' },
     ]},
     { title: 'Publishing', tabs: [
       { id: 'publish', label: 'Publish Results' },
       { id: 'template', label: 'Report Template' },
+      { id: 'debtors', label: 'Debtors' },
+      { id: 'announcements', label: 'Announcements' },
+      { id: 'reportcards', label: 'Report Cards' },
     ]},
   ], 'teachers');
 
   document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
   document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
+  document.querySelector('.nav-item[data-tab="teacherRemarks"]').dataset.onload = 'loadTeacherRemarksTab';
+  document.querySelector('.nav-item[data-tab="calendar"]').dataset.onload = 'loadSchoolCalendar';
   document.querySelector('.nav-item[data-tab="template"]').dataset.onload = 'loadTemplate';
   document.querySelector('.nav-item[data-tab="parents"]').dataset.onload = 'loadParentAccounts';
+  document.querySelector('.nav-item[data-tab="debtors"]').dataset.onload = 'loadDebtsForClass';
+  document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'loadAnnouncementsAdmin';
+  document.querySelector('.nav-item[data-tab="reportcards"]').dataset.onload = 'initReportCards';
 
   const classes = await loadClasses();
-  ['tClass','pubClass','remClass','linkClass'].forEach(id => {
-    q(id).innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
+  ['tClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass'].forEach(id => {
+    const el = q(id); if (el) el.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   });
+  q('annClasses').innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
   const [jss, ss] = await Promise.all([loadSubjects('JSS1A'), loadSubjects('SS1A')]);
   const allSubs = Array.from(new Set(jss.concat(ss))).sort();
   q('tSubjects').innerHTML = allSubs.map(s => `<option>${esc(s)}</option>`).join('');
@@ -833,6 +722,7 @@ async function renderAdmin() {
   await loadTeachers();
 }
 
+/* ---- Admin teachers ---- */
 async function createTeacher() {
   const name = q('tName').value.trim();
   const email = q('tEmail').value.trim();
@@ -853,7 +743,6 @@ async function createTeacher() {
     loadTeachers();
   } catch (e) { toast(e.message, 'err'); }
 }
-
 async function loadTeachers() {
   const box = q('teachersBox'); if (!box) return;
   try {
@@ -862,27 +751,23 @@ async function loadTeachers() {
     box.innerHTML = `<div class="table-wrap"><table>
       <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Class</th><th></th></tr></thead>
       <tbody>${rows.map(t => `
-        <tr>
-          <td><strong>${esc(t.name)}</strong></td>
-          <td>${esc(t.email)}</td>
-          <td>${(t.roles && t.roles.length ? t.roles : String(t.role).split(',')).map(r =>
-            `<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
-          <td>${esc(t.class || '—')}</td>
-          <td>${t.active === false ? '' :
-            `<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td>
-        </tr>`).join('')}</tbody></table></div>`;
+        <tr><td><strong>${esc(t.name)}</strong></td><td>${esc(t.email)}</td>
+        <td>${(t.roles||String(t.role).split(',')).map(r=>`<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
+        <td>${esc(t.class||'—')}</td>
+        <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td></tr>`).join('')}
+      </tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function deleteTeacher(email) {
   if (!confirm('Disable this teacher?')) return;
   try { await api('deleteTeacher', { email }); toast('Disabled', 'ok'); loadTeachers(); }
   catch (e) { toast(e.message, 'err'); }
 }
 
+/* ---- Admin submissions ---- */
 async function loadSubmissions() {
   const box = q('submissionsBox'); if (!box) return;
-  const status = q('subFilter') ? q('subFilter').value : '';
+  const status = q('subFilter').value;
   box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const rows = await api('getSubmissions', status ? { status } : {});
@@ -893,24 +778,19 @@ async function loadSubmissions() {
         const when = r.timestamp ? new Date(r.timestamp).toLocaleString() : '—';
         const locked = r.status === 'locked';
         const isDomains = r.subject === '__DOMAINS__';
-        const subjectLabel = isDomains ? 'Domains (behaviour)' : r.subject;
         return `<tr>
-          <td>${esc(r.teacher_email)}</td>
-          <td>${esc(r.class)}</td>
-          <td><strong>${esc(subjectLabel)}</strong></td>
+          <td>${esc(r.teacher_email)}</td><td>${esc(r.class)}</td>
+          <td><strong>${esc(isDomains ? 'Domains' : r.subject)}</strong></td>
           <td>${esc(r.term)}</td>
-          <td><span class="badge ${locked ? 'warn' : 'ok'}">${esc(r.status)}</span></td>
+          <td><span class="badge ${locked?'warn':'ok'}">${esc(r.status)}</span></td>
           <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
-          <td>${locked ? `<button class="blue sm"
-            onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}',${isDomains})">Unlock</button>` : ''}</td>
+          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}',${isDomains})">Unlock</button>` : ''}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function unlockSubmission(teacherEmail, className, subject, term, isDomains) {
-  const label = isDomains ? `Domains / ${className} / ${term}` : `${subject} / ${className} / ${term}`;
-  if (!confirm(`Unlock ${label}?`)) return;
+  if (!confirm('Unlock this submission?')) return;
   try {
     if (isDomains) await api('unlockDomains', { teacherEmail, className, term });
     else await api('unlockScores', { teacherEmail, className, subject, term });
@@ -918,6 +798,72 @@ async function unlockSubmission(teacherEmail, className, subject, term, isDomain
   } catch (e) { toast(e.message, 'err'); }
 }
 
+/* ---- Domains (shared admin + class teacher) ---- */
+let DMN_KIND = 'affective';
+const AFFECTIVE_ITEMS = [
+  ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
+  ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
+  ['obedience','Obedience'],['neatness','Neatness'],['responsibility','Responsibility'],['self_control','Self-control']
+];
+const PSYCHOMOTOR_ITEMS = [
+  ['handwriting','Handwriting'],['drawing','Drawing and painting'],
+  ['handwork','Handwork / practical'],['sports','Sports & physical'],
+  ['coordination','Coordination & dexterity'],['tools','Use of tools & equipment']
+];
+const DMN_RATINGS = { 5:'Excellent',4:'Very Good',3:'Good',2:'Fair',1:'Needs Improvement' };
+
+function switchDomainKind(kind) {
+  DMN_KIND = kind;
+  q('tabAffBtn').className = 'sm ' + (kind === 'affective' ? 'blue' : 'sec');
+  q('tabPsyBtn').className = 'sm ' + (kind === 'psychomotor' ? 'blue' : 'sec');
+  reloadDomainEditor();
+}
+async function reloadDomainEditor() {
+  const className = hasRole('admin') ? q('dmnClass').value : S.user.class;
+  const term = q('dmnTerm').value;
+  const year = q('dmnYear').value.trim();
+  const box = q('domainEditorBox');
+  if (!className || !term || !year) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const [students, existing] = await Promise.all([
+      api('getStudents', { className }),
+      api('getDomainAssessments', { kind: DMN_KIND, className, term, academicYear: year })
+    ]);
+    if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
+    const byStudent = {}; (existing || []).forEach(r => { byStudent[r.student_id] = r; });
+    const items = DMN_KIND === 'affective' ? AFFECTIVE_ITEMS : PSYCHOMOTOR_ITEMS;
+    const head = `<th style="min-width:170px">Student</th>` +
+      items.map(([k, l]) => `<th style="text-align:center;min-width:110px">${esc(l)}</th>`).join('');
+    const rows = students.map(st => {
+      const row = byStudent[st.student_id] || {};
+      const cells = items.map(([k]) => {
+        const v = row[k];
+        const opts = ['',1,2,3,4,5].map(n =>
+          `<option value="${n}" ${String(v || '') === String(n) ? 'selected' : ''}>${n === '' ? '—' : n + ' · ' + DMN_RATINGS[n]}</option>`
+        ).join('');
+        return `<td style="text-align:center"><select class="dmn-select" data-student="${esc(st.student_id)}" data-item="${k}">${opts}</select></td>`;
+      }).join('');
+      return `<tr><td><strong>${esc(st.name)}</strong><br><small style="color:var(--muted);font-size:11px">${esc(st.student_id)}</small></td>${cells}</tr>`;
+    }).join('');
+    box.innerHTML = `<div style="overflow-x:auto"><table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="portal-note" style="margin-top:14px">Each change saves immediately.</p>`;
+    box.querySelectorAll('select.dmn-select').forEach(sel => {
+      sel.addEventListener('change', () => saveDomainRating(sel, className, term, year));
+    });
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function saveDomainRating(sel, className, term, year) {
+  const studentId = sel.dataset.student, item = sel.dataset.item, value = sel.value;
+  sel.style.background = '#fffbea';
+  try {
+    await api('saveDomainAssessment', { kind: DMN_KIND, className, term, academicYear: year, studentId, item, value });
+    sel.style.background = '#f0fdf4';
+    setTimeout(() => { sel.style.background = ''; }, 800);
+  } catch (e) { sel.style.background = '#fef2f2'; toast(e.message, 'err'); }
+}
+
+/* ---- Publish ---- */
 async function publishClass(publish) {
   const className = q('pubClass').value, term = q('pubTerm').value, year = q('pubYear').value.trim();
   if (!confirm(`${publish ? 'Publish' : 'Unpublish'} ${className} / ${term} / ${year}?`)) return;
@@ -927,11 +873,12 @@ async function publishClass(publish) {
       : await api('adminUnpublishClass', { className, term, academicYear: year });
     q('pubStatus').textContent = publish
       ? `Published: ${r.created} new, ${r.updated} updated, ${r.already} already (of ${r.total}).`
-      : `Unpublished: ${r.changed} result(s).`;
+      : `Unpublished: ${r.changed}.`;
     toast(publish ? 'Published' : 'Unpublished', 'ok');
   } catch (e) { q('pubStatus').textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
+/* ---- Principal remarks ---- */
 async function loadRemarksList() {
   const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
   const box = q('remCard'); if (!box) return;
@@ -949,14 +896,12 @@ async function loadRemarksList() {
         <tr data-student="${esc(students[i].student_id)}">
           <td><strong>${esc(students[i].name)}</strong></td>
           <td>${r.error ? '—' : (r.overallPercent != null ? r.overallPercent + '%' : '—')}</td>
-          <td>${r.error ? `<span class="badge err">${esc(r.error)}</span>` :
-            `<span class="badge ${r.source === 'override' ? 'warn' : 'info'}">${esc(r.source)}</span>`}</td>
+          <td>${r.error ? `<span class="badge err">${esc(r.error)}</span>` : `<span class="badge ${r.source==='override'?'warn':'info'}">${esc(r.source)}</span>`}</td>
           <td><textarea rows="2" style="width:100%">${esc(r.remark || '')}</textarea></td>
         </tr>`).join('')}</tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="ok" onclick="saveAllRemarks()">Save All</button></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function saveAllRemarks() {
   const rows = document.querySelectorAll('#remCard tbody tr');
   const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
@@ -967,13 +912,12 @@ async function saveAllRemarks() {
     try { await api('adminSetPrincipalRemark', { className, studentId, term, academicYear: year, remark }); ok++; }
     catch (e) { fail++; }
   }
-  toast(`Saved ${ok}${fail ? ' · failed ' + fail : ''}`, fail ? 'err' : 'ok');
+  toast(`Saved ${ok}${fail?' · failed '+fail:''}`, fail?'err':'ok');
   loadRemarksList();
 }
-
 async function generateRemarksForClass() {
   const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
-  if (!confirm(`Generate principal remarks for ${className} / ${term}?`)) return;
+  if (!confirm(`Generate remarks for ${className} / ${term}?`)) return;
   try {
     const r = await api('adminGeneratePrincipalRemarksForClass', { className, term, academicYear: year });
     toast(`Created ${r.created} · skipped ${r.skipped} · no-score ${r.noScore}`, 'ok');
@@ -981,11 +925,80 @@ async function generateRemarksForClass() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
+/* ---- Teacher remarks ---- */
+async function loadTeacherRemarksTab() {
+  const classes = await loadClasses();
+  if (q('trClass') && !q('trClass').innerHTML) {
+    q('trClass').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
+  }
+}
+async function loadTeacherRemarks() {
+  const className = q('trClass').value, term = q('trTerm').value, year = q('trYear').value.trim();
+  const box = q('trCard');
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const [students, existing] = await Promise.all([
+      api('getStudents', { className }),
+      api('adminGetTeacherRemarks', { className, term, academicYear: year })
+    ]);
+    if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
+    const map = {}; (existing || []).forEach(r => { map[r.student_id] = r.remark || ''; });
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Class Teacher's Remark</th></tr></thead>
+      <tbody>${students.map(st => `
+        <tr data-student="${esc(st.student_id)}">
+          <td><strong>${esc(st.name)}</strong></td>
+          <td><input data-remark value="${esc(map[st.student_id] || '')}" style="width:100%"></td>
+        </tr>`).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="ok" onclick="saveTeacherRemarks()">Save All</button></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function saveTeacherRemarks() {
+  const className = q('trClass').value, term = q('trTerm').value, year = q('trYear').value.trim();
+  const rows = document.querySelectorAll('#trCard tbody tr');
+  let ok = 0, fail = 0;
+  for (const tr of rows) {
+    const studentId = tr.dataset.student;
+    const remark = tr.querySelector('[data-remark]').value.trim();
+    try {
+      await api('adminSaveTeacherRemark', { studentId, className, term, academicYear: year, remark });
+      ok++;
+    } catch (e) { fail++; }
+  }
+  toast(`Saved ${ok}${fail?' · failed '+fail:''}`, fail?'err':'ok');
+}
+
+/* ---- School Calendar ---- */
+async function loadSchoolCalendar() {
+  const year = q('calYear').value.trim(), term = q('calTerm').value;
+  const status = q('calStatus');
+  status.innerHTML = '';
+  try {
+    const rows = await api('adminGetSchoolCalendar', { academicYear: year, term });
+    const r = rows[0];
+    if (!r) { q('calNext').value = ''; q('calVacates').value = ''; q('calOpened').value = ''; return; }
+    q('calNext').value = r.next_term_begins || '';
+    q('calVacates').value = r.school_vacates || '';
+    q('calOpened').value = r.days_school_opened || '';
+  } catch (e) { status.innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
+}
+async function saveSchoolCalendar() {
+  const academicYear = q('calYear').value.trim(), term = q('calTerm').value;
+  const nextTermBegins = q('calNext').value.trim();
+  const schoolVacates = q('calVacates').value.trim();
+  const daysSchoolOpened = q('calOpened').value.trim();
+  try {
+    await api('adminSaveSchoolCalendar', { academicYear, term, nextTermBegins, schoolVacates, daysSchoolOpened });
+    toast('Calendar saved', 'ok');
+    q('calStatus').innerHTML = '<div class="portal-note" style="background:#f0fdf4;border-color:#a7f3d0;color:#065f46">Saved.</div>';
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---- Template ---- */
 async function loadTemplate() {
   try {
     const t = await api('adminGetReportTemplate');
-    const sv = (id, v) => { const el = q(id); if (el) el.value = v == null ? '' : v; };
-    const sc = (id, v) => { const el = q(id); if (el) el.checked = v === true; };
+    const sv = (id,v) => { const el = q(id); if (el) el.value = v == null ? '' : v; };
     sv('tplSchoolName', t.schoolName || 'Greater Tomorrow Model Schools');
     sv('tplAddress', t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti');
     sv('tplMotto', t.schoolMotto || 'Jesus, our Teacher');
@@ -995,19 +1008,8 @@ async function loadTemplate() {
     sv('tplStamp', t.schoolStampUrl || '');
     sv('tplPrimary', t.primaryColor || '#1e3a8a');
     sv('tplSecondary', t.secondaryColor || '#ffffff');
-    sc('tplShowTests', t.showTests !== false);
-    sc('tplShowExam', t.showExam !== false);
-    sc('tplShowTotals', t.showSubjectTotals !== false);
-    sc('tplShowGrade', t.showGrade !== false);
-    sc('tplShowPrincipal', t.showPrincipalRemark !== false);
-    sc('tplShowAttendance', t.showAttendance !== false);
-    sc('tplShowAffective', t.showAffective !== false);
-    sc('tplShowPsychomotor', t.showPsychomotor !== false);
-    sc('tplShowAverage', t.showAnnualAverage !== false);
-  } catch (e) { q('tplStatus').innerHTML =
-    `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
+  } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
-
 async function saveTemplate() {
   const template = {
     schoolName: q('tplSchoolName').value.trim(),
@@ -1018,27 +1020,16 @@ async function saveTemplate() {
     principalSignatureUrl: q('tplPrincipalSig').value.trim(),
     schoolStampUrl: q('tplStamp').value.trim(),
     primaryColor: q('tplPrimary').value,
-    secondaryColor: q('tplSecondary').value,
-    showTests: q('tplShowTests').checked,
-    showExam: q('tplShowExam').checked,
-    showSubjectTotals: q('tplShowTotals').checked,
-    showGrade: q('tplShowGrade').checked,
-    showPrincipalRemark: q('tplShowPrincipal').checked,
-    showAttendance: q('tplShowAttendance').checked,
-    showAffective: q('tplShowAffective').checked,
-    showPsychomotor: q('tplShowPsychomotor').checked,
-    showAnnualAverage: q('tplShowAverage').checked
+    secondaryColor: q('tplSecondary').value
   };
   try {
     await api('adminSaveReportTemplate', { template });
     q('tplStatus').innerHTML = `<div class="portal-note" style="background:#f0fdf4;border-color:#a7f3d0;color:#065f46">Template saved.</div>`;
     toast('Template saved', 'ok');
-  } catch (e) {
-    q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`;
-    toast(e.message, 'err');
-  }
+  } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; toast(e.message, 'err'); }
 }
 
+/* ---- Parents ---- */
 async function createParent() {
   const name = q('parName').value.trim(), email = q('parEmail').value.trim(), password = q('parPass').value;
   if (!name || !email || password.length < 6) return toast('Name, email, password ≥ 6 required', 'err');
@@ -1049,7 +1040,6 @@ async function createParent() {
     loadParentAccounts();
   } catch (e) { toast(e.message, 'err'); }
 }
-
 async function loadLinkStudents() {
   const cls = q('linkClass').value;
   const sel = q('linkStudent');
@@ -1061,7 +1051,6 @@ async function loadLinkStudents() {
       : '<option value="">No students</option>';
   } catch (e) { sel.innerHTML = `<option value="">${esc(e.message)}</option>`; }
 }
-
 async function linkWard() {
   const email = q('linkEmail').value.trim(), className = q('linkClass').value;
   const studentId = q('linkStudent').value, relationship = q('linkRel').value;
@@ -1069,7 +1058,6 @@ async function linkWard() {
   try { await api('adminLinkWard', { email, className, studentId, relationship }); toast('Linked', 'ok'); loadParentAccounts(); }
   catch (e) { toast(e.message, 'err'); }
 }
-
 async function loadParentAccounts() {
   const box = q('parentsBox'); if (!box) return;
   try {
@@ -1081,29 +1069,411 @@ async function loadParentAccounts() {
         <tr>
           <td><strong>${esc(a.name)}</strong></td>
           <td>${esc(a.email)}</td>
-          <td style="font-family:ui-monospace,monospace;font-size:11px">${esc(a.password || '')}</td>
-          <td>${(a.wards || []).length
-            ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)}
-                <button class="danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('')
-            : '<span style="color:var(--muted)">None</span>'}</td>
+          <td style="font-family:ui-monospace;font-size:11px">${esc(a.password || '')}</td>
+          <td>${(a.wards||[]).length ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)}
+            <button class="danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('') : '<span style="color:var(--muted)">None</span>'}</td>
         </tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function unlinkWard(email, studentId, className) {
   if (!confirm('Unlink?')) return;
   try { await api('adminUnlinkWard', { email, studentId, className }); toast('Unlinked', 'ok'); loadParentAccounts(); }
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* CLASS TEACHER */
+/* ---- Debtors ---- */
+async function loadDebtsForClass() {
+  const className = q('dbClass').value;
+  const academicYear = q('dbYear').value.trim();
+  const box = q('dbCard'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const [students, debts] = await Promise.all([
+      api('getStudents', { className }),
+      api('adminGetDebts', { className, academicYear })
+    ]);
+    if (!students.length) { box.innerHTML = '<div class="empty">No students in this class.</div>'; return; }
+    const byStudent = {};
+    debts.forEach(d => {
+      if (!byStudent[d.studentId]) byStudent[d.studentId] = { total: 0, note: d.note || '', term: d.term || 'Term1' };
+      byStudent[d.studentId].total += d.amount;
+    });
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+      <tbody>${students.map(st => {
+        const d = byStudent[st.student_id] || { total:0, note:'', term:'Term1' };
+        return `<tr data-student="${esc(st.student_id)}">
+          <td><strong>${esc(st.name)}</strong></td>
+          <td><input type="number" min="0" data-amount value="${d.total || ''}" style="width:100px"></td>
+          <td><input data-note value="${esc(d.note)}" style="width:100%"></td>
+          <td><button class="ok sm" onclick="saveDebt('${esc(st.student_id)}')">Save</button></td>
+        </tr>`;
+      }).join('')}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="ok" onclick="saveAllDebts()">Save All</button></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function saveDebt(studentId) {
+  const className = q('dbClass').value, academicYear = q('dbYear').value.trim();
+  const tr = document.querySelector(`#dbCard tr[data-student="${CSS.escape(studentId)}"]`);
+  if (!tr) return;
+  const amount = tr.querySelector('[data-amount]').value.trim();
+  const note = tr.querySelector('[data-note]').value.trim();
+  try {
+    await api('adminSaveDebt', { studentId, className, academicYear, term: 'Term1', amount: amount || 0, note });
+    toast('Saved', 'ok');
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function saveAllDebts() {
+  const rows = document.querySelectorAll('#dbCard tbody tr');
+  let ok = 0, fail = 0;
+  for (const tr of rows) {
+    try {
+      await api('adminSaveDebt', {
+        studentId: tr.dataset.student,
+        className: q('dbClass').value,
+        academicYear: q('dbYear').value.trim(),
+        term: 'Term1',
+        amount: tr.querySelector('[data-amount]').value.trim() || 0,
+        note: tr.querySelector('[data-note]').value.trim()
+      }); ok++;
+    } catch (e) { fail++; }
+  }
+  toast(`Saved ${ok}${fail?' · failed '+fail:''}`, fail?'err':'ok');
+}
+async function loadAllDebts() {
+  const box = q('dbCard'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await api('adminGetDebts', {});
+    if (!rows.length) { box.innerHTML = '<div class="empty">No debtors.</div>'; return; }
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Student ID</th><th>Class</th><th>Year</th><th>Term</th><th>Amount</th><th>Note</th></tr></thead>
+      <tbody>${rows.map(r => `
+        <tr><td>${esc(r.studentId)}</td><td>${esc(r.className)}</td><td>${esc(r.academicYear)}</td>
+        <td>${esc(r.term)}</td><td><strong>${esc(r.amount)}</strong></td><td>${esc(r.note)}</td></tr>`).join('')}</tbody></table></div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+/* ---- Announcements ---- */
+function annTargetModeChanged() {
+  const mode = q('annTargetMode').value;
+  q('annClasses').style.display = mode === 'SOME' ? 'block' : 'none';
+}
+async function createAnnouncement() {
+  const message = q('annMsg').value.trim();
+  const audience = q('annAudience').value;
+  const expiresAt = q('annExpires').value;
+  const mode = q('annTargetMode').value;
+  const targetClasses = mode === 'ALL' ? 'ALL' :
+    Array.from(q('annClasses').selectedOptions).map(o => o.value).join(',');
+  if (!message) return toast('Message required', 'err');
+  if (mode === 'SOME' && (!targetClasses || targetClasses === '')) return toast('Pick at least one class', 'err');
+  try {
+    await api('adminSaveAnnouncement', { message, targetClasses, audience, expiresAt, active: true });
+    toast('Announcement created', 'ok');
+    q('annMsg').value = '';
+    loadAnnouncementsAdmin();
+  } catch (e) { toast(e.message, 'err'); }
+}
+async function loadAnnouncementsAdmin() {
+  const box = q('annListBox'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await api('adminGetAnnouncements', {});
+    if (!rows.length) { box.innerHTML = '<div class="empty">No announcements.</div>'; return; }
+    box.innerHTML = rows.map(r => `
+      <div class="ann-card">
+        <div class="msg">${esc(r.message)}</div>
+        <div class="meta">Target: ${esc(r.targetClasses || 'ALL')} · Audience: ${esc(r.audience)} · ${r.active ? 'Active' : 'Inactive'} · ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
+        ${r.active ? ` · <button class="danger sm" onclick="deleteAnnouncement('${esc(r.id)}')">Deactivate</button>` : ''}</div>
+      </div>`).join('');
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function deleteAnnouncement(id) {
+  if (!confirm('Deactivate this announcement?')) return;
+  try { await api('adminDeleteAnnouncement', { id }); toast('Deactivated', 'ok'); loadAnnouncementsAdmin(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---- Report Cards (PDF export) ---- */
+function initReportCards() { /* noop, class list is already populated */ }
+
+/* Build a report card payload using existing parentGetResult for a *specific* student.
+   Because admin cannot call parentGetResult directly, we recompute client-side using
+   getScores + getDomainAssessments + adminPreviewPrincipalRemark + template. */
+async function buildReportPayload(className, studentId, studentName, term, academicYear) {
+  const [subjectsList, template] = await Promise.all([
+    loadSubjects(className),
+    api('adminGetReportTemplate')
+  ]);
+  const scoresPerSubject = await Promise.all(subjectsList.map(subj =>
+    api('getScores', { className, subject: subj, term }).catch(() => [])
+  ));
+  const subjectResults = subjectsList.map((subj, i) => {
+    const row = (scoresPerSubject[i] || []).find(r => String(r.student_id) === String(studentId)) || {};
+    const t1 = Number(row.T1) || 0, t2 = Number(row.T2) || 0, t3 = Number(row.T3) || 0, ex = Number(row.Exam) || 0;
+    const complete = [row.T1, row.T2, row.T3, row.Exam].every(v => v !== '' && v !== null && v !== undefined);
+    const total = complete ? (t1 + t2 + t3 + ex) : null;
+    return {
+      subject: subj,
+      T1: row.T1, T2: row.T2, T3: row.T3, Exam: row.Exam,
+      total, complete,
+      grade: total === null ? '' : gradeFor(total, template.gradeScale)
+    };
+  });
+  const completeTotals = subjectResults.filter(r => r.total !== null);
+  const overallAverage = (completeTotals.length === subjectResults.length && subjectResults.length)
+    ? Math.round(completeTotals.reduce((a, r) => a + r.total, 0) / subjectResults.length * 100) / 100
+    : null;
+
+  const [aff, psy] = await Promise.all([
+    api('getDomainAssessments', { kind: 'affective', className, term, academicYear, studentId }).catch(() => null),
+    api('getDomainAssessments', { kind: 'psychomotor', className, term, academicYear, studentId }).catch(() => null)
+  ]);
+  const pr = await api('adminPreviewPrincipalRemark', { className, studentId, term, academicYear }).catch(() => null);
+
+  /* cumulative averages */
+  const termAverages = { Term1: null, Term2: null, Term3: null };
+  let enrolledFrom = null;
+  for (const t of ['Term1','Term2','Term3']) {
+    const r = pr && t === term ? pr.overallPercent : null;
+    /* compute per-term using the same approach */
+    const scoresT = await Promise.all(subjectsList.map(subj =>
+      api('getScores', { className, subject: subj, term: t }).catch(() => [])
+    ));
+    const totalsT = [];
+    scoresT.forEach(rows => {
+      const row = rows.find(x => String(x.student_id) === String(studentId));
+      if (!row) return;
+      const nums = [row.T1, row.T2, row.T3, row.Exam].map(v => v === '' || v === null ? null : Number(v));
+      if (nums.every(n => n !== null && isFinite(n))) totalsT.push(nums.reduce((a,b)=>a+b,0));
+    });
+    if (totalsT.length) {
+      const pct = Math.round(totalsT.reduce((a,b)=>a+b,0) / totalsT.length * 100) / 100;
+      termAverages[t] = pct;
+      if (enrolledFrom === null) enrolledFrom = t;
+    }
+  }
+  const presentTerms = ['Term1','Term2','Term3'].filter(t => termAverages[t] !== null);
+  const cumulativeAverage = presentTerms.length
+    ? Math.round(presentTerms.reduce((a,t)=>a+termAverages[t],0) / presentTerms.length * 100) / 100
+    : null;
+
+  return {
+    student: { studentId, name: studentName, className },
+    term, academicYear,
+    subjects: subjectResults,
+    overallAverage,
+    complete: completeTotals.length === subjectResults.length,
+    domains: { days_opened: null, days_present: null, affective: '', psychomotor: '' },
+    principalRemark: pr ? pr.remark : '',
+    affective: aff, psychomotor: psy,
+    teacherRemark: '',
+    daysPresent: null,
+    calendar: null,
+    debtTotal: 0,
+    announcements: [],
+    term1Average: termAverages.Term1,
+    term2Average: termAverages.Term2,
+    term3Average: termAverages.Term3,
+    cumulativeAverage,
+    enrolledFrom,
+    template
+  };
+}
+
+function gradeFor(score, scale) {
+  if (!Array.isArray(scale)) return '';
+  const item = scale.find(g => Number(score) >= Number(g.min) && Number(score) <= Number(g.max));
+  return item ? String(item.grade || '') : '';
+}
+
+/* Build one page for jsPDF */
+function pdfRenderPage(doc, r, opts) {
+  const t = r.template || {};
+  const { jsPDF } = window.jspdf;
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  let y = margin;
+
+  const primary = t.primaryColor || '#1e3a8a';
+
+  /* Header */
+  doc.setFontSize(16); doc.setTextColor(primary);
+  doc.text(t.schoolName || 'GREATER TOMORROW MODEL SCHOOLS', pageW/2, y, { align: 'center' });
+  y += 16;
+  doc.setFontSize(9); doc.setTextColor(60, 60, 60);
+  doc.text(t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti', pageW/2, y, { align: 'center' });
+  y += 12;
+  doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.setFont(undefined, 'bold');
+  doc.text('TERMINAL REPORT SHEET', pageW/2, y, { align: 'center' });
+  y += 12;
+  doc.setFontSize(10); doc.setFont(undefined, 'normal');
+  doc.text(`${r.term} — ${r.academicYear} SESSION`, pageW/2, y, { align: 'center' });
+  y += 8;
+  if (t.schoolMotto) {
+    doc.setFontSize(9); doc.setTextColor(107,68,35);
+    doc.text('Motto: ' + t.schoolMotto, pageW/2, y, { align: 'center' });
+    y += 6;
+  }
+
+  /* Bio row */
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+  const bio = [
+    ['NAME', r.student.name, 'CLASS', r.student.className],
+    ['ADM. NO', r.student.studentId, 'TERM', r.term],
+    ['SESSION', r.academicYear, 'OVERALL', r.overallAverage != null ? r.overallAverage + '%' : '—']
+  ];
+  doc.setFontSize(8.5);
+  bio.forEach(row => {
+    doc.setTextColor(0,0,0); doc.setFont(undefined, 'bold');
+    doc.text(row[0], margin, y); doc.text(row[2], pageW/2 + 10, y);
+    doc.setFont(undefined, 'normal');
+    doc.text(String(row[1] || ''), margin + 40, y);
+    doc.text(String(row[3] || ''), pageW/2 + 50, y);
+    y += 12;
+  });
+
+  /* Subjects table */
+  const subjectRows = r.subjects.filter(s => s.total !== null).map((s, i) => [
+    i + 1, s.subject, s.T1 ?? '—', s.T2 ?? '—', s.T3 ?? '—', s.Exam ?? '—',
+    s.total, s.grade || '—', remarkForGrade(s.grade)
+  ]);
+  if (subjectRows.length && doc.autoTable) {
+    doc.autoTable({
+      startY: y,
+      head: [['SN','Subject','1st','2nd','3rd','Exam','Total','Grade','Remark']],
+      body: subjectRows,
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [45,55,72], textColor: 255, fontSize: 8 },
+      columnStyles: { 0:{cellWidth:14}, 1:{cellWidth:110}, 7:{cellWidth:20} }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  /* Affective + Psychomotor */
+  const affItems = AFFECTIVE_ITEMS.map(([k,l]) => [l, ratingLabel(r.affective, k)]);
+  const psyItems = PSYCHOMOTOR_ITEMS.map(([k,l]) => [l, ratingLabel(r.psychomotor, k)]);
+
+  if (doc.autoTable) {
+    doc.autoTable({
+      startY: y,
+      head: [['Affective Domain','Rating','Psychomotor Domain','Rating']],
+      body: affItems.map((a, i) => [a[0], a[1], psyItems[i] ? psyItems[i][0] : '', psyItems[i] ? psyItems[i][1] : '']),
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [45,55,72], textColor: 255, fontSize: 8 },
+      columnStyles: { 0:{cellWidth:110}, 1:{cellWidth:40}, 2:{cellWidth:110}, 3:{cellWidth:40} }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  /* Cumulative */
+  const cLine = [];
+  if (r.term1Average != null) cLine.push('Term 1: ' + r.term1Average + '%');
+  if (r.term2Average != null) cLine.push('Term 2: ' + r.term2Average + '%');
+  if (r.term3Average != null) cLine.push('Term 3: ' + r.term3Average + '%');
+  if (r.cumulativeAverage != null) cLine.push('Cumulative: ' + r.cumulativeAverage + '%');
+  if (r.term !== 'Term1' && cLine.length) {
+    doc.setFontSize(9); doc.setTextColor(60,60,60);
+    doc.text(cLine.join('   ·   '), pageW/2, y, { align: 'center' });
+    y += 14;
+  }
+
+  /* Remarks */
+  doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont(undefined, 'bold');
+  doc.text("CLASS TEACHER'S REMARK:", margin, y);
+  doc.setFont(undefined, 'normal');
+  const trLines = doc.splitTextToSize(r.teacherRemark || '—', pageW - margin*2 - 110);
+  doc.text(trLines, margin + 105, y);
+  y += Math.max(14, trLines.length * 10 + 4);
+
+  doc.setFont(undefined, 'bold');
+  doc.text("PRINCIPAL'S REMARK:", margin, y);
+  doc.setFont(undefined, 'normal');
+  const prLines = doc.splitTextToSize(r.principalRemark || '—', pageW - margin*2 - 110);
+  doc.text(prLines, margin + 105, y);
+  y += Math.max(14, prLines.length * 10 + 4);
+
+  /* Signatures + Stamp */
+  const baseY = Math.min(y + 20, doc.internal.pageSize.getHeight() - 60);
+  const half = pageW / 2;
+  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
+  doc.line(margin, baseY + 30, half - 20, baseY + 30);
+  doc.line(half + 20, baseY + 30, pageW - margin, baseY + 30);
+  doc.setFontSize(8);
+  doc.text('CLASS TEACHER SIGNATURE', (margin + half - 20)/2, baseY + 40, { align:'center' });
+  doc.text((t.principalName || 'PRINCIPAL') + ' (SIGNATURE)', (half + 20 + pageW - margin)/2, baseY + 40, { align:'center' });
+  y = baseY + 50;
+
+  /* Stamp + Signature image on PDF via base64 fetch */
+  return { y, nextBaseY: baseY };
+}
+
+function ratingLabel(data, key) {
+  const v = Number(data && data[key]);
+  if (!(v >= 1 && v <= 5)) return '—';
+  return v + ' (' + DMN_RATINGS[v] + ')';
+}
+
+function remarkForGrade(g) {
+  return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
+}
+
+async function exportClassPDF() {
+  const className = q('pdfClass').value, term = q('pdfTerm').value, year = q('pdfYear').value.trim();
+  if (!className || !term || !year) return toast('Pick class/term/year', 'err');
+  const status = q('pdfStatus');
+  status.textContent = 'Building…';
+  try {
+    const students = await api('getStudents', { className });
+    if (!students.length) { status.textContent = 'No students.'; return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    for (let i = 0; i < students.length; i++) {
+      const st = students[i];
+      status.textContent = `Building ${i+1}/${students.length} — ${st.name}`;
+      const r = await buildReportPayload(className, st.student_id, st.name, term, year);
+      if (i > 0) doc.addPage();
+      pdfRenderPage(doc, r);
+    }
+    doc.save(`${className}_${term}_${year.replace(/[^\w]/g,'_')}.pdf`);
+    status.textContent = `Done — ${students.length} student page(s).`;
+    toast('PDF saved', 'ok');
+  } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
+}
+
+async function exportEachStudentPDF() {
+  const className = q('pdfClass').value, term = q('pdfTerm').value, year = q('pdfYear').value.trim();
+  if (!className || !term || !year) return toast('Pick class/term/year', 'err');
+  const status = q('pdfStatus');
+  status.textContent = 'Building…';
+  try {
+    const students = await api('getStudents', { className });
+    if (!students.length) { status.textContent = 'No students.'; return; }
+    const { jsPDF } = window.jspdf;
+    for (let i = 0; i < students.length; i++) {
+      const st = students[i];
+      status.textContent = `Saving ${i+1}/${students.length} — ${st.name}`;
+      const r = await buildReportPayload(className, st.student_id, st.name, term, year);
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      pdfRenderPage(doc, r);
+      doc.save(`${className}_${term}_${st.student_id}_${st.name.replace(/[^\w]+/g,'_')}.pdf`);
+      await new Promise(res => setTimeout(res, 250));
+    }
+    status.textContent = `Done — ${students.length} files downloaded.`;
+    toast('All PDFs saved', 'ok');
+  } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
+}
+
+/* ===================== CLASS TEACHER ===================== */
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
   const CLASS_NAME = S.user.class;
   if (!CLASS_NAME) { q('main').innerHTML = '<div class="card"><div class="empty">No class assigned. Contact admin.</div></div>'; return; }
 
   q('main').innerHTML = `
-    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage your class roster, enter scores, rate domains.</p></div>
+    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage your roster, scores, and domains.</p></div>
 
     <div class="panel active" data-panel="students">
       <div class="card">
@@ -1130,16 +1500,30 @@ async function renderClassTeacher() {
       <div class="card" id="ctScoreCard"><div class="empty">Load a subject and term.</div></div>
     </div>
 
-    <div class="panel" data-panel="domains">${domainEditorHtml()}</div>
+    <div class="panel" data-panel="domains">
+      <div class="card">
+        <div class="grid cols-3">
+          <div><label>Term</label><select id="dmnTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="dmnYear" value="2026/2027"></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="reloadDomainEditor()">Load</button></div>
+        </div>
+        <input type="hidden" id="dmnClass" value="${esc(CLASS_NAME)}">
+      </div>
+      <div class="card">
+        <div class="row" style="gap:6px;margin-bottom:14px;border-bottom:2px solid var(--line);padding-bottom:8px">
+          <button class="sec sm" onclick="switchDomainKind('affective')" id="tabAffBtn">Affective</button>
+          <button class="sec sm" onclick="switchDomainKind('psychomotor')" id="tabPsyBtn">Psychomotor</button>
+        </div>
+        <div id="domainEditorBox"><div class="empty">Load a term.</div></div>
+      </div>
+    </div>
   `;
 
   buildNav([
     { title: 'My Class', tabs: [
       { id: 'students', label: 'Students' },
       { id: 'scores', label: 'Scores' },
-    ]},
-    { title: 'Behaviour', tabs: [
-      { id: 'domains', label: 'Affective & Psychomotor' },
+      { id: 'domains', label: 'Domains' },
     ]},
   ], 'students');
 
@@ -1147,7 +1531,6 @@ async function renderClassTeacher() {
 
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
-  await initDomainSelector();
   await ctLoadStudents();
 }
 
@@ -1164,22 +1547,63 @@ async function ctLoadStudents() {
         <td><button class="danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function ctAddBulk() {
   const lines = q('bulkNames').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return toast('Nothing to add', 'err');
-  try {
-    const r = await api('addStudentsBulk', { className: S.user.class, lines });
-    q('bulkNames').value = '';
-    toast(`Added ${r.count}${r.skipped && r.skipped.length ? ' · skipped ' + r.skipped.length : ''}`, 'ok');
-    ctLoadStudents();
-  } catch (e) { toast(e.message, 'err'); }
+  await addStudentsWithDetection(S.user.class, lines);
 }
-
 async function ctRemove(id) {
   if (!confirm('Remove student?')) return;
   try { await api('deleteStudent', { student_id: id }); toast('Removed', 'ok'); ctLoadStudents(); }
   catch (e) { toast(e.message, 'err'); }
+}
+
+/* Add students with duplicate detection + optional copy */
+async function addStudentsWithDetection(className, lines) {
+  /* 1. check every name for matches */
+  const pending = [];
+  for (const line of lines) {
+    const parts = line.split(',');
+    const typedName = parts.length > 1 ? parts.slice(1).join(',').trim() : line;
+    if (!typedName) continue;
+    const matches = await api('findStudentMatches', { name: typedName, excludeClass: className });
+    pending.push({ line, name: typedName, matches });
+  }
+  const withMatches = pending.filter(p => p.matches && p.matches.length);
+  if (!withMatches.length) {
+    /* No matches → just add */
+    const r = await api('addStudentsBulk', { className, lines });
+    toast(`Added ${r.count}${r.skipped && r.skipped.length ? ' · skipped ' + r.skipped.length : ''}`, 'ok');
+    if (hasRole('admin')) loadTeachers();
+    else ctLoadStudents();
+    return;
+  }
+  /* Show a simple per-match confirm */
+  const copyQueue = [];
+  for (const p of withMatches) {
+    const top = p.matches[0];
+    const prompt = `"${p.name}" may match ${top.name} in ${top.className} (${top.studentId}). Copy previous scores?`;
+    if (confirm(prompt)) copyQueue.push({ newName: p.name, newLine: p.line, fromClass: top.className, fromId: top.studentId });
+  }
+  /* 2. add all students first (same IDs, no copy yet) */
+  const r = await api('addStudentsBulk', { className, lines });
+  toast(`Added ${r.count}${r.skipped && r.skipped.length ? ' · skipped ' + r.skipped.length : ''}`, 'ok');
+  /* 3. for students we need to copy, find their new IDs */
+  if (copyQueue.length) {
+    const students = await api('getStudents', { className });
+    for (const c of copyQueue) {
+      const row = students.find(s => s.name.trim().toLowerCase() === c.newName.toLowerCase());
+      if (!row) continue;
+      try {
+        await api('copyStudentFromClass', {
+          fromClass: c.fromClass, fromId: c.fromId, toClass: className, toId: row.student_id
+        });
+      } catch (e) { toast('Copy failed for ' + c.newName + ': ' + e.message, 'err'); }
+    }
+    toast(`Copy done for ${copyQueue.length} student(s)`, 'ok');
+  }
+  if (hasRole('admin')) loadTeachers();
+  else ctLoadStudents();
 }
 
 async function ctLoadScores() {
@@ -1192,8 +1616,7 @@ async function ctLoadScores() {
     ]);
     if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
     const map = {}; scores.forEach(s => map[s.student_id] = s);
-    box.innerHTML = `
-      <h2>${esc(subject)} · ${esc(term)}</h2>
+    box.innerHTML = `<h2>${esc(subject)} · ${esc(term)}</h2>
       <div class="table-wrap"><table>
         <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
         <tbody>${students.map(st => {
@@ -1209,28 +1632,26 @@ async function ctLoadScores() {
     box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => ctSaveCell(inp, subject, term)));
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function ctSaveCell(inp, subject, term) {
   const tr = inp.closest('tr');
   try {
     await api('saveScore', { className: S.user.class, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
     inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
-    const total = Array.from(tr.querySelectorAll('input')).reduce((a, i) => a + (Number(i.value) || 0), 0);
+    const total = Array.from(tr.querySelectorAll('input')).reduce((a,i)=>a+(Number(i.value)||0),0);
     tr.querySelector('.total').textContent = total || '';
-  } catch (e) { toast('Save failed: ' + e.message, 'err'); inp.style.background = '#fef2f2'; }
+  } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
 }
-
 async function ctSubmit(subject, term) {
   if (!confirm(`Submit & lock ${subject} / ${term}?`)) return;
   try { await api('submitScores', { className: S.user.class, subject, term }); toast('Locked', 'ok'); }
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* SUBJECT TEACHER */
+/* ===================== SUBJECT TEACHER ===================== */
 async function renderSubjectTeacher() {
   q('roleTag').textContent = 'Subject Teacher · Jesus, Our Teacher';
   q('main').innerHTML = `
-    <div class="page-head"><h1>Subject Teacher</h1><p>Enter scores for your assigned subjects.</p></div>
+    <div class="page-head"><h1>Subject Teacher</h1><p>Enter scores for your subjects.</p></div>
     <div class="panel active" data-panel="entry">
       <div class="card">
         <div class="grid cols-4">
@@ -1250,21 +1671,15 @@ async function renderSubjectTeacher() {
       </div>
     </div>
   `;
-
-  buildNav([
-    { title: 'Academics', tabs: [
-      { id: 'entry', label: 'Score Entry' },
-      { id: 'history', label: 'My Submissions' },
-    ]},
-  ], 'entry');
-
+  buildNav([{ title: 'Academics', tabs: [
+    { id: 'entry', label: 'Score Entry' },
+    { id: 'history', label: 'My Submissions' },
+  ]}], 'entry');
   document.querySelector('.nav-item[data-tab="history"]').dataset.onload = 'stLoadHistory';
-
   const classes = await loadClasses();
   q('stClass').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   await stFillSubjects();
 }
-
 async function stFillSubjects() {
   const cls = q('stClass').value;
   const subs = await loadSubjects(cls);
@@ -1274,7 +1689,6 @@ async function stFillSubjects() {
     ? filtered.map(s => `<option>${esc(s)}</option>`).join('')
     : '<option value="">No assigned subjects</option>';
 }
-
 async function stLoadScores() {
   const className = q('stClass').value, subject = q('stSubject').value, term = q('stTerm').value;
   if (!subject) return toast('No subject', 'err');
@@ -1286,8 +1700,7 @@ async function stLoadScores() {
     ]);
     if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
     const map = {}; scores.forEach(s => map[s.student_id] = s);
-    box.innerHTML = `
-      <h2>${esc(subject)} · ${esc(className)} · ${esc(term)}</h2>
+    box.innerHTML = `<h2>${esc(subject)} · ${esc(className)} · ${esc(term)}</h2>
       <div class="table-wrap"><table>
         <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
         <tbody>${students.map(st => {
@@ -1303,23 +1716,20 @@ async function stLoadScores() {
     box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => stSaveCell(inp, className, subject, term)));
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-
 async function stSaveCell(inp, className, subject, term) {
   const tr = inp.closest('tr');
   try {
     await api('saveScore', { className, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
     inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
-    const total = Array.from(tr.querySelectorAll('input')).reduce((a, i) => a + (Number(i.value) || 0), 0);
+    const total = Array.from(tr.querySelectorAll('input')).reduce((a,i)=>a+(Number(i.value)||0),0);
     tr.querySelector('.total').textContent = total || '';
-  } catch (e) { toast('Save failed: ' + e.message, 'err'); inp.style.background = '#fef2f2'; }
+  } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
 }
-
 async function stSubmit(className, subject, term) {
   if (!confirm(`Submit & lock ${subject} / ${className} / ${term}?`)) return;
   try { await api('submitScores', { className, subject, term }); toast('Locked', 'ok'); }
   catch (e) { toast(e.message, 'err'); }
 }
-
 async function stLoadHistory() {
   const box = q('stHistory'); if (!box) return;
   try {
@@ -1331,7 +1741,7 @@ async function stLoadHistory() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* STUDENT */
+/* ===================== STUDENT ===================== */
 async function renderStudent() {
   q('roleTag').textContent = 'Student · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1345,7 +1755,6 @@ async function renderStudent() {
     <div class="card" id="studentBox"><div class="empty">Select a term.</div></div>`;
   buildNav([{ title: 'Academics', tabs: [{ id: 'results', label: 'My Results' }] }], 'results');
 }
-
 async function studentLoad() {
   const box = q('studentBox'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
@@ -1357,32 +1766,54 @@ async function studentLoad() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* PARENT */
+/* ===================== PARENT ===================== */
 async function renderParent() {
   q('roleTag').textContent = 'Parent Portal · Jesus, Our Teacher';
   q('main').innerHTML = `
     <div class="page-head"><h1>Parent Portal</h1><p>View published results for your ward.</p></div>
-    <div class="card toolbar">
-      <div class="grid cols-3">
-        <div><label>Ward</label><select id="pWard"></select></div>
-        <div><label>Term</label><select id="pTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
-        <div><label>Academic Year</label><input id="pYear" value="2026/2027"></div>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <button class="blue" onclick="parentLoad()">Load Result</button>
-        <button class="sec" onclick="window.print()">Print</button>
-      </div>
-      <div id="pStatus" class="portal-note">Choose ward, term and year.</div>
-    </div>
-    <div class="panel active" data-panel="report"><div id="pReportBox"></div></div>
-    <div class="card">
-      <h2>Ask Academic Assistant</h2>
-      <div id="pChat"><div class="empty">Load a result first.</div></div>
-      <textarea id="pQuestion" style="margin-top:10px;min-height:70px" placeholder="Which subjects should my child focus on?"></textarea>
-      <div class="row" style="margin-top:8px"><button onclick="parentAsk()">Ask</button></div>
-    </div>`;
 
-  buildNav([{ title: 'Results', tabs: [{ id: 'report', label: 'Report Card' }] }], 'report');
+    <div class="panel active" data-panel="report">
+      <div class="card toolbar">
+        <div class="grid cols-3">
+          <div><label>Ward</label><select id="pWard"></select></div>
+          <div><label>Term</label><select id="pTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Academic Year</label><input id="pYear" value="2026/2027"></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="blue" onclick="parentLoad()">Load Result</button>
+          <button class="sec" onclick="window.print()">Print</button>
+        </div>
+        <div id="pStatus" class="portal-note">Choose ward, term and year.</div>
+      </div>
+      <div id="pReportBox"></div>
+    </div>
+
+    <div class="panel" data-panel="announcements">
+      <div class="card">
+        <h2>Announcements</h2>
+        <div id="pAnnBox"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="chat">
+      <div class="card">
+        <h2>Ask Academic Assistant</h2>
+        <div id="pChat"><div class="empty">Load a result first.</div></div>
+        <textarea id="pQuestion" style="margin-top:10px;min-height:70px" placeholder="Which subjects should my child focus on?"></textarea>
+        <div class="row" style="margin-top:8px"><button onclick="parentAsk()">Ask</button></div>
+      </div>
+    </div>
+  `;
+
+  buildNav([
+    { title: 'Results', tabs: [
+      { id: 'report', label: 'Report Card' },
+      { id: 'announcements', label: 'Announcements' },
+      { id: 'chat', label: 'Ask Assistant' },
+    ]},
+  ], 'report');
+
+  document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'parentLoadAnnouncements';
 
   try {
     const wards = await api('parentGetWards');
@@ -1406,6 +1837,7 @@ async function parentLoad() {
   try {
     const r = await api('parentGetResult', { className: ward.className, studentId: ward.studentId, term, academicYear: year });
     window.__CURRENT_RESULT = r;
+    window.__CURRENT_WARD = ward;
     q('pStatus').textContent = 'Loaded.';
     renderParentReport(r);
   } catch (e) {
@@ -1415,21 +1847,20 @@ async function parentLoad() {
   }
 }
 
-const DOMAIN_ITEMS_AFF = [
-  ['punctuality','Punctuality'],['attendance','Attendance'],['honesty','Honesty'],
-  ['cooperation','Cooperation'],['leadership','Leadership'],['club_participation','Club participation'],
-  ['obedience','Obedience'],['neatness','Neatness'],['responsibility','Responsibility'],['self_control','Self-control']
-];
-const DOMAIN_ITEMS_PSY = [
-  ['handwriting','Handwriting'],['drawing','Drawing & painting'],
-  ['handwork','Handwork / practical'],['sports','Sports & physical'],
-  ['coordination','Coordination & dexterity'],['tools','Use of tools & equipment']
-];
-const RATING_GRADE = { 5:'A', 4:'B', 3:'C', 2:'D', 1:'E' };
-const RATING_WORD  = { 5:'Excellent', 4:'Very Good', 3:'Good', 2:'Fair', 1:'Needs Improvement' };
-
-function remarkForGrade(g) {
-  return ({ A:'Excellent', B:'Very Good', C:'Good', D:'Fair', E:'Pass', F:'Needs Improvement' })[g] || '';
+async function parentLoadAnnouncements() {
+  const box = q('pAnnBox'); if (!box) return;
+  const idx = q('pWard').value;
+  if (idx === '') { box.innerHTML = '<div class="empty">No ward linked.</div>'; return; }
+  const ward = window.__WARDS[Number(idx)];
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const list = await api('parentGetAnnouncements', { className: ward.className, studentId: ward.studentId });
+    if (!list.length) { box.innerHTML = '<div class="empty">No announcements.</div>'; return; }
+    box.innerHTML = list.map(a => `<div class="ann-card">
+      <div class="msg">${esc(a.message)}</div>
+      <div class="meta">${a.createdAt ? new Date(a.createdAt).toLocaleString() : ''}</div>
+    </div>`).join('');
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
 function renderParentReport(r) {
@@ -1441,64 +1872,51 @@ function renderParentReport(r) {
   const schoolAddr = esc(t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti');
   const motto      = esc(t.schoolMotto || 'Jesus, Our Teacher');
   const logo = t.logoUrl
-    ? `<img src="${esc(t.logoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`
+    ? `<img src="${esc(t.logoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:6px" alt="">`
     : `<div style="font-family:Georgia,serif;font-size:30px;color:#1e3a8a;font-weight:900">G</div>`;
 
   const subjects = r.subjects || [];
   const rows = subjects.map((s, i) => {
     const ca = (Number(s.T1) || 0) + (Number(s.T2) || 0) + (Number(s.T3) || 0);
-    return `
-      <tr>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${i + 1}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:left">${esc(s.subject)}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T1 ?? '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T2 ?? '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${s.T3 ?? '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${ca || '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center">${s.Exam ?? '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${s.total ?? '—'}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${esc(s.grade || '—')}</td>
-        <td style="border:1px solid #333;padding:3px;text-align:center;font-size:9px">${esc(remarkForGrade(s.grade))}</td>
-      </tr>`;
+    return `<tr>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${i + 1}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:left">${esc(s.subject)}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T1 ?? '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T2 ?? '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${s.T3 ?? '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${ca || '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center">${s.Exam ?? '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${s.total ?? '—'}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center;font-weight:700">${esc(s.grade || '—')}</td>
+      <td style="border:1px solid #333;padding:3px;text-align:center;font-size:9px">${esc(remarkForGrade(s.grade))}</td>
+    </tr>`;
   }).join('');
 
   const domainCol = (data, key) => {
-    const v = Number(data?.[key]);
+    const v = Number(data && data[key]);
     if (!(v >= 1 && v <= 5)) return '<span style="color:#999">—</span>';
-    return `<strong>${RATING_GRADE[v]}</strong> <span style="font-size:8.5px;color:#555">${RATING_WORD[v]}</span>`;
+    return `<strong>${({5:'A',4:'B',3:'C',2:'D',1:'E'})[v]}</strong> <span style="font-size:8.5px;color:#555">${DMN_RATINGS[v]}</span>`;
   };
-  const affRows = DOMAIN_ITEMS_AFF.map(([k, l]) =>
-    `<tr>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.affective, k)}</td>
-    </tr>`).join('');
-  const psyRows = DOMAIN_ITEMS_PSY.map(([k, l]) =>
-    `<tr>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.psychomotor, k)}</td>
-    </tr>`).join('');
+  const affRows = AFFECTIVE_ITEMS.map(([k, l]) =>
+    `<tr><td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
+     <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.affective, k)}</td></tr>`).join('');
+  const psyRows = PSYCHOMOTOR_ITEMS.map(([k, l]) =>
+    `<tr><td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9.5px">${esc(l)}</td>
+     <td style="border:1px solid #999;padding:2px 4px;text-align:center">${domainCol(r.psychomotor, k)}</td></tr>`).join('');
 
   const scale = (t.gradeScale || []).slice().sort((a, b) => Number(b.min) - Number(a.min));
   const gradeRows = scale.map(g =>
-    `<tr>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:center">${Number(g.min)}–${Number(g.max) === 100 ? 100 : Number(g.max)}</td>
+    `<tr><td style="border:1px solid #999;padding:2px 4px;text-align:center">${Number(g.min)}–${Number(g.max) === 100 ? 100 : Number(g.max)}</td>
       <td style="border:1px solid #999;padding:2px 4px;text-align:center;font-weight:700">${esc(g.grade)}</td>
-      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9px">${esc(g.remark || '')}</td>
-    </tr>`).join('');
+      <td style="border:1px solid #999;padding:2px 4px;text-align:left;font-size:9px">${esc(g.remark || '')}</td></tr>`).join('');
 
   const totalObtained = subjects.reduce((s, x) => s + (Number(x.total) || 0), 0);
   const overallPct = r.overallAverage == null ? '—' : r.overallAverage;
 
-  /* Attendance numbers — prefer admin calendar for "days opened",
-     fall back to daysPresent from the domains tab */
   const daysOpen    = cal.days_school_opened || d.days_opened || '—';
   const daysPresent = r.daysPresent ?? d.days_present ?? '—';
   const daysAbsent  = (Number(daysOpen) && Number(daysPresent)) ? (Number(daysOpen) - Number(daysPresent)) : '—';
-
-  /* Teacher remark — now served by the backend */
   const tRemark = r.teacherRemark || '';
-
-  /* Calendar dates — served by the backend */
   const nextTerm = cal.next_term_begins || '';
   const vacates  = cal.school_vacates || '';
 
@@ -1514,57 +1932,85 @@ function renderParentReport(r) {
     </div>`;
   }).join('');
 
+  /* cumulative row */
+  const cParts = [];
+  if (r.term1Average != null) cParts.push(['Term 1', r.term1Average]);
+  if (r.term2Average != null) cParts.push(['Term 2', r.term2Average]);
+  if (r.term3Average != null) cParts.push(['Term 3', r.term3Average]);
+  if (r.cumulativeAverage != null) cParts.push(['Cumulative', r.cumulativeAverage]);
+  const showCumulative = r.term !== 'Term1' && cParts.length > 1;
+  const cumulativeRow = showCumulative ? `
+    <div style="display:grid;grid-template-columns:repeat(${cParts.length},1fr);gap:6px;margin:10px 0;
+                padding:10px;background:#faf7f2;border:1px solid #e5dccf;border-radius:6px">
+      ${cParts.map(([label, val]) => `
+        <div style="text-align:center">
+          <div style="font-size:9px;color:#6b4423;font-weight:700;text-transform:uppercase;letter-spacing:.05em">${label}</div>
+          <div style="font-size:14px;font-weight:800;color:#1e3a8a">${val}%</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  /* debt banner */
+  const debtTotal = Number(r.debtTotal) || 0;
+  const debtBanner = debtTotal > 0 ? `
+    <div class="debt-banner">
+      <span>⚠ Outstanding balance: <strong>₦${debtTotal.toLocaleString()}</strong> — kindly settle at the school bursary.</span>
+    </div>` : '';
+
+  /* stamp + signature images */
+  const sigImg = t.principalSignatureUrl
+    ? `<img src="${esc(t.principalSignatureUrl)}" alt="Signature" style="max-height:60px;max-width:160px;object-fit:contain"
+        onerror="this.style.display='none'">` : '';
+  const stampImg = t.schoolStampUrl
+    ? `<img src="${esc(t.schoolStampUrl)}" alt="Stamp" style="max-height:70px;max-width:100px;object-fit:contain"
+        onerror="this.style.display='none'">` : '';
+
   q('pReportBox').innerHTML = `
-  <div id="reportCard"
-    style="background:#fff;color:#111;padding:16px 18px;font-family:'Inter','Segoe UI',Arial,sans-serif;
-           font-size:11px;line-height:1.35;border:1px solid #333;max-width:1000px;margin:0 auto">
+    ${debtBanner}
+    <div id="reportCard" style="background:#fff;color:#111;padding:16px 18px;font-family:'Inter','Segoe UI',Arial,sans-serif;
+      font-size:11px;line-height:1.35;border:1px solid #333;max-width:1000px;margin:0 auto">
 
-    <!-- HEADER -->
-    <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;
-                border-bottom:3px solid #f5b800;padding-bottom:10px;margin-bottom:10px">
-      <div style="width:110px;height:110px;border-radius:8px;border:2px solid #f5b800;
-                  background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">
-        ${logo}
+      <div style="display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:center;
+        border-bottom:3px solid #f5b800;padding-bottom:10px;margin-bottom:10px">
+        <div style="width:110px;height:110px;border-radius:8px;border:2px solid #f5b800;
+          background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden">${logo}</div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:900;letter-spacing:.5px;color:#111;text-transform:uppercase;line-height:1.1">${schoolName}</div>
+          <div style="font-size:11px;color:#333;margin-top:3px">${schoolAddr}</div>
+          <div style="font-size:11px;color:#333;font-weight:700">TERMINAL REPORT SHEET</div>
+          <div style="font-size:11px;color:#333;font-weight:600">${esc(r.term)} &mdash; ${esc(r.academicYear)} SESSION</div>
+          <div style="font-size:11px;font-style:italic;color:#6b4423;margin-top:2px">Motto: ${motto}</div>
+        </div>
       </div>
-      <div style="text-align:center">
-        <div style="font-size:22px;font-weight:900;letter-spacing:.5px;color:#111;text-transform:uppercase;line-height:1.1">${schoolName}</div>
-        <div style="font-size:11px;color:#333;margin-top:3px">${schoolAddr}</div>
-        <div style="font-size:11px;color:#333;font-weight:700">TERMINAL REPORT SHEET</div>
-        <div style="font-size:11px;color:#333;font-weight:600">${esc(r.term)} &mdash; ${esc(r.academicYear)} SESSION</div>
-        <div style="font-size:11px;font-style:italic;color:#6b4423;margin-top:2px">Motto: ${motto}</div>
-      </div>
-    </div>
 
-    <!-- BIO DATA -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
-      <tr>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:80px">NAME</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.name)}</td>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:60px">CLASS</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.className)}</td>
-      </tr>
-      <tr>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">ADM. NO</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.studentId)}</td>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">TERM</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(r.term)}</td>
-      </tr>
-      <tr>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SESSION</td>
-        <td style="border:1px solid #333;padding:3px 8px">${esc(r.academicYear)}</td>
-        <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">OVERALL</td>
-        <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPct === '—' ? '—' : overallPct + '%'}</td>
-      </tr>
-    </table>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
+        <tr>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:80px">NAME</td>
+          <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.name)}</td>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700;width:60px">CLASS</td>
+          <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.className)}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">ADM. NO</td>
+          <td style="border:1px solid #333;padding:3px 8px">${esc(r.student.studentId)}</td>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">TERM</td>
+          <td style="border:1px solid #333;padding:3px 8px">${esc(r.term)}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">SESSION</td>
+          <td style="border:1px solid #333;padding:3px 8px">${esc(r.academicYear)}</td>
+          <td style="border:1px solid #333;padding:3px 8px;background:#f2f2f2;font-weight:700">OVERALL</td>
+          <td style="border:1px solid #333;padding:3px 8px;font-weight:700">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+        </tr>
+      </table>
 
-    <!-- SUBJECTS + SIDE PANELS -->
-    <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
-      <div>
-        <div style="font-weight:900;text-align:center;background:#2d3748;color:#fff;padding:3px;font-size:10.5px;
-                    text-transform:uppercase;letter-spacing:.5px">Subject Performance</div>
-        <table style="width:100%;border-collapse:collapse;font-size:10px">
-          <thead>
-            <tr style="background:#f2f2f2">
+      ${cumulativeRow}
+
+      <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
+        <div>
+          <div style="font-weight:900;text-align:center;background:#2d3748;color:#fff;padding:3px;font-size:10.5px;
+            text-transform:uppercase;letter-spacing:.5px">Subject Performance</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead><tr style="background:#f2f2f2">
               <th style="border:1px solid #333;padding:3px;width:22px">SN</th>
               <th style="border:1px solid #333;padding:3px;text-align:left">SUBJECTS</th>
               <th style="border:1px solid #333;padding:3px;width:30px">1ST</th>
@@ -1575,107 +2021,104 @@ function renderParentReport(r) {
               <th style="border:1px solid #333;padding:3px;width:38px">TOTAL</th>
               <th style="border:1px solid #333;padding:3px;width:32px">GRD</th>
               <th style="border:1px solid #333;padding:3px">REMARK</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-            <tr style="background:#f2f2f2;font-weight:800">
-              <td colspan="7" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
-              <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtained}</td>
-              <td style="border:1px solid #333;padding:3px;text-align:center">${overallPct === '—' ? '—' : overallPct + '%'}</td>
-              <td style="border:1px solid #333;padding:3px"></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div>
-        <div style="border:2px solid #2d3748;margin-bottom:8px">
-          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                      text-transform:uppercase;letter-spacing:.5px">Affective Domain</div>
-          <table style="width:100%;border-collapse:collapse">${affRows}</table>
+            </tr></thead>
+            <tbody>
+              ${rows}
+              <tr style="background:#f2f2f2;font-weight:800">
+                <td colspan="7" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
+                <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtained}</td>
+                <td style="border:1px solid #333;padding:3px;text-align:center">${overallPct === '—' ? '—' : overallPct + '%'}</td>
+                <td style="border:1px solid #333;padding:3px"></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <div style="border:2px solid #2d3748;margin-bottom:8px">
-          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                      text-transform:uppercase;letter-spacing:.5px">Psychomotor Domain</div>
-          <table style="width:100%;border-collapse:collapse">${psyRows}</table>
-        </div>
-
-        <div style="border:2px solid #2d3748">
-          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                      text-transform:uppercase;letter-spacing:.5px">Grading Scale</div>
-          <table style="width:100%;border-collapse:collapse">
-            <thead>
-              <tr style="background:#f2f2f2">
+        <div>
+          <div style="border:2px solid #2d3748;margin-bottom:8px">
+            <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+              text-transform:uppercase;letter-spacing:.5px">Affective Domain</div>
+            <table style="width:100%;border-collapse:collapse">${affRows}</table>
+          </div>
+          <div style="border:2px solid #2d3748;margin-bottom:8px">
+            <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+              text-transform:uppercase;letter-spacing:.5px">Psychomotor Domain</div>
+            <table style="width:100%;border-collapse:collapse">${psyRows}</table>
+          </div>
+          <div style="border:2px solid #2d3748">
+            <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+              text-transform:uppercase;letter-spacing:.5px">Grading Scale</div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr style="background:#f2f2f2">
                 <th style="border:1px solid #999;padding:2px;font-size:9px">Range</th>
                 <th style="border:1px solid #999;padding:2px;font-size:9px">Grade</th>
                 <th style="border:1px solid #999;padding:2px;font-size:9px;text-align:left">Remark</th>
-              </tr>
-            </thead>
-            <tbody>${gradeRows}</tbody>
-          </table>
+              </tr></thead>
+              <tbody>${gradeRows}</tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- CHART + ATTENDANCE + DATES -->
-    <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
-      <div style="border:2px solid #2d3748">
-        <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                    text-transform:uppercase;letter-spacing:.5px">Performance in Subjects (%)</div>
-        <div style="display:flex;align-items:flex-end;gap:6px;height:130px;padding:8px 6px 4px;border-bottom:1px solid #ccc">
-          ${chart}
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="border:2px solid #2d3748;flex:1">
+      <div style="display:grid;grid-template-columns:1fr 230px;gap:10px;margin-bottom:10px">
+        <div style="border:2px solid #2d3748">
           <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                      text-transform:uppercase;letter-spacing:.5px">Attendance</div>
-          <table style="width:100%;border-collapse:collapse;font-size:9.5px">
-            <tr><td style="padding:3px 6px">Times School Opened</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysOpen}</td></tr>
-            <tr><td style="padding:3px 6px">Times Present</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysPresent}</td></tr>
-            <tr><td style="padding:3px 6px">Times Absent</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysAbsent}</td></tr>
-          </table>
+            text-transform:uppercase;letter-spacing:.5px">Performance in Subjects (%)</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:130px;padding:8px 6px 4px;border-bottom:1px solid #ccc">
+            ${chart}
+          </div>
         </div>
-        <div style="border:2px solid #2d3748;flex:1">
-          <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
-                      text-transform:uppercase;letter-spacing:.5px">Next Term</div>
-          <table style="width:100%;border-collapse:collapse;font-size:9.5px">
-            <tr><td style="padding:3px 6px">Next term begins</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(nextTerm || '—')}</td></tr>
-            <tr><td style="padding:3px 6px">School vacates</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(vacates || '—')}</td></tr>
-          </table>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="border:2px solid #2d3748;flex:1">
+            <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+              text-transform:uppercase;letter-spacing:.5px">Attendance</div>
+            <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+              <tr><td style="padding:3px 6px">Times School Opened</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysOpen}</td></tr>
+              <tr><td style="padding:3px 6px">Times Present</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysPresent}</td></tr>
+              <tr><td style="padding:3px 6px">Times Absent</td><td style="text-align:right;padding:3px 6px;font-weight:700">${daysAbsent}</td></tr>
+            </table>
+          </div>
+          <div style="border:2px solid #2d3748;flex:1">
+            <div style="background:#2d3748;color:#fff;padding:3px;text-align:center;font-weight:800;font-size:10px;
+              text-transform:uppercase;letter-spacing:.5px">Next Term</div>
+            <table style="width:100%;border-collapse:collapse;font-size:9.5px">
+              <tr><td style="padding:3px 6px">Next term begins</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(nextTerm || '—')}</td></tr>
+              <tr><td style="padding:3px 6px">School vacates</td><td style="text-align:right;padding:3px 6px;font-weight:700">${esc(vacates || '—')}</td></tr>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- COMMENTS -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
-      <tr>
-        <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700;width:150px">CLASS TEACHER'S REMARK</td>
-        <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(tRemark || '—')}</td>
-      </tr>
-      <tr>
-        <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700">PRINCIPAL'S REMARK</td>
-        <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(r.principalRemark || '')}</td>
-      </tr>
-    </table>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:10.5px">
+        <tr>
+          <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700;width:150px">CLASS TEACHER'S REMARK</td>
+          <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(tRemark || '—')}</td>
+        </tr>
+        <tr>
+          <td style="border:1px solid #333;padding:4px 8px;background:#f2f2f2;font-weight:700">PRINCIPAL'S REMARK</td>
+          <td style="border:1px solid #333;padding:6px 8px;height:28px">${esc(r.principalRemark || '')}</td>
+        </tr>
+      </table>
 
-    <!-- SIGNATURES -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
-      <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
-        CLASS TEACHER'S SIGNATURE
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:14px;align-items:flex-end">
+        <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
+          CLASS TEACHER'S SIGNATURE
+        </div>
+        <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
+          ${sigImg ? `<div style="margin-bottom:4px">${sigImg}</div>` : ''}
+          ${esc(t.principalName || 'PRINCIPAL')} <br><span style="font-weight:400;font-size:9px">PRINCIPAL'S SIGNATURE</span>
+        </div>
+        <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
+          ${stampImg ? `<div style="margin-bottom:4px">${stampImg}</div>` : ''}
+          SCHOOL STAMP
+        </div>
       </div>
-      <div style="text-align:center;padding-top:36px;border-top:1px solid #333;font-size:10px;font-weight:700">
-        ${esc(t.principalName || 'PRINCIPAL')} <br><span style="font-weight:400;font-size:9px">PRINCIPAL'S SIGNATURE</span>
+
+      <div style="text-align:center;font-size:9px;color:#666;margin-top:12px;font-style:italic">
+        Report generated on ${new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })}.
+        Please contact the school if you notice any discrepancy.
       </div>
     </div>
-
-    <div style="text-align:center;font-size:9px;color:#666;margin-top:12px;font-style:italic">
-      Report generated on ${new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })}.
-      Please contact the school if you notice any discrepancy.
-    </div>
-  </div>
   `;
 }
 
