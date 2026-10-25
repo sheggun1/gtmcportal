@@ -181,25 +181,21 @@
   .score-input { width:64px; padding:5px 6px; text-align:center; font-size:13px; }
   .dmn-select { width:100%; min-width:110px; padding:5px 6px; font-size:12px; }
 
-  /* Debt banner */
   .debt-banner { background:#fef2f2; border:1px solid #fecaca; color:#991b1b;
     padding:12px 14px; border-radius:var(--radius-sm); margin-bottom:14px;
     font-weight:600; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
   .debt-banner strong { color:#7f1d1d; }
 
-  /* Announcement cards */
   .ann-card { background:#fffdf5; border:1px solid var(--gold-light); border-radius:var(--radius-sm);
     padding:12px 14px; margin-bottom:10px; }
   .ann-card .msg { font-size:13.5px; color:var(--ink); margin-bottom:6px; line-height:1.55; }
   .ann-card .meta { font-size:11px; color:var(--muted); }
 
-  /* Chat */
   .chat-message { padding:10px 14px; border-radius:var(--radius-sm); margin:8px 0;
     font-size:13px; white-space:pre-wrap; line-height:1.55; }
   .chat-message.user { background:#eff6ff; margin-left:22px; }
   .chat-message.ai { background:#f0fdf4; margin-right:22px; }
 
-  /* Toast */
   .toast { position:fixed; bottom:22px; right:22px; background:var(--brown-dark); color:#fff;
     padding:13px 20px; border-radius:var(--radius-sm);
     font-size:13px; font-weight:600; max-width:340px;
@@ -237,7 +233,6 @@
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginView" class="login-wrap">
   <div class="login-card">
     <div class="login-logo" id="loginLogo"><span>G</span></div>
@@ -259,7 +254,6 @@
   </div>
 </div>
 
-<!-- APP -->
 <div id="appView" class="app-layout" style="display:none">
   <header class="topbar">
     <div class="brand">
@@ -289,9 +283,8 @@
 /* ============================================================
    CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbwtQv4p4fYQ0cikmRbl-jlZU1i_0jx8iVaBABQu7EgVHXZPUaaD91jD2KDRlCRsHnZZ/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxOSpS1uDm5zgNi1LCGQvYtYH62OeCCgZGKw43otolFi8e1OvAv_hqJj9cDpM98g2B2/exec';
 
-/* SESSION */
 const S = {
   token: localStorage.getItem('gs_token') || '',
   user: JSON.parse(localStorage.getItem('gs_user') || 'null'),
@@ -330,7 +323,6 @@ function logout(){
   document.getElementById('appView').style.display='none';
 }
 
-/* HELPERS */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function q(id){ return document.getElementById(id); }
 function toast(msg,kind){
@@ -355,7 +347,6 @@ async function loadSubjects(className) {
   return subs;
 }
 
-/* LOGO FALLBACK */
 function applyLogoFallback() {
   const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--login-logo-image').trim();
   if (!cssBg || cssBg === 'none') return;
@@ -369,7 +360,6 @@ function applyLogoFallback() {
   });
 }
 
-/* LOGIN */
 async function doLogin() {
   const email = q('loginEmail').value.trim();
   const password = q('loginPassword').value;
@@ -390,7 +380,6 @@ async function doLogin() {
   } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
-/* BOOT */
 function boot() {
   if (!S.token || !S.user) { logout(); return; }
   q('loginView').style.display = 'none';
@@ -410,7 +399,6 @@ function boot() {
   else toast('Unknown role: ' + S.user.role, 'err');
 }
 
-/* SIDEBAR */
 function buildNav(items, defaultTab) {
   const sidebar = q('sidebar');
   sidebar.innerHTML = items.map(g => `
@@ -764,7 +752,6 @@ async function deleteTeacher(email) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Admin submissions ---- */
 async function loadSubmissions() {
   const box = q('submissionsBox'); if (!box) return;
   const status = q('subFilter').value;
@@ -863,7 +850,6 @@ async function saveDomainRating(sel, className, term, year) {
   } catch (e) { sel.style.background = '#fef2f2'; toast(e.message, 'err'); }
 }
 
-/* ---- Publish ---- */
 async function publishClass(publish) {
   const className = q('pubClass').value, term = q('pubTerm').value, year = q('pubYear').value.trim();
   if (!confirm(`${publish ? 'Publish' : 'Unpublish'} ${className} / ${term} / ${year}?`)) return;
@@ -878,7 +864,6 @@ async function publishClass(publish) {
   } catch (e) { q('pubStatus').textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
-/* ---- Principal remarks ---- */
 async function loadRemarksList() {
   const className = q('remClass').value, term = q('remTerm').value, year = q('remYear').value.trim();
   const box = q('remCard'); if (!box) return;
@@ -925,7 +910,6 @@ async function generateRemarksForClass() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Teacher remarks ---- */
 async function loadTeacherRemarksTab() {
   const classes = await loadClasses();
   if (q('trClass') && !q('trClass').innerHTML) {
@@ -968,7 +952,6 @@ async function saveTeacherRemarks() {
   toast(`Saved ${ok}${fail?' · failed '+fail:''}`, fail?'err':'ok');
 }
 
-/* ---- School Calendar ---- */
 async function loadSchoolCalendar() {
   const year = q('calYear').value.trim(), term = q('calTerm').value;
   const status = q('calStatus');
@@ -994,7 +977,6 @@ async function saveSchoolCalendar() {
   } catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Template ---- */
 async function loadTemplate() {
   try {
     const t = await api('adminGetReportTemplate');
@@ -1029,7 +1011,6 @@ async function saveTemplate() {
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; toast(e.message, 'err'); }
 }
 
-/* ---- Parents ---- */
 async function createParent() {
   const name = q('parName').value.trim(), email = q('parEmail').value.trim(), password = q('parPass').value;
   if (!name || !email || password.length < 6) return toast('Name, email, password ≥ 6 required', 'err');
@@ -1081,7 +1062,6 @@ async function unlinkWard(email, studentId, className) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Debtors ---- */
 async function loadDebtsForClass() {
   const className = q('dbClass').value;
   const academicYear = q('dbYear').value.trim();
@@ -1095,13 +1075,13 @@ async function loadDebtsForClass() {
     if (!students.length) { box.innerHTML = '<div class="empty">No students in this class.</div>'; return; }
     const byStudent = {};
     debts.forEach(d => {
-      if (!byStudent[d.studentId]) byStudent[d.studentId] = { total: 0, note: d.note || '', term: d.term || 'Term1' };
+      if (!byStudent[d.studentId]) byStudent[d.studentId] = { total: 0, note: d.note || '' };
       byStudent[d.studentId].total += d.amount;
     });
     box.innerHTML = `<div class="table-wrap"><table>
       <thead><tr><th>Student</th><th>Amount</th><th>Note</th><th></th></tr></thead>
       <tbody>${students.map(st => {
-        const d = byStudent[st.student_id] || { total:0, note:'', term:'Term1' };
+        const d = byStudent[st.student_id] || { total:0, note:'' };
         return `<tr data-student="${esc(st.student_id)}">
           <td><strong>${esc(st.name)}</strong></td>
           <td><input type="number" min="0" data-amount value="${d.total || ''}" style="width:100px"></td>
@@ -1154,7 +1134,6 @@ async function loadAllDebts() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ---- Announcements ---- */
 function annTargetModeChanged() {
   const mode = q('annTargetMode').value;
   q('annClasses').style.display = mode === 'SOME' ? 'block' : 'none';
@@ -1167,7 +1146,7 @@ async function createAnnouncement() {
   const targetClasses = mode === 'ALL' ? 'ALL' :
     Array.from(q('annClasses').selectedOptions).map(o => o.value).join(',');
   if (!message) return toast('Message required', 'err');
-  if (mode === 'SOME' && (!targetClasses || targetClasses === '')) return toast('Pick at least one class', 'err');
+  if (mode === 'SOME' && !targetClasses) return toast('Pick at least one class', 'err');
   try {
     await api('adminSaveAnnouncement', { message, targetClasses, audience, expiresAt, active: true });
     toast('Announcement created', 'ok');
@@ -1195,22 +1174,35 @@ async function deleteAnnouncement(id) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ---- Report Cards (PDF export) ---- */
-function initReportCards() { /* noop, class list is already populated */ }
+function initReportCards() {}
 
-/* Build a report card payload using existing parentGetResult for a *specific* student.
-   Because admin cannot call parentGetResult directly, we recompute client-side using
-   getScores + getDomainAssessments + adminPreviewPrincipalRemark + template. */
-async function buildReportPayload(className, studentId, studentName, term, academicYear) {
-  const [subjectsList, template] = await Promise.all([
-    loadSubjects(className),
+/* -------- Bulk caches for PDF -------- */
+const _bulkCache = {};
+
+async function loadBulkForClass(className, term, academicYear) {
+  const cacheKey = className + '|' + term + '|' + academicYear;
+  if (_bulkCache[cacheKey]) return _bulkCache[cacheKey];
+  const [scores, domains, remarks, template] = await Promise.all([
+    api('getClassScores', { className, term }),
+    api('getClassDomains', { className, term, academicYear }),
+    api('getClassTeacherRemarks', { className, term, academicYear }),
     api('adminGetReportTemplate')
   ]);
-  const scoresPerSubject = await Promise.all(subjectsList.map(subj =>
-    api('getScores', { className, subject: subj, term }).catch(() => [])
-  ));
-  const subjectResults = subjectsList.map((subj, i) => {
-    const row = (scoresPerSubject[i] || []).find(r => String(r.student_id) === String(studentId)) || {};
+  const bundle = { scores, domains, remarks, template };
+  _bulkCache[cacheKey] = bundle;
+  return bundle;
+}
+
+async function buildReportPayload(className, studentId, studentName, term, academicYear) {
+  const [bundle, pr] = await Promise.all([
+    loadBulkForClass(className, term, academicYear),
+    api('adminPreviewPrincipalRemark', { className, studentId, term, academicYear }).catch(() => null)
+  ]);
+  const declaredSubjects = await loadSubjects(className);
+  const template = bundle.template;
+
+  const subjectResults = declaredSubjects.map(function (subj) {
+    const row = (bundle.scores[studentId] || {})[subj] || {};
     const t1 = Number(row.T1) || 0, t2 = Number(row.T2) || 0, t3 = Number(row.T3) || 0, ex = Number(row.Exam) || 0;
     const complete = [row.T1, row.T2, row.T3, row.Exam].every(v => v !== '' && v !== null && v !== undefined);
     const total = complete ? (t1 + t2 + t3 + ex) : null;
@@ -1226,33 +1218,26 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     ? Math.round(completeTotals.reduce((a, r) => a + r.total, 0) / subjectResults.length * 100) / 100
     : null;
 
-  const [aff, psy] = await Promise.all([
-    api('getDomainAssessments', { kind: 'affective', className, term, academicYear, studentId }).catch(() => null),
-    api('getDomainAssessments', { kind: 'psychomotor', className, term, academicYear, studentId }).catch(() => null)
-  ]);
-  const pr = await api('adminPreviewPrincipalRemark', { className, studentId, term, academicYear }).catch(() => null);
+  const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
-  /* cumulative averages */
   const termAverages = { Term1: null, Term2: null, Term3: null };
   let enrolledFrom = null;
   for (const t of ['Term1','Term2','Term3']) {
-    const r = pr && t === term ? pr.overallPercent : null;
-    /* compute per-term using the same approach */
-    const scoresT = await Promise.all(subjectsList.map(subj =>
-      api('getScores', { className, subject: subj, term: t }).catch(() => [])
-    ));
-    const totalsT = [];
-    scoresT.forEach(rows => {
-      const row = rows.find(x => String(x.student_id) === String(studentId));
-      if (!row) return;
-      const nums = [row.T1, row.T2, row.T3, row.Exam].map(v => v === '' || v === null ? null : Number(v));
-      if (nums.every(n => n !== null && isFinite(n))) totalsT.push(nums.reduce((a,b)=>a+b,0));
-    });
-    if (totalsT.length) {
-      const pct = Math.round(totalsT.reduce((a,b)=>a+b,0) / totalsT.length * 100) / 100;
-      termAverages[t] = pct;
-      if (enrolledFrom === null) enrolledFrom = t;
-    }
+    try {
+      const tb = await loadBulkForClass(className, t, academicYear);
+      const rowFor = tb.scores[studentId] || {};
+      const totalsT = [];
+      declaredSubjects.forEach(function (subj) {
+        const row = rowFor[subj];
+        if (!row) return;
+        const nums = [row.T1, row.T2, row.T3, row.Exam].map(v => v === '' || v === null ? null : Number(v));
+        if (nums.every(n => n !== null && isFinite(n))) totalsT.push(nums.reduce((a,b)=>a+b,0));
+      });
+      if (totalsT.length) {
+        termAverages[t] = Math.round(totalsT.reduce((a,b)=>a+b,0) / totalsT.length * 100) / 100;
+        if (enrolledFrom === null) enrolledFrom = t;
+      }
+    } catch (e) {}
   }
   const presentTerms = ['Term1','Term2','Term3'].filter(t => termAverages[t] !== null);
   const cumulativeAverage = presentTerms.length
@@ -1265,19 +1250,25 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     subjects: subjectResults,
     overallAverage,
     complete: completeTotals.length === subjectResults.length,
-    domains: { days_opened: null, days_present: null, affective: '', psychomotor: '' },
+    domains: {
+      days_opened: dom.days ? dom.days.days_opened : null,
+      days_present: dom.days ? dom.days.days_present : null,
+      affective: dom.days ? dom.days.affective_letter : '',
+      psychomotor: dom.days ? dom.days.psychomotor_letter : ''
+    },
     principalRemark: pr ? pr.remark : '',
-    affective: aff, psychomotor: psy,
-    teacherRemark: '',
-    daysPresent: null,
+    affective: dom.affective || {},
+    psychomotor: dom.psychomotor || {},
+    teacherRemark: (bundle.remarks || {})[studentId] || '',
+    daysPresent: dom.days ? dom.days.days_present : null,
     calendar: null,
     debtTotal: 0,
     announcements: [],
     term1Average: termAverages.Term1,
     term2Average: termAverages.Term2,
     term3Average: termAverages.Term3,
-    cumulativeAverage,
-    enrolledFrom,
+    cumulativeAverage: cumulativeAverage,
+    enrolledFrom: enrolledFrom,
     template
   };
 }
@@ -1288,17 +1279,13 @@ function gradeFor(score, scale) {
   return item ? String(item.grade || '') : '';
 }
 
-/* Build one page for jsPDF */
-function pdfRenderPage(doc, r, opts) {
+function pdfRenderPage(doc, r) {
   const t = r.template || {};
-  const { jsPDF } = window.jspdf;
   const pageW = doc.internal.pageSize.getWidth();
   const margin = 20;
   let y = margin;
 
   const primary = t.primaryColor || '#1e3a8a';
-
-  /* Header */
   doc.setFontSize(16); doc.setTextColor(primary);
   doc.text(t.schoolName || 'GREATER TOMORROW MODEL SCHOOLS', pageW/2, y, { align: 'center' });
   y += 16;
@@ -1318,8 +1305,6 @@ function pdfRenderPage(doc, r, opts) {
     y += 6;
   }
 
-  /* Bio row */
-  doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
   const bio = [
     ['NAME', r.student.name, 'CLASS', r.student.className],
     ['ADM. NO', r.student.studentId, 'TERM', r.term],
@@ -1335,7 +1320,6 @@ function pdfRenderPage(doc, r, opts) {
     y += 12;
   });
 
-  /* Subjects table */
   const subjectRows = r.subjects.filter(s => s.total !== null).map((s, i) => [
     i + 1, s.subject, s.T1 ?? '—', s.T2 ?? '—', s.T3 ?? '—', s.Exam ?? '—',
     s.total, s.grade || '—', remarkForGrade(s.grade)
@@ -1352,7 +1336,6 @@ function pdfRenderPage(doc, r, opts) {
     y = doc.lastAutoTable.finalY + 10;
   }
 
-  /* Affective + Psychomotor */
   const affItems = AFFECTIVE_ITEMS.map(([k,l]) => [l, ratingLabel(r.affective, k)]);
   const psyItems = PSYCHOMOTOR_ITEMS.map(([k,l]) => [l, ratingLabel(r.psychomotor, k)]);
 
@@ -1368,7 +1351,6 @@ function pdfRenderPage(doc, r, opts) {
     y = doc.lastAutoTable.finalY + 10;
   }
 
-  /* Cumulative */
   const cLine = [];
   if (r.term1Average != null) cLine.push('Term 1: ' + r.term1Average + '%');
   if (r.term2Average != null) cLine.push('Term 2: ' + r.term2Average + '%');
@@ -1380,7 +1362,6 @@ function pdfRenderPage(doc, r, opts) {
     y += 14;
   }
 
-  /* Remarks */
   doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont(undefined, 'bold');
   doc.text("CLASS TEACHER'S REMARK:", margin, y);
   doc.setFont(undefined, 'normal');
@@ -1395,7 +1376,6 @@ function pdfRenderPage(doc, r, opts) {
   doc.text(prLines, margin + 105, y);
   y += Math.max(14, prLines.length * 10 + 4);
 
-  /* Signatures + Stamp */
   const baseY = Math.min(y + 20, doc.internal.pageSize.getHeight() - 60);
   const half = pageW / 2;
   doc.setDrawColor(80,80,80); doc.setLineWidth(0.3);
@@ -1404,10 +1384,6 @@ function pdfRenderPage(doc, r, opts) {
   doc.setFontSize(8);
   doc.text('CLASS TEACHER SIGNATURE', (margin + half - 20)/2, baseY + 40, { align:'center' });
   doc.text((t.principalName || 'PRINCIPAL') + ' (SIGNATURE)', (half + 20 + pageW - margin)/2, baseY + 40, { align:'center' });
-  y = baseY + 50;
-
-  /* Stamp + Signature image on PDF via base64 fetch */
-  return { y, nextBaseY: baseY };
 }
 
 function ratingLabel(data, key) {
@@ -1421,6 +1397,7 @@ function remarkForGrade(g) {
 }
 
 async function exportClassPDF() {
+  Object.keys(_bulkCache).forEach(k => delete _bulkCache[k]);
   const className = q('pdfClass').value, term = q('pdfTerm').value, year = q('pdfYear').value.trim();
   if (!className || !term || !year) return toast('Pick class/term/year', 'err');
   const status = q('pdfStatus');
@@ -1444,6 +1421,7 @@ async function exportClassPDF() {
 }
 
 async function exportEachStudentPDF() {
+  Object.keys(_bulkCache).forEach(k => delete _bulkCache[k]);
   const className = q('pdfClass').value, term = q('pdfTerm').value, year = q('pdfYear').value.trim();
   if (!className || !term || !year) return toast('Pick class/term/year', 'err');
   const status = q('pdfStatus');
@@ -1558,52 +1536,72 @@ async function ctRemove(id) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* Add students with duplicate detection + optional copy */
 async function addStudentsWithDetection(className, lines) {
-  /* 1. check every name for matches */
-  const pending = [];
+  const preChecks = [];
   for (const line of lines) {
     const parts = line.split(',');
-    const typedName = parts.length > 1 ? parts.slice(1).join(',').trim() : line;
+    const typedId = parts.length > 1 ? parts[0].trim() : '';
+    const typedName = parts.length > 1 ? parts.slice(1).join(',').trim() : line.trim();
     if (!typedName) continue;
-    const matches = await api('findStudentMatches', { name: typedName, excludeClass: className });
-    pending.push({ line, name: typedName, matches });
+    try {
+      const check = await api('checkNewStudent', { className, studentId: typedId, name: typedName });
+      preChecks.push({ line, typedId, typedName, check });
+    } catch (e) {
+      toast('Pre-check failed: ' + e.message, 'err');
+      return;
+    }
   }
-  const withMatches = pending.filter(p => p.matches && p.matches.length);
-  if (!withMatches.length) {
-    /* No matches → just add */
-    const r = await api('addStudentsBulk', { className, lines });
-    toast(`Added ${r.count}${r.skipped && r.skipped.length ? ' · skipped ' + r.skipped.length : ''}`, 'ok');
-    if (hasRole('admin')) loadTeachers();
-    else ctLoadStudents();
+
+  const warnings = [];
+  for (const p of preChecks) {
+    if (p.check.idInThisClass) {
+      warnings.push(`ID "${p.typedId}" already exists in ${className}. Skipped.`);
+    }
+    if (p.check.sameNameInOtherClasses && p.check.sameNameInOtherClasses.length) {
+      const m = p.check.sameNameInOtherClasses[0];
+      const ok = confirm(
+        `"${p.typedName}" matches "${m.name}" (${m.studentId}) in ${m.className}.\n\n` +
+        `Same student? Click OK to copy their previous scores into ${className}. ` +
+        `Click Cancel to add as a NEW student with no previous scores.`
+      );
+      p.willCopyFrom = ok ? m : null;
+    }
+  }
+
+  if (warnings.length) {
+    const proceed = confirm(warnings.join('\n\n') + '\n\nContinue adding the rest?');
+    if (!proceed) return;
+  }
+
+  const filtered = preChecks.filter(p => !p.check.idInThisClass).map(p => p.line);
+  if (!filtered.length) {
+    toast('Nothing to add — all had duplicate IDs', 'err');
     return;
   }
-  /* Show a simple per-match confirm */
-  const copyQueue = [];
-  for (const p of withMatches) {
-    const top = p.matches[0];
-    const prompt = `"${p.name}" may match ${top.name} in ${top.className} (${top.studentId}). Copy previous scores?`;
-    if (confirm(prompt)) copyQueue.push({ newName: p.name, newLine: p.line, fromClass: top.className, fromId: top.studentId });
-  }
-  /* 2. add all students first (same IDs, no copy yet) */
-  const r = await api('addStudentsBulk', { className, lines });
+
+  const r = await api('addStudentsBulk', { className, lines: filtered });
   toast(`Added ${r.count}${r.skipped && r.skipped.length ? ' · skipped ' + r.skipped.length : ''}`, 'ok');
-  /* 3. for students we need to copy, find their new IDs */
-  if (copyQueue.length) {
+
+  const toCopy = preChecks.filter(p => p.willCopyFrom && !p.check.idInThisClass);
+  if (toCopy.length) {
     const students = await api('getStudents', { className });
-    for (const c of copyQueue) {
-      const row = students.find(s => s.name.trim().toLowerCase() === c.newName.toLowerCase());
+    for (const c of toCopy) {
+      const row = students.find(s => s.name.trim().toLowerCase() === c.typedName.toLowerCase());
       if (!row) continue;
       try {
         await api('copyStudentFromClass', {
-          fromClass: c.fromClass, fromId: c.fromId, toClass: className, toId: row.student_id
+          fromClass: c.willCopyFrom.className,
+          fromId: c.willCopyFrom.studentId,
+          toClass: className,
+          toId: row.student_id
         });
-      } catch (e) { toast('Copy failed for ' + c.newName + ': ' + e.message, 'err'); }
+      } catch (e) { toast('Copy failed for ' + c.typedName + ': ' + e.message, 'err'); }
     }
-    toast(`Copy done for ${copyQueue.length} student(s)`, 'ok');
+    toast(`Copied previous scores for ${toCopy.length} student(s)`, 'ok');
   }
+
   if (hasRole('admin')) loadTeachers();
-  else ctLoadStudents();
+  else if (typeof ctLoadStudents === 'function') ctLoadStudents();
 }
 
 async function ctLoadScores() {
@@ -1932,7 +1930,6 @@ function renderParentReport(r) {
     </div>`;
   }).join('');
 
-  /* cumulative row */
   const cParts = [];
   if (r.term1Average != null) cParts.push(['Term 1', r.term1Average]);
   if (r.term2Average != null) cParts.push(['Term 2', r.term2Average]);
@@ -1949,14 +1946,12 @@ function renderParentReport(r) {
         </div>`).join('')}
     </div>` : '';
 
-  /* debt banner */
   const debtTotal = Number(r.debtTotal) || 0;
   const debtBanner = debtTotal > 0 ? `
     <div class="debt-banner">
       <span>⚠ Outstanding balance: <strong>₦${debtTotal.toLocaleString()}</strong> — kindly settle at the school bursary.</span>
     </div>` : '';
 
-  /* stamp + signature images */
   const sigImg = t.principalSignatureUrl
     ? `<img src="${esc(t.principalSignatureUrl)}" alt="Signature" style="max-height:60px;max-width:160px;object-fit:contain"
         onerror="this.style.display='none'">` : '';
