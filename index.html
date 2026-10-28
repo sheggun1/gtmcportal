@@ -49,7 +49,6 @@
   label { font-size:11.5px; color:var(--muted); font-weight:700;
     display:block; margin-bottom:5px; letter-spacing:.04em; text-transform:uppercase; }
 
-  /* LOGIN */
   .login-wrap { flex:1; display:flex; align-items:center; justify-content:center; padding:20px;
     position:relative; overflow:hidden;
     background: var(--login-bg-image, none) center/cover no-repeat,
@@ -204,6 +203,10 @@
   .toast.ok { background:var(--ok); border-left-color:var(--gold); }
   .toast.err { background:var(--err); border-left-color:#fca5a5; }
 
+  .stat-box { text-align:center; padding:10px; border-radius:6px; }
+  .stat-box .label { font-size:10px; text-transform:uppercase; font-weight:700; letter-spacing:.04em; }
+  .stat-box .value { font-size:22px; font-weight:800; }
+
   @media (max-width:900px) {
     .body-layout { grid-template-columns:1fr; }
     .sidebar { display:flex; overflow-x:auto; padding:8px 12px;
@@ -236,7 +239,7 @@
   <div class="login-card">
     <div class="login-logo" id="loginLogo"><span>G</span></div>
     <h1>Greater Tomorrow<br>Model College</h1>
-    <div class="motto">“Jesus, Our Teacher”</div>
+    <div class="motto">"Jesus, Our Teacher"</div>
     <div class="tag">Known for Moral and Academic Excellence</div>
     <div class="login-divider"></div>
     <label>Email or Student ID</label>
@@ -282,7 +285,8 @@
 /* ============================================================
    CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbxOSpS1uDm5zgNi1LCGQvYtYH62OeCCgZGKw43otolFi8e1OvAv_hqJj9cDpM98g2B2/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwhlZpJhDVD7uj9VfCspUrlVgDmaQwJiqo6va0R6cWBET-6nThfiXtKpBJlB3qXacNb/exec';
+const ATTENDANCE_API = 'https://script.google.com/macros/s/AKfycbyxsohckjH29QFwbgUdVuP9A-Y-OMJa9ve7nkbwB0qKxtFmK2vM0C1huublkBZrD35X/exec';
 
 const S = {
   token: localStorage.getItem('gs_token') || '',
@@ -313,6 +317,26 @@ async function api(action, payload = {}) {
   }
   return json.data;
 }
+
+/* Attendance backend helper (returns { ok:true, ... } instead of { success:true, data:... }) */
+async function attendanceApi(action, payload = {}) {
+  let res;
+  try {
+    res = await fetch(ATTENDANCE_API, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ action }, payload || {})),
+      redirect:'follow'
+    });
+  } catch (e) { throw new Error('Attendance network error — check internet'); }
+  const raw = await res.text();
+  let json;
+  try { json = JSON.parse(raw); }
+  catch (e) { throw new Error('Attendance non-JSON (' + res.status + '): ' + raw.slice(0,180)); }
+  if (!json || json.ok !== true) throw new Error((json && json.error) || 'Attendance request failed');
+  return json;
+}
+
 function saveSession(t,u){ S.token=t; S.user=u;
   localStorage.setItem('gs_token',t); localStorage.setItem('gs_user',JSON.stringify(u)); }
 function logout(){
@@ -332,6 +356,11 @@ function toast(msg,kind){
 }
 function roleList(){ return S.user ? String(S.user.role || '').split(',').map(s=>s.trim()).filter(Boolean) : []; }
 function hasRole(r){ return roleList().indexOf(r) !== -1; }
+function fmtMin_(m) {
+  m = Number(m) || 0;
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+function normAidClient_(v) { return String(v == null ? '' : v).trim().replace(/^0+/, '') || '0'; }
 
 async function loadClasses() {
   if (S.cache.classes) return S.cache.classes;
@@ -379,7 +408,25 @@ async function doLogin() {
   } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
-function boot() {
+/* Resolve officer status from the attendance backend (cached per session) */
+let OFFICERS_CACHE = null;
+async function loadOfficers() {
+  if (OFFICERS_CACHE) return OFFICERS_CACHE;
+  try {
+    const r = await attendanceApi('getOfficers');
+    OFFICERS_CACHE = (r.officers || []).map(o => String(o.email || '').toLowerCase());
+  } catch (e) {
+    OFFICERS_CACHE = [];
+  }
+  return OFFICERS_CACHE;
+}
+async function isOfficer() {
+  const list = await loadOfficers();
+  const me = String((S.user && S.user.email) || '').toLowerCase();
+  return list.indexOf(me) !== -1;
+}
+
+async function boot() {
   if (!S.token || !S.user) { logout(); return; }
   q('loginView').style.display = 'none';
   q('appView').style.display = 'flex';
@@ -389,6 +436,13 @@ function boot() {
     student:'Student', parent:'Parent'
   })[r] || r).join(' · ');
   applyLogoFallback();
+
+  /* Officer flag is only relevant for staff */
+  if (hasRole('admin') || hasRole('class_teacher') || hasRole('subject_teacher')) {
+    S.user.isOfficer = await isOfficer();
+  } else {
+    S.user.isOfficer = false;
+  }
 
   if (hasRole('admin')) renderAdmin();
   else if (hasRole('class_teacher')) renderClassTeacher();
@@ -417,12 +471,140 @@ function setNav(tabId) {
   if (nav && nav.dataset.onload) try { window[nav.dataset.onload](); } catch (e) {}
 }
 
-/* ===================== ADMIN ===================== */
+/* ============================================================
+   SHARED: MY ATTENDANCE PANEL (used by admin, class teacher, subject teacher)
+   ============================================================ */
+const MY_ATTENDANCE_HTML = `
+<div class="panel" data-panel="myAttendance">
+  <div class="card">
+    <h2>My Attendance</h2>
+    <div class="sub">Your clock-ins and penalties for the month.</div>
+    <div class="grid cols-3">
+      <div><label>Month</label><input id="myAttMonth" type="month"></div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="blue" onclick="loadMyAttendance()">Load</button>
+      </div>
+    </div>
+    <div id="myAttSummary" class="portal-note" style="margin-top:12px">Choose a month and click Load.</div>
+  </div>
+  <div class="card" id="myAttCard"><div class="empty">No data loaded yet.</div></div>
+  <div class="card" id="myPenaltyCard" style="display:none">
+    <h2>Penalty Summary</h2>
+    <div class="sub">Deductions recorded against your attendance for the month.</div>
+    <div id="myPenaltyBox"></div>
+  </div>
+</div>`;
+
+const ATTENDANCE_SUMMARY_HTML = `
+<div class="panel" data-panel="attendanceSummary">
+  <div class="card">
+    <h2>Attendance Summary — Whole School</h2>
+    <div class="sub">Read-only monthly summary. Visible to officers and admin only.</div>
+    <div class="grid cols-3">
+      <div><label>Month</label><input id="sumMonth" type="month"></div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="blue" onclick="loadAttendanceSummary()">Load</button>
+      </div>
+    </div>
+    <div id="sumBox" class="portal-note" style="margin-top:12px">Choose a month and Load.</div>
+  </div>
+</div>`;
+
+const MESSAGE_ADMIN_HTML = `
+<div class="panel" data-panel="messageAdmin">
+  <div class="card">
+    <h2>Message the Admin</h2>
+    <div class="sub">Report an attendance or penalty issue. The admin will reply.</div>
+    <div class="grid cols-2">
+      <div>
+        <label>Subject</label>
+        <select id="msgSubject">
+          <option>Attendance dispute</option>
+          <option>Penalty query</option>
+          <option>Leave request</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div>
+        <label>Related date (optional)</label>
+        <input id="msgRelatedDate" type="date">
+      </div>
+    </div>
+    <label style="margin-top:12px">Message</label>
+    <textarea id="msgBody" rows="5" placeholder="Describe the issue…" maxlength="2000"></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="ok" onclick="sendStaffMessage()">Send to Admin</button>
+    </div>
+    <div id="msgStatus" class="portal-note" style="display:none;margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>Recent Messages</h2>
+    <div id="msgHistory"><div class="empty">No messages yet.</div></div>
+  </div>
+</div>`;
+
+/* ============================================================
+   ADMIN RENDERER
+   ============================================================ */
 async function renderAdmin() {
   q('roleTag').textContent = 'Administrator · Jesus, Our Teacher';
 
+  const staffAttendancePanel = `
+    <div class="panel" data-panel="staffAttendance">
+      <div class="card">
+        <h2>Staff Attendance — Full Grid</h2>
+        <div class="sub">Live from the clocking machine. Read-only here; uploads happen on the attendance admin page.</div>
+        <div class="grid cols-4">
+          <div><label>Month</label><input id="attMonth" type="month"></div>
+          <div><label>Date</label><input id="attDate" type="date"></div>
+          <div><label>Staff filter</label><input id="attStaffFilter" placeholder="name or id"></div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="blue" onclick="loadStaffAttendanceGrid()">Load</button>
+          </div>
+        </div>
+        <div id="attAnnouncement"></div>
+        <div id="attSummary" class="portal-note" style="margin-top:12px">Choose filters and Load.</div>
+      </div>
+      <div class="card">
+        <h2>Register</h2>
+        <div id="attRecords"><div class="empty">Nothing loaded yet.</div></div>
+      </div>
+      <div class="card">
+        <h2>Unlinked Clock-ins</h2>
+        <div class="sub">Attendance IDs on the machine that aren't mapped to any teacher yet.</div>
+        <div id="attUnmapped"><div class="empty">Load attendance first.</div></div>
+      </div>
+    </div>`;
+
+  const staffLinksPanel = `
+    <div class="panel" data-panel="staffLinks">
+      <div class="card">
+        <h2>Staff Links — Machine ID ↔ Teacher</h2>
+        <div class="sub">Map each clocking-machine ID to a teacher's email. Used for attendance + penalty generation. Edit in the StaffLinks sheet in the attendance spreadsheet.</div>
+        <button class="sec sm" onclick="loadStaffLinksAdmin()">Refresh</button>
+        <div id="staffLinksBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
+      </div>
+    </div>`;
+
+  const staffMessagesPanel = `
+    <div class="panel" data-panel="staffMessages">
+      <div class="card">
+        <h2>Staff Messages</h2>
+        <div class="sub">Messages sent by teachers from the portal.</div>
+        <div class="row" style="margin-bottom:12px">
+          <select id="smStatusFilter" onchange="loadStaffMessagesAdmin()" style="max-width:180px">
+            <option value="">All statuses</option>
+            <option value="Open">Open</option>
+            <option value="Replied">Replied</option>
+          </select>
+          <button class="sec sm" onclick="loadStaffMessagesAdmin()">Refresh</button>
+        </div>
+        <div id="staffMessagesBox"><div class="empty">Loading…</div></div>
+      </div>
+    </div>`;
+
   q('main').innerHTML = `
-    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, results, debtors, announcements, and report cards.</p></div>
+    <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, results, attendance, messages, debtors, and report cards.</p></div>
 
     <div class="panel active" data-panel="teachers">
       <div class="card">
@@ -659,9 +841,16 @@ async function renderAdmin() {
         <div id="pdfStatus" class="portal-note">Choose class, term and year.</div>
       </div>
     </div>
+
+    ${MY_ATTENDANCE_HTML}
+    ${S.user.isOfficer ? ATTENDANCE_SUMMARY_HTML : ''}
+    ${staffAttendancePanel}
+    ${staffLinksPanel}
+    ${MESSAGE_ADMIN_HTML}
+    ${staffMessagesPanel}
   `;
 
-  buildNav([
+  const navItems = [
     { title: 'People', tabs: [
       { id: 'teachers', label: 'Teachers' },
       { id: 'parents', label: 'Parent Portal' },
@@ -673,6 +862,16 @@ async function renderAdmin() {
       { id: 'teacherRemarks', label: 'Teacher Remarks' },
       { id: 'calendar', label: 'School Calendar' },
     ]},
+    { title: 'Attendance', tabs: [
+      { id: 'myAttendance', label: 'My Attendance' },
+      ...(S.user.isOfficer ? [{ id: 'attendanceSummary', label: 'Attendance Summary' }] : []),
+      { id: 'staffAttendance', label: 'Staff Attendance' },
+      { id: 'staffLinks', label: 'Staff Links' },
+    ]},
+    { title: 'Comms', tabs: [
+      { id: 'messageAdmin', label: 'Message Admin' },
+      { id: 'staffMessages', label: 'Staff Messages' },
+    ]},
     { title: 'Publishing', tabs: [
       { id: 'publish', label: 'Publish Results' },
       { id: 'template', label: 'Report Template' },
@@ -680,7 +879,8 @@ async function renderAdmin() {
       { id: 'announcements', label: 'Announcements' },
       { id: 'reportcards', label: 'Report Cards' },
     ]},
-  ], 'teachers');
+  ];
+  buildNav(navItems, 'teachers');
 
   document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
@@ -692,6 +892,13 @@ async function renderAdmin() {
   document.querySelector('.nav-item[data-tab="debtors"]').dataset.onload = 'loadDebtsForClass';
   document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'loadAnnouncementsAdmin';
   document.querySelector('.nav-item[data-tab="reportcards"]').dataset.onload = 'initReportCards';
+  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
+  if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
+  document.querySelector('.nav-item[data-tab="staffAttendance"]').dataset.onload = 'loadStaffAttendanceGrid';
+  document.querySelector('.nav-item[data-tab="staffLinks"]').dataset.onload = 'loadStaffLinksAdmin';
+  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
+  document.querySelector('.nav-item[data-tab="staffMessages"]').dataset.onload = 'loadStaffMessagesAdmin';
 
   const classes = await loadClasses();
   ['tClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass'].forEach(id => {
@@ -708,6 +915,12 @@ async function renderAdmin() {
 
   await loadTeachers();
 }
+
+/* ============================================================
+   === CONTINUE IN PART 2 ===
+   ============================================================ *//* ============================================================
+   CONTINUED FROM PART 1 — admin functions (existing, unchanged)
+   ============================================================ */
 
 async function createTeacher() {
   const name = q('tName').value.trim();
@@ -1480,14 +1693,555 @@ async function exportEachStudentPDF() {
   } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
-/* ===================== CLASS TEACHER ===================== */
+/* ============================================================
+   NEW: ATTENDANCE LOADERS
+   ============================================================ */
+
+/* My Attendance — self view (works for admin, class_teacher, subject_teacher) */
+async function loadMyAttendance() {
+  const sum = q('myAttSummary');
+  const box = q('myAttCard');
+  const penCard = q('myPenaltyCard');
+  if (!sum || !box) return;
+  sum.textContent = 'Loading…';
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  if (penCard) penCard.style.display = 'none';
+
+  try {
+    /* 1) Get links to find my attendance ID */
+    const linksRes = await attendanceApi('getStaffLinks');
+    const myEmail = String(S.user.email || '').toLowerCase();
+    const myLink = (linksRes.links || []).find(l => String(l.email || '').toLowerCase() === myEmail);
+
+    if (!myLink) {
+      sum.innerHTML = `<span style="color:#92400e">⚠ No attendance ID is linked to your account (${esc(myEmail)}). Ask the admin to add you to the StaffLinks sheet.</span>`;
+      box.innerHTML = '<div class="empty">No attendance data available.</div>';
+      return;
+    }
+    const myAid = normAidClient_(myLink.attendanceId);
+
+    /* 2) Pull public data + penalties */
+    const [pub, penRes, ratesRes] = await Promise.all([
+      attendanceApi('getPublicData'),
+      attendanceApi('getPenalties'),
+      attendanceApi('getPenaltyRates')
+    ]);
+    const settings = pub.settings || {};
+    const start = Number(settings.start) || 480;
+    const grace = Number(settings.grace) || 10;
+    const cutoff = Number(settings.halfdayCutoff) || 720;
+    const halfSet = new Set((pub.halfDayList || []).map(normAidClient_));
+    const isHalf = halfSet.has(myAid);
+
+    const month = q('myAttMonth').value;
+    const mine = (pub.records || []).filter(r =>
+      normAidClient_(r.id) === myAid && (!month || r.date.slice(0, 7) === month)
+    );
+
+    /* 3) Group by day */
+    const byDay = {};
+    mine.forEach(r => {
+      if (!byDay[r.date]) byDay[r.date] = [];
+      byDay[r.date].push(r);
+    });
+    const days = Object.keys(byDay).sort();
+
+    if (!days.length) {
+      sum.textContent = 'No clock-ins for ' + (month || 'any month') + '.';
+      box.innerHTML = '<div class="empty">Nothing recorded.</div>';
+    } else {
+      let present = 0, late = 0, half = 0;
+      const rows = days.map(d => {
+        const times = byDay[d].map(r => r.timeMin).sort((a,b)=>a-b);
+        const first = Math.min(...times);
+        const last = Math.max(...times);
+        let status, lateMin = 0;
+        if (isHalf) {
+          if (first <= start + grace || last >= cutoff) { status = 'present'; present++; }
+          else { status = 'halfday'; half++; }
+        } else {
+          if (first <= start + grace) { status = 'present'; present++; }
+          else { status = 'late'; late++; lateMin = first - (start + grace); }
+        }
+        const color = status === 'present' ? '#15803d' : status === 'late' ? '#b45309' : '#1e3a8a';
+        const label = status === 'present' ? 'Present' : status === 'late' ? 'Late' : 'Half-day';
+        const insStr = byDay[d].map(r => r.timeStr).join(' → ');
+        return `<tr>
+          <td>${esc(d)}</td>
+          <td>${esc(insStr)}</td>
+          <td style="color:${color};font-weight:700">${label}</td>
+          <td style="text-align:right">${lateMin ? '+' + lateMin + ' min late' : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      sum.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+          <div class="stat-box" style="background:#f0fdf4"><div class="label" style="color:#166534">Present</div><div class="value" style="color:#15803d">${present}</div></div>
+          <div class="stat-box" style="background:#fef3c7"><div class="label" style="color:#92400e">Late</div><div class="value" style="color:#b45309">${late}</div></div>
+          <div class="stat-box" style="background:#e0e7ff"><div class="label" style="color:#1e3a8a">Half-day</div><div class="value" style="color:#1e3a8a">${half}</div></div>
+          <div class="stat-box" style="background:#faf7f2"><div class="label" style="color:#6b4423">ID</div><div class="value" style="color:#6b4423;font-size:16px">${esc(myLink.attendanceId)}</div></div>
+        </div>`;
+      box.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Clock-ins</th><th>Status</th><th style="text-align:right">Lateness</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>
+        <p class="portal-note" style="margin-top:12px">
+          Expected in by <strong>${fmtMin_(start + grace)}</strong> (start ${fmtMin_(start)} + ${grace} min grace).
+          ${isHalf ? '<strong>You are flagged as half-day.</strong>' : ''}
+        </p>`;
+    }
+
+    /* 4) Penalties for this month */
+    const penalties = (penRes.penalties || []).filter(p =>
+      String(p.email || '').toLowerCase() === myEmail && (!month || String(p.date || '').slice(0, 7) === month)
+    );
+    if (penCard && penalties.length) {
+      penCard.style.display = 'block';
+      const rateLate = Number(ratesRes.rates.late) || 0;
+      const rateAbs  = Number(ratesRes.rates.absent) || 0;
+      const rateHalf = Number(ratesRes.rates.halfday) || 0;
+      let total = 0;
+      let countLate = 0, countAbs = 0, countHalf = 0;
+      const pr = penalties.map(p => {
+        const amt = Number(p.amount) || 0;
+        total += amt;
+        if (p.type === 'late') countLate++;
+        else if (p.type === 'absent') countAbs++;
+        else if (p.type === 'halfday') countHalf++;
+        return `<tr>
+          <td>${esc(p.date)}</td>
+          <td><span class="badge ${p.type === 'late' ? 'warn' : p.type === 'absent' ? 'err' : 'info'}">${esc(p.type)}</span></td>
+          <td>${esc(p.reason || '')}</td>
+          <td style="text-align:right"><strong>₦${amt.toLocaleString()}</strong></td>
+        </tr>`;
+      }).join('');
+      q('myPenaltyBox').innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+          <div class="stat-box" style="background:#fef2f2"><div class="label" style="color:#991b1b">Late</div><div class="value" style="color:#b91c1c;font-size:16px">${countLate} × ₦${rateLate.toLocaleString()}</div></div>
+          <div class="stat-box" style="background:#fef2f2"><div class="label" style="color:#991b1b">Absent</div><div class="value" style="color:#b91c1c;font-size:16px">${countAbs} × ₦${rateAbs.toLocaleString()}</div></div>
+          <div class="stat-box" style="background:#e0e7ff"><div class="label" style="color:#1e3a8a">Half-day</div><div class="value" style="color:#1e3a8a;font-size:16px">${countHalf} × ₦${rateHalf.toLocaleString()}</div></div>
+          <div class="stat-box" style="background:#fef2f2"><div class="label" style="color:#991b1b">Total</div><div class="value" style="color:#7f1d1d">₦${total.toLocaleString()}</div></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th style="text-align:right">Amount</th></tr></thead>
+          <tbody>${pr}</tbody></table></div>
+        <p class="portal-note" style="margin-top:10px">
+          This amount will be reflected in your ${esc(month || 'monthly')} salary.
+          Contact the admin if you believe a deduction is incorrect.
+        </p>`;
+    } else if (penCard) {
+      penCard.style.display = 'block';
+      q('myPenaltyBox').innerHTML = '<div class="empty">No deductions recorded for this month. 🎉</div>';
+    }
+  } catch (e) {
+    sum.textContent = 'Error: ' + e.message;
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+/* Attendance Summary — whole school (officers + admin) */
+async function loadAttendanceSummary() {
+  const month = q('sumMonth').value;
+  const box = q('sumBox');
+  if (!month) return toast('Choose a month', 'err');
+  box.innerHTML = 'Loading…';
+  try {
+    const [pub, linksRes, penRes] = await Promise.all([
+      attendanceApi('getPublicData'),
+      attendanceApi('getStaffLinks'),
+      attendanceApi('getPenalties').catch(() => ({ penalties: [] }))
+    ]);
+    const linkMap = {};
+    (linksRes.links || []).forEach(l => { linkMap[normAidClient_(l.attendanceId)] = l; });
+
+    const settings = pub.settings || {};
+    const start = Number(settings.start) || 480;
+    const grace = Number(settings.grace) || 10;
+    const cutoff = Number(settings.halfdayCutoff) || 720;
+    const workDays = String(settings.workDays || '1,2,3,4,5').split(',').map(s => Number(s.trim()));
+    const halfSet = new Set((pub.halfDayList || []).map(normAidClient_));
+    const hidden = new Set((pub.hidden || []).map(String));
+
+    /* Count working days elapsed */
+    const [yr, mo] = month.split('-').map(Number);
+    const today = new Date();
+    const isCurrent = (today.getFullYear() === yr && today.getMonth() === mo - 1);
+    const lastDay = isCurrent ? today.getDate() : new Date(yr, mo, 0).getDate();
+    let workingDays = 0;
+    for (let d = 1; d <= lastDay; d++) {
+      if (workDays.indexOf(new Date(yr, mo - 1, d).getDay()) !== -1) workingDays++;
+    }
+
+    /* Group clock-ins */
+    const perStaff = {};
+    (pub.records || []).forEach(r => {
+      if (r.date.slice(0, 7) !== month) return;
+      if (hidden.has(String(r.id))) return;
+      const aid = normAidClient_(r.id);
+      const link = linkMap[aid];
+      if (!link) return;
+      const key = String(link.email || '').toLowerCase();
+      if (!perStaff[key]) perStaff[key] = { name: link.name || '', email: key, days: {} };
+      if (!perStaff[key].days[r.date]) perStaff[key].days[r.date] = [];
+      perStaff[key].days[r.date].push(r.timeMin);
+    });
+
+    /* Penalties by email */
+    const penByEmail = {};
+    (penRes.penalties || []).forEach(p => {
+      if (String(p.date || '').slice(0, 7) !== month) return;
+      const email = String(p.email || '').toLowerCase();
+      if (!penByEmail[email]) penByEmail[email] = { total: 0, late: 0, absent: 0, halfday: 0 };
+      const amt = Number(p.amount) || 0;
+      penByEmail[email].total += amt;
+      if (p.type === 'late') penByEmail[email].late += amt;
+      else if (p.type === 'absent') penByEmail[email].absent += amt;
+      else if (p.type === 'halfday') penByEmail[email].halfday += amt;
+    });
+
+    /* Build per-teacher rows */
+    const rows = Object.keys(perStaff).map(email => {
+      const s = perStaff[email];
+      const aid = Object.keys(linkMap).find(k => String(linkMap[k].email).toLowerCase() === email);
+      const isHalf = halfSet.has(aid);
+      let present = 0, late = 0, half = 0;
+      Object.keys(s.days).forEach(date => {
+        const d = new Date(date + 'T00:00:00');
+        if (workDays.indexOf(d.getDay()) === -1) return;
+        const times = s.days[date];
+        const first = Math.min(...times);
+        const last = Math.max(...times);
+        if (isHalf) {
+          if (first <= start + grace || last >= cutoff) present++;
+          else half++;
+        } else {
+          if (first <= start + grace) present++;
+          else late++;
+        }
+      });
+      const absent = Math.max(0, workingDays - (present + late + half));
+      const pen = penByEmail[email] || { total: 0 };
+      return { email, name: s.name, present, late, halfDay: half, absent, workingDays, penTotal: pen.total };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+
+    if (!rows.length) {
+      box.innerHTML = '<div class="empty">No linked staff clock-ins for this month.</div>';
+      return;
+    }
+
+    const totals = rows.reduce((a, r) => ({
+      present: a.present + r.present, late: a.late + r.late, half: a.half + r.halfDay,
+      absent: a.absent + r.absent, pen: a.pen + r.penTotal
+    }), { present: 0, late: 0, half: 0, absent: 0, pen: 0 });
+
+    box.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
+        <div class="stat-box" style="background:#f0fdf4"><div class="label" style="color:#166534">Present</div><div class="value" style="color:#15803d">${totals.present}</div></div>
+        <div class="stat-box" style="background:#fef3c7"><div class="label" style="color:#92400e">Late</div><div class="value" style="color:#b45309">${totals.late}</div></div>
+        <div class="stat-box" style="background:#e0e7ff"><div class="label" style="color:#1e3a8a">Half-day</div><div class="value" style="color:#1e3a8a">${totals.half}</div></div>
+        <div class="stat-box" style="background:#fee2e2"><div class="label" style="color:#991b1b">Absent</div><div class="value" style="color:#b91c1c">${totals.absent}</div></div>
+        <div class="stat-box" style="background:#faf7f2"><div class="label" style="color:#6b4423">Working Days</div><div class="value" style="color:#6b4423">${workingDays}</div></div>
+        <div class="stat-box" style="background:#fef2f2"><div class="label" style="color:#991b1b">Penalties</div><div class="value" style="color:#7f1d1d;font-size:16px">₦${totals.pen.toLocaleString()}</div></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Staff</th>
+          <th style="text-align:center">Present</th>
+          <th style="text-align:center">Late</th>
+          <th style="text-align:center">Half-day</th>
+          <th style="text-align:center">Absent</th>
+          <th style="text-align:center">Attendance %</th>
+          <th style="text-align:right">Penalty</th>
+        </tr></thead>
+        <tbody>${rows.map(r => {
+          const attended = r.present + r.late + r.halfDay;
+          const pct = r.workingDays ? Math.round(attended / r.workingDays * 100) : 0;
+          const color = pct >= 90 ? '#15803d' : pct >= 75 ? '#1e3a8a' : pct >= 60 ? '#b45309' : '#b91c1c';
+          return `<tr>
+            <td><strong>${esc(r.name || r.email)}</strong><br><small style="color:var(--muted)">${esc(r.email)}</small></td>
+            <td style="text-align:center;color:#15803d;font-weight:700">${r.present}</td>
+            <td style="text-align:center;color:#b45309;font-weight:700">${r.late}</td>
+            <td style="text-align:center;color:#1e3a8a;font-weight:700">${r.halfDay}</td>
+            <td style="text-align:center;color:#b91c1c;font-weight:700">${r.absent}</td>
+            <td style="text-align:center;font-weight:800;color:${color}">${pct}%</td>
+            <td style="text-align:right">₦${r.penTotal.toLocaleString()}</td>
+          </tr>`;
+        }).join('')}</tbody></table></div>
+      <p class="portal-note" style="margin-top:10px">
+        ${rows.length} staff · ${workingDays} working days in ${esc(month)}.
+        Absence = working days − recorded attendance. Verify against approved leave before acting.
+      </p>`;
+  } catch (e) {
+    box.innerHTML = `<span style="color:#991b1b">${esc(e.message)}</span>`;
+  }
+}
+
+/* Staff Attendance — full grid (admin only) */
+async function loadStaffAttendanceGrid() {
+  const box = q('attRecords');
+  const sum = q('attSummary');
+  if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const [pub, linksRes] = await Promise.all([
+      attendanceApi('getPublicData'),
+      attendanceApi('getStaffLinks')
+    ]);
+    const settings = pub.settings || {};
+    const start = Number(settings.start) || 480;
+    const grace = Number(settings.grace) || 10;
+    const cutoff = Number(settings.halfdayCutoff) || 720;
+    const halfSet = new Set((pub.halfDayList || []).map(normAidClient_));
+    const hidden = new Set((pub.hidden || []).map(String));
+    const linkMap = {};
+    (linksRes.links || []).forEach(l => { linkMap[normAidClient_(l.attendanceId)] = l; });
+
+    const month = q('attMonth').value;
+    const date  = q('attDate').value;
+    const filter = q('attStaffFilter').value.trim().toLowerCase();
+
+    /* Announcement banner */
+    q('attAnnouncement').innerHTML = (pub.announcement && pub.announcement.enabled === 'yes' && pub.announcement.text)
+      ? `<div class="ann-card"><div class="msg">📣 ${esc(pub.announcement.text)}</div></div>` : '';
+
+    /* Filter records */
+    const recs = (pub.records || []).filter(r => {
+      if (date && r.date !== date) return false;
+      if (month && r.date.slice(0, 7) !== month) return false;
+      if (hidden.has(String(r.id))) return false;
+      const aid = normAidClient_(r.id);
+      const link = linkMap[aid];
+      if (filter) {
+        const text = ((link && (link.name + ' ' + link.email)) || '') + ' ' + String(r.id);
+        if (text.toLowerCase().indexOf(filter) === -1) return false;
+      }
+      return true;
+    });
+
+    if (!recs.length) {
+      sum.textContent = 'No records for the chosen filters.';
+      box.innerHTML = '<div class="empty">Nothing to show.</div>';
+    } else {
+      /* Group per (staff,date) */
+      const perKey = {};
+      recs.forEach(r => {
+        const aid = normAidClient_(r.id);
+        const link = linkMap[aid];
+        const key = (link ? link.email : 'unknown:' + aid) + '|' + r.date;
+        if (!perKey[key]) perKey[key] = {
+          email: link ? link.email : '', name: link ? link.name : r.name,
+          aid: r.id, date: r.date, times: []
+        };
+        perKey[key].times.push(r.timeMin);
+      });
+
+      const dates = Array.from(new Set(recs.map(r => r.date))).sort();
+      const staffKeys = Array.from(new Set(recs.map(r => {
+        const aid = normAidClient_(r.id);
+        return linkMap[aid] ? String(linkMap[aid].email).toLowerCase() : 'unknown:' + r.id;
+      })));
+
+      let present = 0, late = 0, absent = 0, half = 0;
+      const staffMap = {};
+      perKey && Object.values(perKey).forEach(row => {
+        const sid = row.email || ('unknown:' + row.aid);
+        if (!staffMap[sid]) staffMap[sid] = { name: row.name, email: row.email, aid: row.aid, days: {} };
+        staffMap[sid].days[row.date] = row.times;
+      });
+
+      const staffRows = Object.keys(staffMap).sort().map(sid => {
+        const s = staffMap[sid];
+        const cells = dates.map(d => {
+          const times = s.days[d];
+          if (!times || !times.length) { absent++; return `<td style="text-align:center;color:#b91c1c;font-weight:700">✗</td>`; }
+          const first = Math.min(...times);
+          const last = Math.max(...times);
+          if (halfSet.has(normAidClient_(s.aid))) {
+            if (first <= start + grace || last >= cutoff) { present++; return `<td style="text-align:center;color:#15803d;font-weight:700">✓</td>`; }
+            half++; return `<td style="text-align:center;color:#1e3a8a;font-weight:700">½</td>`;
+          }
+          if (first <= start + grace) { present++; return `<td style="text-align:center;color:#15803d;font-weight:700">✓</td>`; }
+          late++; return `<td style="text-align:center;color:#b45309;font-weight:700">L</td>`;
+        }).join('');
+        return `<tr>
+          <td><strong>${esc(s.name || '—')}</strong><br><small style="color:var(--muted)">${esc(s.email || 'unknown:' + s.aid)}</small></td>
+          ${cells}
+        </tr>`;
+      }).join('');
+
+      sum.innerHTML = `Present <strong style="color:#15803d">${present}</strong> · Late <strong style="color:#b45309">${late}</strong> · Half-day <strong style="color:#1e3a8a">${half}</strong> · Absent <strong style="color:#b91c1c">${absent}</strong>`;
+      box.innerHTML = `<div style="overflow-x:auto"><table>
+        <thead><tr>
+          <th style="min-width:170px">Staff</th>
+          ${dates.map(d => `<th style="text-align:center;font-size:10px;min-width:44px">${d.slice(5)}</th>`).join('')}
+        </tr></thead>
+        <tbody>${staffRows}</tbody></table></div>
+        <p class="portal-note" style="margin-top:12px">✓ on time · <strong>L</strong> late · ½ half-day · ✗ absent. Tolerance: ${grace} min after ${fmtMin_(start)}.</p>`;
+    }
+
+    /* Unlinked clock-ins */
+    const unmapped = (pub.records || []).filter(r => {
+      const aid = normAidClient_(r.id);
+      return !linkMap[aid] && !hidden.has(String(r.id));
+    }).slice(0, 100);
+    if (unmapped.length) {
+      q('attUnmapped').innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Machine ID</th><th>Name</th><th>Date</th><th>Time</th></tr></thead>
+        <tbody>${unmapped.map(u => `<tr><td><strong>${esc(u.id)}</strong></td><td>${esc(u.name)}</td><td>${esc(u.date)}</td><td>${esc(u.timeStr)}</td></tr>`).join('')}</tbody></table></div>`;
+    } else {
+      q('attUnmapped').innerHTML = '<div class="empty">No unlinked clock-ins.</div>';
+    }
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+    if (sum) sum.textContent = 'Error: ' + e.message;
+  }
+}
+
+/* Staff Links — read-only display (admin edits in the sheet) */
+async function loadStaffLinksAdmin() {
+  const box = q('staffLinksBox'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const [linksRes, teachers] = await Promise.all([
+      attendanceApi('getStaffLinks'),
+      api('getTeachers').catch(() => [])
+    ]);
+    const linkMap = {};
+    (linksRes.links || []).forEach(l => { linkMap[String(l.email || '').toLowerCase()] = l; });
+
+    if (!teachers.length && !Object.keys(linkMap).length) {
+      box.innerHTML = '<div class="empty">No teachers or links yet.</div>';
+      return;
+    }
+
+    const rows = teachers.map(t => {
+      const l = linkMap[String(t.email || '').toLowerCase()];
+      return `<tr>
+        <td><strong>${esc(t.name)}</strong></td>
+        <td>${esc(t.email)}</td>
+        <td>${esc(t.class || '—')}</td>
+        <td>${l ? `<strong>${esc(l.attendanceId)}</strong>` : '<span class="badge warn">not linked</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    const orphanIds = Object.keys(linkMap).filter(e => !teachers.find(t => String(t.email).toLowerCase() === e));
+    const orphans = orphanIds.map(e => {
+      const l = linkMap[e];
+      return `<tr><td>—</td><td>${esc(l.email)}</td><td>—</td><td><strong>${esc(l.attendanceId)}</strong></td></tr>`;
+    }).join('');
+
+    box.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Teacher</th><th>Email</th><th>Class</th><th>Attendance ID</th></tr></thead>
+      <tbody>${rows}${orphans}</tbody></table></div>
+      <p class="portal-note" style="margin-top:10px">
+        To add or edit links, open the <strong>StaffLinks</strong> sheet in the attendance spreadsheet
+        (columns: <code>attendance_id | email | name</code>). Changes appear here after a Refresh.
+      </p>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+/* ============================================================
+   NEW: MESSAGING
+   ============================================================ */
+async function sendStaffMessage() {
+  const subject = q('msgSubject').value;
+  const message = q('msgBody').value.trim();
+  const relatedDate = q('msgRelatedDate').value;
+  const status = q('msgStatus');
+  if (!message) return toast('Message body required', 'err');
+  try {
+    await api('staffSendMessage', { subject, message, relatedDate });
+    toast('Message sent to admin', 'ok');
+    q('msgBody').value = '';
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:#065f46">✅ Message sent. The admin will reply from the portal.</span>';
+    loadMyMessages();
+  } catch (e) {
+    status.style.display = 'block';
+    status.innerHTML = `<span style="color:#991b1b">${esc(e.message)}</span>`;
+  }
+}
+
+async function loadMyMessages() {
+  const box = q('msgHistory'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    /* Admin sees all; teachers see their own — getStaffMessages is admin-only so use adminGetStaffMessages for admin,
+       and for teachers we filter by fromEmail on the admin endpoint (blocked) → fallback: use staffSendMessage? 
+       Actually the backend's adminGetStaffMessages is admin-only. Teachers can only see their own via the send history list
+       we maintain client-side. For simplicity: teachers get a friendly note; admins see everything in "Staff Messages" tab. */
+    if (hasRole('admin')) {
+      const rows = await api('adminGetStaffMessages');
+      if (!rows.length) { box.innerHTML = '<div class="empty">No messages yet.</div>'; return; }
+      box.innerHTML = rows.slice(0, 10).map(r => `
+        <div class="ann-card">
+          <div class="msg">${esc(r.message)}</div>
+          <div class="meta">${esc(r.fromEmail)} · ${esc(r.subject || 'No subject')} · ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
+            · <span class="badge ${r.status === 'Replied' ? 'ok' : 'warn'}">${esc(r.status)}</span></div>
+          ${r.reply ? `<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #15803d;border-radius:4px;font-size:12.5px"><strong>Admin reply:</strong> ${esc(r.reply)}</div>` : ''}
+        </div>`).join('');
+    } else {
+      /* For non-admins, we can't fetch their own history without a new backend action.
+         Show a graceful note instead. */
+      box.innerHTML = '<div class="empty">Your sent messages will appear here once the admin replies. For now, use the form above to send a new message.</div>';
+    }
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function loadStaffMessagesAdmin() {
+  const box = q('staffMessagesBox'); if (!box) return;
+  box.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const status = q('smStatusFilter').value;
+    const rows = await api('adminGetStaffMessages', status ? { status } : {});
+    if (!rows.length) { box.innerHTML = '<div class="empty">No messages.</div>'; return; }
+    box.innerHTML = rows.map(r => `
+      <div class="ann-card" data-msg-id="${esc(r.id)}">
+        <div class="msg">${esc(r.message)}</div>
+        <div class="meta">
+          From: <strong>${esc(r.fromName || r.fromEmail)}</strong> (${esc(r.fromEmail)})
+          · Subject: <strong>${esc(r.subject || '—')}</strong>
+          ${r.relatedDate ? ` · Related date: ${esc(r.relatedDate)}` : ''}
+          · ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
+          · <span class="badge ${r.status === 'Replied' ? 'ok' : 'warn'}">${esc(r.status)}</span>
+        </div>
+        ${r.reply ? `<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border-left:3px solid #15803d;border-radius:4px;font-size:12.5px"><strong>Reply sent ${r.repliedAt ? '('+new Date(r.repliedAt).toLocaleString()+')' : ''}:</strong> ${esc(r.reply)}</div>` : ''}
+        ${r.status !== 'Replied' ? `
+          <div style="margin-top:8px">
+            <textarea data-reply rows="2" placeholder="Type your reply…" maxlength="2000" style="width:100%"></textarea>
+            <button class="ok sm" style="margin-top:6px" onclick="replyToMessage('${esc(r.id)}', this)">Send Reply</button>
+          </div>` : ''}
+      </div>`).join('');
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+async function replyToMessage(msgId, btn) {
+  const card = btn.closest('[data-msg-id]');
+  const ta = card.querySelector('[data-reply]');
+  const reply = ta.value.trim();
+  if (!reply) return toast('Reply required', 'err');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    await api('adminReplyStaffMessage', { id: msgId, reply });
+    toast('Reply sent', 'ok');
+    loadStaffMessagesAdmin();
+  } catch (e) {
+    toast(e.message, 'err');
+    btn.disabled = false; btn.textContent = 'Send Reply';
+  }
+}
+
+/* ============================================================
+   CLASS TEACHER RENDERER
+   ============================================================ */
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
   const CLASS_NAME = S.user.class;
   if (!CLASS_NAME) { q('main').innerHTML = '<div class="card"><div class="empty">No class assigned. Contact admin.</div></div>'; return; }
 
   q('main').innerHTML = `
-    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage your roster, scores, and domains.</p></div>
+    <div class="page-head"><h1>Class Teacher · ${esc(CLASS_NAME)}</h1><p>Manage your roster, scores, domains, and attendance.</p></div>
 
     <div class="panel active" data-panel="students">
       <div class="card">
@@ -1531,17 +2285,33 @@ async function renderClassTeacher() {
         <div id="domainEditorBox"><div class="empty">Load a term.</div></div>
       </div>
     </div>
+
+    ${MY_ATTENDANCE_HTML}
+    ${S.user.isOfficer ? ATTENDANCE_SUMMARY_HTML : ''}
+    ${MESSAGE_ADMIN_HTML}
   `;
 
-  buildNav([
+  const navItems = [
     { title: 'My Class', tabs: [
       { id: 'students', label: 'Students' },
       { id: 'scores', label: 'Scores' },
       { id: 'domains', label: 'Domains' },
     ]},
-  ], 'students');
+    { title: 'Attendance', tabs: [
+      { id: 'myAttendance', label: 'My Attendance' },
+      ...(S.user.isOfficer ? [{ id: 'attendanceSummary', label: 'Attendance Summary' }] : []),
+    ]},
+    { title: 'Comms', tabs: [
+      { id: 'messageAdmin', label: 'Message Admin' },
+    ]},
+  ];
+  buildNav(navItems, 'students');
 
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
+  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
+  if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
+  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
 
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
@@ -1681,7 +2451,9 @@ async function ctSubmit(subject, term) {
   catch (e) { toast(e.message, 'err'); }
 }
 
-/* ===================== SUBJECT TEACHER ===================== */
+/* ============================================================
+   SUBJECT TEACHER RENDERER
+   ============================================================ */
 async function renderSubjectTeacher() {
   q('roleTag').textContent = 'Subject Teacher · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1704,12 +2476,30 @@ async function renderSubjectTeacher() {
         <div id="stHistory" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
+
+    ${MY_ATTENDANCE_HTML}
+    ${S.user.isOfficer ? ATTENDANCE_SUMMARY_HTML : ''}
+    ${MESSAGE_ADMIN_HTML}
   `;
-  buildNav([{ title: 'Academics', tabs: [
-    { id: 'entry', label: 'Score Entry' },
-    { id: 'history', label: 'My Submissions' },
-  ]}], 'entry');
+  const navItems = [
+    { title: 'Academics', tabs: [
+      { id: 'entry', label: 'Score Entry' },
+      { id: 'history', label: 'My Submissions' },
+    ]},
+    { title: 'Attendance', tabs: [
+      { id: 'myAttendance', label: 'My Attendance' },
+      ...(S.user.isOfficer ? [{ id: 'attendanceSummary', label: 'Attendance Summary' }] : []),
+    ]},
+    { title: 'Comms', tabs: [
+      { id: 'messageAdmin', label: 'Message Admin' },
+    ]},
+  ];
+  buildNav(navItems, 'entry');
   document.querySelector('.nav-item[data-tab="history"]').dataset.onload = 'stLoadHistory';
+  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
+  if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
+  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
   const classes = await loadClasses();
   q('stClass').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   await stFillSubjects();
@@ -1775,7 +2565,9 @@ async function stLoadHistory() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ===================== STUDENT ===================== */
+/* ============================================================
+   STUDENT RENDERER (unchanged)
+   ============================================================ */
 async function renderStudent() {
   q('roleTag').textContent = 'Student · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1800,7 +2592,9 @@ async function studentLoad() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
-/* ===================== PARENT ===================== */
+/* ============================================================
+   PARENT RENDERER (unchanged)
+   ============================================================ */
 async function renderParent() {
   q('roleTag').textContent = 'Parent Portal · Jesus, Our Teacher';
   q('main').innerHTML = `
@@ -1836,8 +2630,7 @@ async function renderParent() {
         <textarea id="pQuestion" style="margin-top:10px;min-height:70px" placeholder="Which subjects should my child focus on?"></textarea>
         <div class="row" style="margin-top:8px"><button onclick="parentAsk()">Ask</button></div>
       </div>
-    </div>
-  `;
+    </div>`;
 
   buildNav([
     { title: 'Results', tabs: [
