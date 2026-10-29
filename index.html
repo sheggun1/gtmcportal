@@ -392,7 +392,7 @@
 /* ============================================================
    CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbzLaY9O1O2j96irkyiMp_ixnuU_ubYjGr_H7jO4porrDsJpyTcbDrVqcAfbb8S4bApu/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxd2V9A7GK2qpbdNRCeUwVRKqRlFQro1nVeHQr3j9QeP8G2RSBn38ixQkeYZ_xlew4-/exec';
 const ATTENDANCE_API = 'https://script.google.com/macros/s/AKfycbyxsohckjH29QFwbgUdVuP9A-Y-OMJa9ve7nkbwB0qKxtFmK2vM0C1huublkBZrD35X/exec';
 
 const S = {
@@ -471,8 +471,10 @@ function normAidClient_(v) { return String(v == null ? '' : v).trim().replace(/^
 
 async function loadClasses() {
   if (S.cache.classes) return S.cache.classes;
-  const list = await api('getClasses');
-  S.cache.classes = list.map(c => c.class);
+  const response = await api('getClasses');
+  const list = Array.isArray(response) ? response : (response && Array.isArray(response.classes) ? response.classes : []);
+  S.cache.classes = list.map(c => typeof c === 'string' ? c : c && (c.class || c.className || c.name)).filter(Boolean).map(c => String(c).trim()).filter(Boolean);
+  if (!S.cache.classes.length) throw new Error('No active classes were returned by the backend. Check the Classes sheet and redeploy the Apps Script if needed.');
   return S.cache.classes;
 }
 async function loadSubjects(className) {
@@ -577,7 +579,20 @@ async function switchStaffPortal() {
   }
 }
 
+function assignNavOnload(tabId, handlerName) {
+  const navItem = document.querySelector('.nav-item[data-tab="' + tabId + '"]');
+  if (navItem) navItem.dataset.onload = handlerName;
+}
+
 function buildNav(items, defaultTab) {
+  if (!items.some(g => (g.tabs || []).some(t => t.id === 'library'))) items.push({ title: 'Resources', tabs: [{ id: 'library', label: 'e-Library' }] });
+  const main = q('main');
+  if (main && !main.querySelector('[data-panel="library"]')) main.insertAdjacentHTML('beforeend', `
+    <div class="panel" data-panel="library">
+      <div class="page-head"><h1>School e-Library</h1><p>Browse learning resources shared by Greater Tomorrow Model Schools.</p></div>
+      <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap"><div><h2>Learning Materials</h2><p class="sub">Books, notes, past questions, videos and other approved learning resources.</p></div><button class="sec sm" onclick="loadLibrary()">Refresh</button></div><div class="grid cols-3" style="margin:12px 0"><div><label>Search</label><input id="libSearch" placeholder="Search title, subject, author…" oninput="renderLibraryRows()"></div><div><label>Resource type</label><select id="libCategory" onchange="renderLibraryRows()"><option value="">All types</option><option>Textbook</option><option>Class Notes</option><option>Past Questions</option><option>Video</option><option>Audio</option><option>Worksheet</option><option>Other</option></select></div><div><label>Class</label><select id="libClassFilter" onchange="renderLibraryRows()"><option value="">All classes</option></select></div></div><div id="libraryRows"><div class="empty">Loading library resources…</div></div></div>
+      <div class="card" id="libraryAdminCard" style="display:none"><h2>Manage Library Resources</h2><p class="sub">Add a resource by entering its shareable URL. For Google Drive files, set access so intended readers can open the file.</p><input type="hidden" id="libId"><div class="grid cols-3"><div><label>Title *</label><input id="libTitle" placeholder="Resource title"></div><div><label>Author / Teacher</label><input id="libAuthor" placeholder="Author or teacher"></div><div><label>Subject</label><input id="libSubject" placeholder="e.g. Mathematics"></div><div><label>Class</label><select id="libClass"><option value="ALL">All classes</option></select></div><div><label>Resource type</label><select id="libType"><option>Textbook</option><option>Class Notes</option><option>Past Questions</option><option>Video</option><option>Audio</option><option>Worksheet</option><option>Other</option></select></div><div><label>Resource URL *</label><input id="libUrl" type="url" placeholder="https://…"></div><div style="grid-column:1/-1"><label>Description</label><textarea id="libDescription" rows="2" placeholder="Brief description or instructions"></textarea></div></div><div class="row" style="margin-top:12px"><button class="blue" onclick="saveLibraryResource()">Save Resource</button><button class="sec" onclick="resetLibraryForm()">Clear Form</button></div><div id="libAdminStatus" class="portal-note"></div></div>
+    </div>`);
   const sidebar = q('sidebar');
   sidebar.innerHTML = items.map(g => `
     <div class="group">
@@ -587,6 +602,8 @@ function buildNav(items, defaultTab) {
         ${t.badge ? `<span class="count-badge">${t.badge}</span>` : ''}
       </div>`).join('')}
     </div>`).join('');
+  const libNav = document.querySelector('.nav-item[data-tab="library"]');
+  if (libNav) libNav.dataset.onload = 'loadLibrary';
   setNav(defaultTab);
 }
 function setNav(tabId) {
@@ -595,6 +612,44 @@ function setNav(tabId) {
   const nav = document.querySelector('.nav-item[data-tab="' + tabId + '"]');
   if (nav && nav.dataset.onload) try { window[nav.dataset.onload](); } catch (e) {}
 }
+
+/* ============================================================
+   SHARED: SCHOOL e-LIBRARY
+   ============================================================ */
+let LIBRARY_CACHE = [];
+function libraryIsAdmin(){ return hasRole('admin'); }
+async function loadLibrary(){
+  const box=q('libraryRows'); if(!box) return;
+  const adminCard=q('libraryAdminCard'); if(adminCard) adminCard.style.display=libraryIsAdmin()?'block':'none';
+  box.innerHTML='<div class="empty">Loading library resources…</div>';
+  try{
+    const resources=await api('libraryList');
+    LIBRARY_CACHE=Array.isArray(resources)?resources:[];
+    const cls=await loadClasses().catch(()=>[]);
+    const filter=q('libClassFilter'); if(filter){const old=filter.value;filter.innerHTML='<option value="">All classes</option>'+cls.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');if(cls.includes(old))filter.value=old;}
+    const adminClass=q('libClass');if(adminClass){const old=adminClass.value;adminClass.innerHTML='<option value="ALL">All classes</option>'+cls.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');if(cls.includes(old))adminClass.value=old;}
+    renderLibraryRows();
+  }catch(e){box.innerHTML=`<div class="empty">Could not load library: ${esc(e.message)}. If you have just updated the backend, run setupSheets() and redeploy the Apps Script web app.</div>`;}
+}
+function renderLibraryRows(){
+  const box=q('libraryRows');if(!box)return;
+  const needle=String(q('libSearch')?.value||'').toLowerCase().trim(),cat=q('libCategory')?.value||'',cls=q('libClassFilter')?.value||'';
+  const rows=LIBRARY_CACHE.filter(r=>{
+    const text=[r.title,r.author,r.subject,r.description,r.category].join(' ').toLowerCase();
+    const target=String(r.class||'ALL');
+    return (!needle||text.includes(needle))&&(!cat||r.category===cat)&&(!cls||target==='ALL'||target===cls);
+  });
+  if(!rows.length){box.innerHTML='<div class="empty">No matching library resources yet.</div>';return;}
+  box.innerHTML='<div class="grid cols-2">'+rows.map(r=>`<div class="card" style="border:1px solid var(--line)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(r.title||'Untitled resource')}</h3><p class="sub">${esc(r.category||'Other')} · ${esc(r.subject||'General')} · ${esc(r.class||'ALL classes')}</p></div>${libraryIsAdmin()?`<div class="row"><button class="sec sm" onclick="editLibraryResource('${esc(r.id)}')">Edit</button><button class="danger sm" onclick="deleteLibraryResource('${esc(r.id)}')">Remove</button></div>`:''}</div>${r.author?`<p><strong>Author:</strong> ${esc(r.author)}</p>`:''}${r.description?`<p>${esc(r.description)}</p>`:''}<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="button blue" style="display:inline-block;text-decoration:none;margin-top:8px">Open Resource ↗</a></div>`).join('')+'</div>';
+}
+function resetLibraryForm(){['libId','libTitle','libAuthor','libSubject','libUrl','libDescription'].forEach(id=>{if(q(id))q(id).value='';});if(q('libClass'))q('libClass').value='ALL';if(q('libType'))q('libType').value='Textbook';if(q('libAdminStatus'))q('libAdminStatus').textContent='';}
+function editLibraryResource(id){const r=LIBRARY_CACHE.find(x=>String(x.id)===String(id));if(!r)return; q('libId').value=r.id||'';q('libTitle').value=r.title||'';q('libAuthor').value=r.author||'';q('libSubject').value=r.subject||'';q('libClass').value=r.class||'ALL';q('libType').value=r.category||'Other';q('libUrl').value=r.url||'';q('libDescription').value=r.description||'';q('libAdminStatus').textContent='Editing resource: '+r.title; q('libraryAdminCard').scrollIntoView({behavior:'smooth',block:'start'});}
+async function saveLibraryResource(){
+  if(!libraryIsAdmin())return toast('Only administrators can manage library resources.','err');
+  const title=q('libTitle').value.trim(),url=q('libUrl').value.trim();if(!title||!url)return toast('Enter a resource title and URL.','err');
+  try{const r=await api('librarySave',{id:q('libId').value.trim(),title,author:q('libAuthor').value.trim(),subject:q('libSubject').value.trim(),className:q('libClass').value||'ALL',category:q('libType').value, url,description:q('libDescription').value.trim()});q('libAdminStatus').textContent=r.message||'Resource saved.';toast('Library resource saved.','ok');resetLibraryForm();await loadLibrary();}catch(e){q('libAdminStatus').textContent=e.message;toast(e.message,'err');}
+}
+async function deleteLibraryResource(id){if(!libraryIsAdmin()||!confirm('Remove this resource from the e-Library?'))return;try{await api('libraryDelete',{id});toast('Resource removed from the library.','ok');await loadLibrary();}catch(e){toast(e.message,'err');}}
 
 /* ============================================================
    SHARED: MY ATTENDANCE PANEL (used by admin, class teacher, subject teacher)
@@ -1078,32 +1133,32 @@ async function renderAdmin() {
   ];
   buildNav(navItems, 'dashboard');
 
-  document.querySelector('.nav-item[data-tab="dashboard"]').dataset.onload = 'loadAdminDashboard';
-  document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
-  document.querySelector('.nav-item[data-tab="performance"]').dataset.onload = 'loadClassPerformance';
-  document.querySelector('.nav-item[data-tab="broadsheet"]').dataset.onload = 'initBroadsheet';
-  document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
-  document.querySelector('.nav-item[data-tab="academicSummary"]').dataset.onload = 'loadTeacherAcademicSummary';
-  document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
-  document.querySelector('.nav-item[data-tab="teacherRemarks"]').dataset.onload = 'loadTeacherRemarksTab';
-  document.querySelector('.nav-item[data-tab="calendar"]').dataset.onload = 'loadSchoolCalendar';
-  document.querySelector('.nav-item[data-tab="template"]').dataset.onload = 'loadTemplate';
-  document.querySelector('.nav-item[data-tab="parents"]').dataset.onload = 'loadParentAccounts';
-  document.querySelector('.nav-item[data-tab="debtors"]').dataset.onload = 'loadDebtsForClass';
-  document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'loadAnnouncementsAdmin';
-  document.querySelector('.nav-item[data-tab="reportcards"]').dataset.onload = 'initReportCards';
-  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  assignNavOnload('dashboard', 'loadAdminDashboard');
+  assignNavOnload('submissions', 'loadSubmissions');
+  assignNavOnload('performance', 'loadClassPerformance');
+  assignNavOnload('broadsheet', 'initBroadsheet');
+  assignNavOnload('domains', 'reloadDomainEditor');
+  assignNavOnload('academicSummary', 'loadTeacherAcademicSummary');
+  assignNavOnload('remarks', 'loadRemarksList');
+  assignNavOnload('teacherRemarks', 'loadTeacherRemarksTab');
+  assignNavOnload('calendar', 'loadSchoolCalendar');
+  assignNavOnload('template', 'loadTemplate');
+  assignNavOnload('parents', 'loadParentAccounts');
+  assignNavOnload('debtors', 'loadDebtsForClass');
+  assignNavOnload('announcements', 'loadAnnouncementsAdmin');
+  assignNavOnload('reportcards', 'initReportCards');
+  assignNavOnload('myAttendance', 'loadMyAttendance');
   const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
   if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
-  document.querySelector('.nav-item[data-tab="staffAttendance"]').dataset.onload = 'loadStaffAttendanceGrid';
-  document.querySelector('.nav-item[data-tab="staffLinks"]').dataset.onload = 'loadStaffLinksAdmin';
-  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
-  document.querySelector('.nav-item[data-tab="staffMessages"]').dataset.onload = 'loadStaffMessagesAdmin';
+  assignNavOnload('staffAttendance', 'loadStaffAttendanceGrid');
+  assignNavOnload('staffLinks', 'loadStaffLinksAdmin');
+  assignNavOnload('messageAdmin', 'loadMyMessages');
+  assignNavOnload('staffMessages', 'loadStaffMessagesAdmin');
 
   const classes = await loadClasses();
   window.__gtmcClasses = classes;
   ['tClass','tClassTeacherClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass','assPubClass'].forEach(id => {
-    const el = q(id); if (el) el.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
+    const el = q(id); if (el) { const old = el.value; el.innerHTML = '<option value="">Choose class</option>' + classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join(''); if (classes.includes(old)) el.value = old; else if (classes.length) el.value = classes[0]; }
   });
   q('annClasses').innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
 
@@ -2537,11 +2592,7 @@ async function renderClassTeacher() {
       <div class="card" id="ctScoreCard"><div class="empty">Load a subject and term.</div></div>
     </div>
 
-    <div class="panel" data-panel="academicSummary">
-      <div class="card"><h2>Class Academic Summary &amp; Test Performance</h2><p class="sub">Class-only analysis based on entered scores. Incomplete subject records are shown as incomplete.</p>
-        <div class="grid cols-3"><div><label>Term</label><select id="ctPerfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div><div><label>Assessment</label><select id="ctPerfAssessment"><option value="total">Subject Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Exam /70</option></select></div><div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadTeacherAcademicSummary()">Analyse Class</button></div></div>
-      </div><div class="grid cols-4" id="ctPerfStats"></div><div class="card"><h2>Subject Analysis</h2><div id="ctPerfSubjects" class="empty">Choose assessment and analyse.</div></div><div class="card"><h2>Student Progress Snapshot</h2><div id="ctPerfStudents" class="empty">Analysis will appear here.</div></div>
-    </div>
+
 
     <div class="panel" data-panel="domains">
       <div class="card">
@@ -2570,7 +2621,6 @@ async function renderClassTeacher() {
     { title: 'My Class', tabs: [
       { id: 'students', label: 'Students' },
       { id: 'scores', label: 'Scores' },
-      { id: 'academicSummary', label: 'Test Performance' },
       { id: 'domains', label: 'Domains' },
     ]},
     { title: 'Attendance', tabs: [
@@ -2583,11 +2633,11 @@ async function renderClassTeacher() {
   ];
   buildNav(navItems, 'students');
 
-  document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
-  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  assignNavOnload('domains', 'reloadDomainEditor');
+  assignNavOnload('myAttendance', 'loadMyAttendance');
   const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
   if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
-  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
+  assignNavOnload('messageAdmin', 'loadMyMessages');
 
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
@@ -2792,11 +2842,11 @@ async function renderSubjectTeacher() {
     ]},
   ];
   buildNav(navItems, 'entry');
-  document.querySelector('.nav-item[data-tab="history"]').dataset.onload = 'stLoadHistory';
-  document.querySelector('.nav-item[data-tab="myAttendance"]').dataset.onload = 'loadMyAttendance';
+  assignNavOnload('history', 'stLoadHistory');
+  assignNavOnload('myAttendance', 'loadMyAttendance');
   const sumNav = document.querySelector('.nav-item[data-tab="attendanceSummary"]');
   if (sumNav) sumNav.dataset.onload = 'loadAttendanceSummary';
-  document.querySelector('.nav-item[data-tab="messageAdmin"]').dataset.onload = 'loadMyMessages';
+  assignNavOnload('messageAdmin', 'loadMyMessages');
   const classes = await loadClasses();
   q('stClass').innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   await stFillSubjects();
@@ -2883,16 +2933,18 @@ function filterTableRows(containerId, query) {
 async function renderStudent() {
   q('roleTag').textContent = 'Student · Jesus, Our Teacher';
   q('main').innerHTML = `
-    <div class="page-head"><h1>My Results</h1><p>View your scores per term.</p></div>
-    <div class="card">
-      <div class="row">
-        <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
-        <button class="blue" onclick="studentLoad()">Load</button>
-        <button class="ok" onclick="downloadStudentResultPDF()">⬇ Download Result PDF</button>
-        <button class="sec" onclick="printCurrentResult()">Print</button>
+    <div class="panel active" data-panel="results">
+      <div class="page-head"><h1>My Results</h1><p>View your scores per term.</p></div>
+      <div class="card">
+        <div class="row">
+          <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
+          <button class="blue" onclick="studentLoad()">Load</button>
+          <button class="ok" onclick="downloadStudentResultPDF()">⬇ Download Result PDF</button>
+          <button class="sec" onclick="printCurrentResult()">Print</button>
+        </div>
       </div>
-    </div>
-    <div class="card" id="studentBox"><div class="empty">Select a term.</div></div>`;
+      <div class="card" id="studentBox"><div class="empty">Select a term.</div></div>
+    </div>`;
   buildNav([{ title: 'Academics', tabs: [{ id: 'results', label: 'My Results' }] }], 'results');
 }
 async function studentLoad() {
@@ -2983,8 +3035,8 @@ async function renderParent() {
     ]},
   ], 'report');
 
-  document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'parentLoadAnnouncements';
-  document.querySelector('.nav-item[data-tab="testPerformance"]').dataset.onload = 'parentLoadTestPerformance';
+  assignNavOnload('announcements', 'parentLoadAnnouncements');
+  assignNavOnload('testPerformance', 'parentLoadTestPerformance');
 
   try {
     const wards = await api('parentGetWards');
