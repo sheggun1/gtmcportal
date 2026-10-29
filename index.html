@@ -146,6 +146,14 @@
   .card { background:var(--surface); border:1px solid var(--line);
     border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-sm); margin-bottom:18px; }
   .card h2 { font-size:15px; font-weight:800; color:var(--brown); margin-bottom:6px; }
+  .stat-card { margin-bottom:0; padding:18px; border-top:3px solid var(--blue); }
+  .stat-number { font-size:30px; line-height:1.15; font-weight:850; color:var(--blue-dark); letter-spacing:-.03em; }
+  .template-preview { border:1px solid var(--line-strong); border-top:5px solid var(--preview-primary, #0756a8); background:var(--preview-secondary,#fff); padding:18px; border-radius:8px; color:var(--ink); }
+  .template-preview .preview-head { display:flex; align-items:center; gap:14px; padding-bottom:12px; border-bottom:2px solid var(--preview-primary,#0756a8); }
+  .template-preview .preview-logo { width:62px;height:62px;object-fit:contain;border:1px solid var(--line);border-radius:6px; }
+  .template-preview h3 { color:var(--preview-primary,#0756a8);font-size:17px;line-height:1.2; }
+  .template-preview .preview-motto { font-style:italic;font-weight:700;margin-top:4px; }
+  @media(max-width:700px){ .stat-number{font-size:25px} }
   .card .sub { color:var(--muted); font-size:12.5px; margin-bottom:14px; }
 
   .grid { display:grid; gap:12px; }
@@ -234,12 +242,30 @@
     body * { visibility:hidden !important; }
     #reportCard, #reportCard * { visibility:visible !important; }
     #reportCard { position:absolute!important;left:0!important;top:0!important;width:100%!important; }
+    #studentBox { display:block!important; position:absolute!important;left:0!important;top:0!important;width:100%!important;padding:0!important;border:0!important;box-shadow:none!important }
+    #studentBox .result-summary,#studentBox .portal-toolbar { display:none!important }
+    #studentBox .table-wrap { overflow:visible!important }
+    #studentBox table { width:100%!important;font-size:10px!important }
+    #studentBox th,#studentBox td { padding:4px!important;border:1px solid #777!important }
     #reportCard .gtmc-result-columns { grid-template-columns:minmax(0,1fr) 165px!important;gap:4px!important; }
     #reportCard .gtmc-report-header { grid-template-columns:54px 1fr!important; }
     #reportCard .gtmc-report-logo { width:50px!important;height:50px!important; }
     #reportCard table { font-size:7px!important; }
     #reportCard td,#reportCard th { padding:1px 2px!important; }
   }
+
+  /* Additional frontend workflow improvements */
+  .score-input{min-width:58px;max-width:78px;text-align:center;font-weight:700;padding:7px 5px;font-variant-numeric:tabular-nums}
+  .score-input:focus{outline:2px solid #0756a8;outline-offset:1px;background:#eff6ff}
+  .score-input.score-invalid{border-color:#b91c1c!important;background:#fef2f2!important;color:#991b1b}
+  .score-input.score-saved{border-color:#15803d!important;background:#f0fdf4!important}
+  .table-search{max-width:320px;min-width:180px}
+  .portal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .portal-toolbar .hint{font-size:12px;color:var(--muted)}
+  .result-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .result-summary>div{background:#f1f7fd;border:1px solid #dce6f1;border-radius:8px;padding:12px}
+  .result-summary strong{display:block;font-size:20px;color:#043e7a}
+  @media(max-width:640px){.result-summary{grid-template-columns:1fr}.table-search{max-width:none;width:100%}}
 
   /* GTMC professional frontend refresh */
   body{background:#f1f6fc;color:#18324a}
@@ -263,24 +289,24 @@
   #reportCard td,#reportCard th{vertical-align:middle}
   @media(max-width:900px){main.content{padding:15px}.body-layout{grid-template-columns:1fr}}
   @media print{
-    @page{size:A4 landscape;margin:7mm}
+    @page{size:A4 landscape;margin:5mm}
     body{background:#fff!important;font-size:10px}
     .app-layout{min-height:0}
     main.content{padding:0!important;overflow:visible!important}
-    #reportCard{width:100%!important;max-width:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:5mm!important;font-size:8.5px!important;line-height:1.2!important}
-    #reportCard .gtmc-report-header{grid-template-columns:68px 1fr!important;gap:8px!important;padding-bottom:5px!important;margin-bottom:5px!important}
-    #reportCard .gtmc-report-logo{width:64px!important;height:64px!important}
-    #reportCard .gtmc-school-name{font-size:17px!important}
-    #reportCard .gtmc-student-details{margin-bottom:5px!important;font-size:8px!important}
+    #reportCard{width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:1mm!important;font-size:7.5px!important;line-height:1.08!important}
+    #reportCard .gtmc-report-header{grid-template-columns:48px 1fr!important;gap:5px!important;padding-bottom:3px!important;margin-bottom:3px!important}
+    #reportCard .gtmc-report-logo{width:44px!important;height:44px!important}
+    #reportCard .gtmc-school-name{font-size:13px!important}
+    #reportCard .gtmc-student-details{margin-bottom:3px!important;font-size:6.8px!important}
     #reportCard .gtmc-student-details td{padding:2px 5px!important}
-    #reportCard .gtmc-result-columns{grid-template-columns:minmax(0,1fr) 180px!important;gap:6px!important;margin-bottom:6px!important}
-    #reportCard table{font-size:7.5px!important}
-    #reportCard td,#reportCard th{padding:2px 3px!important}
+    #reportCard .gtmc-result-columns{grid-template-columns:minmax(0,1fr) 145px!important;gap:3px!important;margin-bottom:3px!important}
+    #reportCard table{font-size:6.2px!important}
+    #reportCard td,#reportCard th{padding:1px 2px!important}
     #reportCard .gtmc-section-title{padding:3px!important;font-size:8px!important}
     #reportCard .gtmc-bottom-row{margin-bottom:5px!important}
-    #reportCard .gtmc-signatures{margin-top:7px!important;gap:8px!important}
-    #reportCard .gtmc-signatures>div{padding-top:16px!important;font-size:8px!important}
-    #reportCard .gtmc-footer{margin-top:5px!important;font-size:7px!important}
+    #reportCard .gtmc-signatures{margin-top:3px!important;gap:5px!important}
+    #reportCard .gtmc-signatures>div{padding-top:8px!important;font-size:6.5px!important}
+    #reportCard .gtmc-footer{margin-top:2px!important;font-size:6px!important}
   }
 
 </style>
@@ -658,7 +684,26 @@ async function renderAdmin() {
   q('main').innerHTML = `
     <div class="page-head"><h1>Admin Dashboard</h1><p>Manage teachers, results, attendance, messages, debtors, and report cards.</p></div>
 
-    <div class="panel active" data-panel="teachers">
+    <div class="panel active" data-panel="dashboard">
+      <div class="grid cols-4" id="adminStatsGrid">
+        <div class="card stat-card"><div class="sub">Teachers</div><div class="stat-number" id="dashTeachers">—</div></div>
+        <div class="card stat-card"><div class="sub">Classes</div><div class="stat-number" id="dashClasses">—</div></div>
+        <div class="card stat-card"><div class="sub">Score submissions</div><div class="stat-number" id="dashSubmissions">—</div></div>
+        <div class="card stat-card"><div class="sub">Locked submissions</div><div class="stat-number" id="dashLocked">—</div></div>
+      </div>
+      <div class="card"><h2>Quick Actions</h2><p class="sub">Open common tasks without searching through the menu.</p>
+        <div class="row">
+          <button onclick="setNav('teachers')">Manage Teachers</button>
+          <button class="sec" onclick="setNav('submissions')">Review Submissions</button>
+          <button class="sec" onclick="setNav('publish')">Publish Results</button>
+          <button class="sec" onclick="setNav('reportcards')">Download Report Cards</button>
+          <button class="sec" onclick="setNav('template')">Edit Result Template</button>
+        </div>
+      </div>
+      <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Submission Overview</h2><p class="sub">Counts are loaded from the existing system; unavailable data is shown as an error, not guessed.</p></div><button class="sec sm" onclick="loadAdminDashboard()">Refresh dashboard</button></div><div id="dashOverview" class="portal-note">Loading dashboard data…</div></div>
+    </div>
+
+    <div class="panel" data-panel="teachers">
       <div class="card">
         <h2>Create Teacher</h2>
         <div class="sub">A teacher may hold multiple roles (e.g. Class Teacher + Subject Teacher).</div>
@@ -681,7 +726,7 @@ async function renderAdmin() {
       </div>
       <div class="card">
         <h2>All Teachers</h2>
-        <button class="sec sm" onclick="loadTeachers()">Refresh</button>
+        <div class="portal-toolbar"><input id="teacherSearch" class="table-search" placeholder="Search teachers by name, email, role or class" oninput="filterTableRows('teachersBox',this.value)"><button class="sec sm" onclick="loadTeachers()">Refresh</button></div>
         <div id="teachersBox" style="margin-top:12px"><div class="empty">Loading…</div></div>
       </div>
     </div>
@@ -690,6 +735,7 @@ async function renderAdmin() {
       <div class="card">
         <h2>Score Submissions</h2>
         <div class="row" style="margin-bottom:12px">
+          <input id="submissionSearch" class="table-search" placeholder="Search submissions" oninput="filterTableRows('submissionsBox',this.value)">
           <select id="subFilter" onchange="loadSubmissions()" style="max-width:200px">
             <option value="">All statuses</option>
             <option value="locked">Locked only</option>
@@ -798,8 +844,9 @@ async function renderAdmin() {
           <div><label>Primary Colour</label><input id="tplPrimary" type="color" value="#0756a8"></div>
           <div><label>Secondary Colour</label><input id="tplSecondary" type="color" value="#ffffff"></div>
         </div>
-        <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button></div>
+        <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button><button class="sec" onclick="previewTemplate()">Preview Template</button><button class="sec" onclick="resetTemplatePreview()">Reset Preview</button></div>
         <div id="tplStatus"></div>
+        <div id="tplPreview" class="template-preview" aria-live="polite" style="display:none;margin-top:18px"></div>
       </div>
     </div>
 
@@ -903,6 +950,7 @@ async function renderAdmin() {
   `;
 
   const navItems = [
+    { title: 'Overview', tabs: [ { id: 'dashboard', label: 'Dashboard' } ] },
     { title: 'People', tabs: [
       { id: 'teachers', label: 'Teachers' },
       { id: 'parents', label: 'Parent Portal' },
@@ -932,8 +980,9 @@ async function renderAdmin() {
       { id: 'reportcards', label: 'Report Cards' },
     ]},
   ];
-  buildNav(navItems, 'teachers');
+  buildNav(navItems, 'dashboard');
 
+  document.querySelector('.nav-item[data-tab="dashboard"]').dataset.onload = 'loadAdminDashboard';
   document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
   document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
@@ -973,6 +1022,56 @@ async function renderAdmin() {
    ============================================================ *//* ============================================================
    CONTINUED FROM PART 1 — admin functions (existing, unchanged)
    ============================================================ */
+
+async function loadAdminDashboard() {
+  const overview = q('dashOverview');
+  if (!overview) return;
+  overview.textContent = 'Loading dashboard data…';
+  try {
+    const results = await Promise.allSettled([api('getTeachers'), loadClasses(), api('getSubmissions')]);
+    const teachers = results[0].status === 'fulfilled' && Array.isArray(results[0].value) ? results[0].value : null;
+    const classes = results[1].status === 'fulfilled' && Array.isArray(results[1].value) ? results[1].value : null;
+    const submissions = results[2].status === 'fulfilled' && Array.isArray(results[2].value) ? results[2].value : null;
+    if (q('dashTeachers')) q('dashTeachers').textContent = teachers ? teachers.length : '—';
+    if (q('dashClasses')) q('dashClasses').textContent = classes ? classes.length : '—';
+    if (q('dashSubmissions')) q('dashSubmissions').textContent = submissions ? submissions.length : '—';
+    if (q('dashLocked')) q('dashLocked').textContent = submissions ? submissions.filter(x => String(x.status).toLowerCase() === 'locked').length : '—';
+    const issues = [];
+    if (!teachers) issues.push('Teacher data unavailable');
+    if (!classes) issues.push('Class data unavailable');
+    if (!submissions) issues.push('Submission data unavailable');
+    if (submissions) {
+      const unlocked = submissions.filter(x => String(x.status).toLowerCase() !== 'locked').length;
+      overview.innerHTML = `<strong>${submissions.length}</strong> submission records found. <strong>${submissions.filter(x => String(x.status).toLowerCase() === 'locked').length}</strong> locked and <strong>${unlocked}</strong> not locked.${issues.length ? `<div style="margin-top:6px;color:var(--warn)">${esc(issues.join(' · '))}</div>` : ''}`;
+    } else {
+      overview.innerHTML = `<span style="color:var(--warn)">${esc(issues.join(' · ') || 'Could not load all dashboard data.')}</span>`;
+    }
+  } catch (e) {
+    overview.textContent = 'Dashboard data could not be loaded: ' + e.message;
+  }
+}
+
+function previewTemplate() {
+  const box = q('tplPreview');
+  if (!box) return;
+  const val = id => (q(id)?.value || '').trim();
+  const primary = q('tplPrimary')?.value || '#0756a8';
+  const secondary = q('tplSecondary')?.value || '#ffffff';
+  const logoUrl = val('tplLogo');
+  const school = val('tplSchoolName') || 'GREATER TOMORROW MODEL COLLEGE';
+  const address = val('tplAddress') || 'School address';
+  const motto = val('tplMotto') || 'Jesus, Our Teacher';
+  const principal = val('tplPrincipalName') || 'The Principal';
+  box.style.setProperty('--preview-primary', primary);
+  box.style.setProperty('--preview-secondary', secondary);
+  box.innerHTML = `<div class="preview-head">${logoUrl ? `<img class="preview-logo" src="${esc(logoUrl)}" alt="School logo preview" onerror="this.style.display='none'">` : `<div class="preview-logo" style="display:grid;place-items:center;font-size:24px;font-weight:900;color:${esc(primary)}">G</div>`}<div><h3>${esc(school)}</h3><div>${esc(address)}</div><div class="preview-motto">${esc(motto)}</div></div></div><div style="padding:14px 0"><strong>STUDENT REPORT CARD</strong><div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><div style="background:#f1f6fc;padding:8px;border-radius:4px">Student: <strong>Sample Student</strong></div><div style="background:#f1f6fc;padding:8px;border-radius:4px">Class: <strong>JSS1</strong></div><div style="background:#f1f6fc;padding:8px;border-radius:4px">Term: <strong>First Term</strong></div></div><p style="margin-top:12px;color:#63778d">This is a visual template preview only. It does not save changes or replace a real student's result.</p></div><div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-size:12px"><span>Principal: ${esc(principal)}</span><span>Jesus, Our Teacher</span></div>`;
+  box.style.display = 'block';
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function resetTemplatePreview() {
+  const box = q('tplPreview');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
 
 async function createTeacher() {
   const name = q('tName').value.trim();
@@ -2474,7 +2573,7 @@ async function ctLoadScores() {
     const map = {}; scores.forEach(s => map[s.student_id] = s);
     box.innerHTML = `<h2>${esc(subject)} · ${esc(term)}</h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
+        <thead><tr><th>Student</th><th>CA 1</th><th>CA 2</th><th>CA 3</th><th>Exam</th><th>Total</th></tr></thead>
         <tbody>${students.map(st => {
           const sc = map[st.student_id] || {};
           const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
@@ -2485,14 +2584,20 @@ async function ctLoadScores() {
           </tr>`;
         }).join('')}</tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
-    box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => ctSaveCell(inp, subject, term)));
+    box.querySelectorAll('input.score-input').forEach(inp => {
+      inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
+      inp.addEventListener('change', () => ctSaveCell(inp, subject, term));
+    });
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 async function ctSaveCell(inp, subject, term) {
   const tr = inp.closest('tr');
+  const max = inp.dataset.f === 'Exam' ? 70 : 10, value = Number(inp.value);
+  if (inp.value !== '' && (!Number.isFinite(value) || value < 0 || value > max)) { inp.classList.add('score-invalid'); toast(`Enter a score between 0 and ${max}.`, 'err'); inp.focus(); return; }
+  inp.classList.remove('score-invalid');
   try {
     await api('saveScore', { className: S.user.class, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
-    inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
+    inp.classList.add('score-saved'); setTimeout(() => { inp.classList.remove('score-saved'); }, 1000);
     const total = Array.from(tr.querySelectorAll('input')).reduce((a,i)=>a+(Number(i.value)||0),0);
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
@@ -2578,7 +2683,7 @@ async function stLoadScores() {
     const map = {}; scores.forEach(s => map[s.student_id] = s);
     box.innerHTML = `<h2>${esc(subject)} · ${esc(className)} · ${esc(term)}</h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>Student</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
+        <thead><tr><th>Student</th><th>CA 1</th><th>CA 2</th><th>CA 3</th><th>Exam</th><th>Total</th></tr></thead>
         <tbody>${students.map(st => {
           const sc = map[st.student_id] || {};
           const total = (Number(sc.T1)||0)+(Number(sc.T2)||0)+(Number(sc.T3)||0)+(Number(sc.Exam)||0);
@@ -2589,14 +2694,20 @@ async function stLoadScores() {
           </tr>`;
         }).join('')}</tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
-    box.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => stSaveCell(inp, className, subject, term)));
+    box.querySelectorAll('input.score-input').forEach(inp => {
+      inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
+      inp.addEventListener('change', () => stSaveCell(inp, className, subject, term));
+    });
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 async function stSaveCell(inp, className, subject, term) {
   const tr = inp.closest('tr');
+  const max = inp.dataset.f === 'Exam' ? 70 : 10, value = Number(inp.value);
+  if (inp.value !== '' && (!Number.isFinite(value) || value < 0 || value > max)) { inp.classList.add('score-invalid'); toast(`Enter a score between 0 and ${max}.`, 'err'); inp.focus(); return; }
+  inp.classList.remove('score-invalid');
   try {
     await api('saveScore', { className, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
-    inp.style.background = '#f0fdf4'; setTimeout(() => { inp.style.background = ''; }, 800);
+    inp.classList.add('score-saved'); setTimeout(() => { inp.classList.remove('score-saved'); }, 1000);
     const total = Array.from(tr.querySelectorAll('input')).reduce((a,i)=>a+(Number(i.value)||0),0);
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
@@ -2617,6 +2728,14 @@ async function stLoadHistory() {
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 
+function filterTableRows(containerId, query) {
+  const root = q(containerId); if (!root) return;
+  const needle = String(query || '').trim().toLowerCase();
+  root.querySelectorAll('tbody tr').forEach(tr => {
+    tr.style.display = !needle || tr.textContent.toLowerCase().includes(needle) ? '' : 'none';
+  });
+}
+
 /* ============================================================
    STUDENT RENDERER (unchanged)
    ============================================================ */
@@ -2628,6 +2747,8 @@ async function renderStudent() {
       <div class="row">
         <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
         <button class="blue" onclick="studentLoad()">Load</button>
+        <button class="ok" onclick="downloadStudentResultPDF()">⬇ Download Result PDF</button>
+        <button class="sec" onclick="printCurrentResult()">Print</button>
       </div>
     </div>
     <div class="card" id="studentBox"><div class="empty">Select a term.</div></div>`;
@@ -2638,10 +2759,31 @@ async function studentLoad() {
   try {
     const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, studentId: S.user.email });
     if (!rows.length) { box.innerHTML = '<div class="empty">No scores.</div>'; return; }
-    box.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>Subject</th><th>T1</th><th>T2</th><th>T3</th><th>Exam</th><th>Total</th></tr></thead>
-      <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total}</strong></td></tr>`).join('')}</tbody></table></div>`;
+    window.__STUDENT_RESULT_ROWS = rows;
+    const total = rows.reduce((sum,r) => sum + (Number(r.total)||0), 0);
+    const completed = rows.filter(r => r.total !== null && r.total !== undefined && r.total !== '').length;
+    box.innerHTML = `<div class="result-summary"><div><span>Subjects</span><strong>${rows.length}</strong></div><div><span>Total marks</span><strong>${total}</strong></div><div><span>Average</span><strong>${completed ? (total / completed).toFixed(1) + '%' : '—'}</strong></div></div>
+      <div class="portal-toolbar"><div class="hint">${esc(q('studentTerm').value)} · ${esc(S.user.class || '')}</div><input class="table-search" placeholder="Search subject" oninput="filterTableRows('studentBox',this.value)"></div>
+      <div class="table-wrap"><table id="studentResultTable">
+      <thead><tr><th>Subject</th><th>CA 1</th><th>CA 2</th><th>CA 3</th><th>Exam</th><th>Total</th><th>Grade</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total ?? '—'}</strong></td><td>${esc(r.grade || '—')}</td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function downloadStudentResultPDF() {
+  const rows = window.__STUDENT_RESULT_ROWS || [];
+  if (!rows.length) return toast('Load your result before downloading the PDF.', 'err');
+  if (!window.jspdf || !window.jspdf.jsPDF) return toast('PDF tools did not load. Check your internet connection.', 'err');
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.text('GREATER TOMORROW MODEL COLLEGE',148.5,13,{align:'center'});
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text('Jesus, Our Teacher',148.5,19,{align:'center'});
+    pdf.setFontSize(11); pdf.text('STUDENT RESULT',148.5,27,{align:'center'});
+    pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Term: ${q('studentTerm').value}`,12,35);
+    pdf.autoTable({startY:40,head:[['Subject','CA 1','CA 2','CA 3','Exam','Total','Grade']],body:rows.map(r=>[r.subject,r.T1??'—',r.T2??'—',r.T3??'—',r.Exam??'—',r.total??'—',r.grade||'—']),theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[4,62,122]},margin:{left:12,right:12},tableWidth:'auto'});
+    pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
+    toast('Student result PDF downloaded.', 'ok');
+  } catch(e) { toast('Could not generate PDF: '+e.message,'err'); }
 }
 
 /* ============================================================
@@ -2661,7 +2803,7 @@ async function renderParent() {
         </div>
         <div class="row" style="margin-top:10px">
           <button class="blue" onclick="parentLoad()">Load Result</button>
-          <button class="sec" onclick="window.print()">Print</button>
+          <button class="sec" onclick="printCurrentResult()">Print</button>
           <button class="ok" onclick="downloadCurrentReportPDF()">⬇ Download Result PDF (A4)</button>
         </div>
         <div id="pStatus" class="portal-note">Choose ward, term and year.</div>
@@ -2802,6 +2944,20 @@ function renderParentReport(r) {
     h += `<td style="text-align:center">${s.position ?? s.rank ?? '—'}</td><td style="text-align:center">${esc(s.remark || '—')}</td>`;
     return `<tr>${h}</tr>`;
   }).join('');
+  // Build a footer with the same number/order of cells as the selected report columns.
+  const footerCells = [];
+  let totalColIndex = -1;
+  let runningCol = 0;
+  footerCells.push(`<td style="border:1px solid #333;padding:3px;text-align:right;font-weight:800">TOTAL</td>`); runningCol++;
+  if (showTests) { footerCells.push('<td></td><td></td><td></td><td></td>'); runningCol += 4; }
+  if (showExam) { footerCells.push('<td></td>'); runningCol++; }
+  if (showTotals) { totalColIndex = runningCol; footerCells.push(`<td style="border:1px solid #333;padding:3px;text-align:center;font-weight:800">${totalObtainedVisible}</td>`); runningCol++; }
+  if (showCumulativeCols) { footerCells.push('<td></td>'); runningCol++; }
+  if (showTerm3Col) { footerCells.push('<td></td>'); runningCol++; }
+  if (showGrade) { footerCells.push('<td></td>'); runningCol++; }
+  footerCells.push(`<td style="border:1px solid #333;padding:3px;text-align:center;font-weight:800">${overallPctVisible == null ? '—' : overallPctVisible + '%'}</td>`); runningCol++;
+  footerCells.push('<td></td><td></td>');
+  const totalFooterRow = `<tr style="background:#f2f2f2;font-weight:800">${footerCells.join('')}</tr>`;
 
   const domainCol = (data, key) => {
     const v = Number(data && data[key]);
@@ -2923,13 +3079,7 @@ function renderParentReport(r) {
             <thead><tr style="background:#f2f2f2">${cols.join('')}</tr></thead>
             <tbody>
               ${rows || '<tr><td colspan="20" style="text-align:center;padding:10px;color:#999">No subjects</td></tr>'}
-              <tr style="background:#f2f2f2;font-weight:800">
-                <td colspan="${showCumulativeCols ? (showTerm3Col ? 10 : 9) : 7}" style="border:1px solid #333;padding:3px;text-align:right">TOTAL</td>
-                <td style="border:1px solid #333;padding:3px;text-align:center">${totalObtainedVisible}</td>
-                <td style="border:1px solid #333;padding:3px;text-align:center">${overallPctVisible == null ? '—' : overallPctVisible + '%'}</td>
-                <td style="border:1px solid #333;padding:3px"></td>
-                ${showCumulativeCols ? `<td colspan="${showTerm3Col ? 4 : 3}" style="border:1px solid #333;padding:3px"></td>` : ''}
-              </tr>
+              ${totalFooterRow}
             </tbody>
           </table>
         </div>
@@ -3020,6 +3170,21 @@ function renderParentReport(r) {
       </div>
     </div>
   `;
+}
+
+function printCurrentResult() {
+  const report = q('reportCard');
+  if (!report) { toast('Load a result before printing.', 'err'); return; }
+  const oldZoom = report.style.zoom;
+  // Fit the report to the landscape A4 printable area before opening print preview.
+  const width = Math.max(report.scrollWidth || 0, report.getBoundingClientRect().width || 0);
+  const height = Math.max(report.scrollHeight || 0, report.getBoundingClientRect().height || 0);
+  const scale = Math.min(1, 1080 / Math.max(width, 1), 700 / Math.max(height, 1));
+  report.style.zoom = String(Math.max(0.42, scale));
+  const restore = () => { report.style.zoom = oldZoom; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  window.print();
+  setTimeout(restore, 1200);
 }
 
 async function downloadCurrentReportPDF() {
