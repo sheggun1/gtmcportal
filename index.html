@@ -376,6 +376,7 @@
         <div class="uname" id="userLabel"></div>
         <div class="urole" id="userRole"></div>
       </div>
+      <button class="sec sm" id="portalSwitchBtn" style="display:none" onclick="switchStaffPortal()">Switch portal</button>
       <button class="sec sm" onclick="logout()">Logout</button>
     </div>
   </header>
@@ -391,7 +392,7 @@
 /* ============================================================
    CONFIG
    ============================================================ */
-const API = 'https://script.google.com/macros/s/AKfycbwhlZpJhDVD7uj9VfCspUrlVgDmaQwJiqo6va0R6cWBET-6nThfiXtKpBJlB3qXacNb/exec';
+const API = 'https://script.google.com/macros/s/AKfycbzLaY9O1O2j96irkyiMp_ixnuU_ubYjGr_H7jO4porrDsJpyTcbDrVqcAfbb8S4bApu/exec';
 const ATTENDANCE_API = 'https://script.google.com/macros/s/AKfycbyxsohckjH29QFwbgUdVuP9A-Y-OMJa9ve7nkbwB0qKxtFmK2vM0C1huublkBZrD35X/exec';
 
 const S = {
@@ -541,6 +542,12 @@ async function boot() {
     admin:'Administrator', class_teacher:'Class Teacher', subject_teacher:'Subject Teacher',
     student:'Student', parent:'Parent'
   })[r] || r).join(' · ');
+  const portalSwitch = q('portalSwitchBtn');
+  if (portalSwitch) {
+    const dualStaff = hasRole('class_teacher') && hasRole('subject_teacher');
+    portalSwitch.style.display = dualStaff ? 'inline-flex' : 'none';
+    portalSwitch.textContent = 'Switch to Subject Teacher';
+  }
   applyLogoFallback();
 
   /* Officer flag is only relevant for staff */
@@ -556,6 +563,18 @@ async function boot() {
   else if (hasRole('student')) renderStudent();
   else if (hasRole('parent')) renderParent();
   else toast('Unknown role: ' + S.user.role, 'err');
+}
+
+async function switchStaffPortal() {
+  if (!(hasRole('class_teacher') && hasRole('subject_teacher'))) return;
+  const tag = q('roleTag')?.textContent || '';
+  if (tag.startsWith('Class Teacher')) {
+    await renderSubjectTeacher();
+    if (q('portalSwitchBtn')) q('portalSwitchBtn').textContent = 'Switch to Class Teacher';
+  } else {
+    await renderClassTeacher();
+    if (q('portalSwitchBtn')) q('portalSwitchBtn').textContent = 'Switch to Subject Teacher';
+  }
 }
 
 function buildNav(items, defaultTab) {
@@ -739,7 +758,8 @@ async function renderAdmin() {
           <div><label>Full Name</label><input id="tName"></div>
           <div><label>Email</label><input id="tEmail" type="email"></div>
           <div><label>Password</label><input id="tPass"></div>
-          <div><label>Class (for class teachers)</label><select id="tClass"><option value="">— none —</option></select></div>
+          <div><label>Default Teaching Class (optional)</label><select id="tClass"><option value="">— none —</option></select></div>
+          <div><label>Class Teacher Class (separate assignment)</label><select id="tClassTeacherClass"><option value="">— not a class teacher —</option></select><small class="sub">This controls the class roster, domains, remarks and attendance for the class teacher role.</small></div>
         </div>
         <div class="grid cols-3" style="margin-top:12px">
           <label class="check"><input type="checkbox" id="roleCT"> Class Teacher</label>
@@ -807,6 +827,18 @@ async function renderAdmin() {
           <button class="danger" onclick="publishClass(false)">Unpublish</button>
         </div>
         <div id="pubStatus" class="portal-note">Choose class, term and year.</div>
+      </div>
+      <div class="card">
+        <h2>Publish Individual Assessment</h2>
+        <p class="sub">Publish or withdraw T1, T2, T3 or Exam independently. Parents will only see assessments published here.</p>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="assPubClass"></select></div>
+          <div><label>Term</label><select id="assPubTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Assessment</label><select id="assPubAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div>
+          <div><label>Academic Year</label><input id="assPubYear" value="2026/2027"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="blue" onclick="loadAssessmentPublicationStatus()">Check Status</button><button class="ok" onclick="setAssessmentPublication(true)">Publish Assessment</button><button class="danger" onclick="setAssessmentPublication(false)">Unpublish Assessment</button></div>
+        <div id="assPubStatus" class="portal-note">Choose a class, term, assessment and year.</div>
       </div>
     </div>
 
@@ -1069,7 +1101,8 @@ async function renderAdmin() {
   document.querySelector('.nav-item[data-tab="staffMessages"]').dataset.onload = 'loadStaffMessagesAdmin';
 
   const classes = await loadClasses();
-  ['tClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass'].forEach(id => {
+  window.__gtmcClasses = classes;
+  ['tClass','tClassTeacherClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass','assPubClass'].forEach(id => {
     const el = q(id); if (el) el.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   });
   q('annClasses').innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -1154,7 +1187,7 @@ async function createTeacher() {
   const subjects = roles.indexOf('subject_teacher') !== -1
     ? Array.from(q('tSubjects').selectedOptions).map(o => o.value).join(',') : '';
   try {
-    await api('createTeacher', { name, email, password, role: roles.join(','), class: cls, subjects });
+    await api('createTeacher', { name, email, password, role: roles.join(','), class: cls, class_teacher_class: q('tClassTeacherClass').value, subjects });
     toast('Teacher created', 'ok');
     q('tName').value = ''; q('tEmail').value = ''; q('tPass').value = '';
     loadTeachers();
@@ -1166,15 +1199,26 @@ async function loadTeachers() {
     const rows = await api('getTeachers');
     if (!rows.length) { box.innerHTML = '<div class="empty">No teachers yet.</div>'; return; }
     box.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Class</th><th></th></tr></thead>
-      <tbody>${rows.map(t => `
+      <thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Default Teaching Class</th><th>Class Teacher Class</th><th>Assignment</th><th></th></tr></thead>
+      <tbody>${rows.map((t,idx) => `
         <tr><td><strong>${esc(t.name)}</strong></td><td>${esc(t.email)}</td>
         <td>${(t.roles||String(t.role).split(',')).map(r=>`<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
         <td>${esc(t.class||'—')}</td>
+        <td><select id="teacherClassAssign_${idx}" aria-label="Class teacher class for ${esc(t.name)}"><option value="">— none —</option>${(window.__gtmcClasses||[]).map(c=>`<option value="${esc(c)}" ${String(t.class_teacher_class||'')===String(c)?'selected':''}>${esc(c)}</option>`).join('')}</select></td>
+        <td><button class="blue sm" onclick="saveTeacherClassAssignment('${esc(t.email)}','teacherClassAssign_${idx}')">Save class</button></td>
         <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td></tr>`).join('')}
       </tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
+async function saveTeacherClassAssignment(email, selectId) {
+  const classTeacherClass = q(selectId)?.value || '';
+  try {
+    await api('adminUpdateTeacherClass', { email, class_teacher_class: classTeacherClass });
+    toast(classTeacherClass ? `Class teacher class saved: ${classTeacherClass}` : 'Class teacher assignment cleared', 'ok');
+    await loadTeachers();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
 async function deleteTeacher(email) {
   if (!confirm('Disable this teacher?')) return;
   try { await api('deleteTeacher', { email }); toast('Disabled', 'ok'); loadTeachers(); }
@@ -1189,7 +1233,7 @@ async function loadSubmissions() {
     const rows = await api('getSubmissions', status ? { status } : {});
     if (!rows.length) { box.innerHTML = '<div class="empty">No submissions.</div>'; return; }
     box.innerHTML = `<div class="table-wrap"><table>
-      <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Term</th><th>Status</th><th>When</th><th></th></tr></thead>
+      <thead><tr><th>Teacher</th><th>Class</th><th>Subject</th><th>Term</th><th>Assessment</th><th>Status</th><th>When</th><th></th></tr></thead>
       <tbody>${rows.map(r => {
         const when = r.timestamp ? new Date(r.timestamp).toLocaleString() : '—';
         const locked = r.status === 'locked';
@@ -1197,21 +1241,22 @@ async function loadSubmissions() {
         return `<tr>
           <td>${esc(r.teacher_email)}</td><td>${esc(r.class)}</td>
           <td><strong>${esc(isDomains ? 'Domains' : r.subject)}</strong></td>
-          <td>${esc(r.term)}</td>
+          <td>${esc(r.term)}</td><td><strong>${esc(r.assessment || 'Legacy term lock')}</strong></td>
           <td><span class="badge ${locked?'warn':'ok'}">${esc(r.status)}</span></td>
           <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
-          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}',${isDomains})">Unlock</button>` : ''}</td>
+          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}','${esc(r.assessment||'')}',${isDomains},'${esc(r.academic_year||'')}')">Authorise correction</button>` : ''}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
-async function unlockSubmission(teacherEmail, className, subject, term, isDomains) {
-  if (!confirm('Unlock this submission?')) return;
-  try {
-    if (isDomains) await api('unlockDomains', { teacherEmail, className, term });
-    else await api('unlockScores', { teacherEmail, className, subject, term });
-    toast('Unlocked', 'ok'); loadSubmissions();
-  } catch (e) { toast(e.message, 'err'); }
+async function unlockSubmission(teacherEmail, className, subject, term, assessment, isDomains, academicYear) {
+  if (isDomains) { if(!confirm('Unlock domain submission?')) return; try { await api('unlockDomains',{teacherEmail,className,term});toast('Unlocked','ok');loadSubmissions(); } catch(e){toast(e.message,'err');} return; }
+  if (!assessment) return toast('This is a legacy term-wide lock. It cannot be unlocked as an assessment; ask the teacher to submit each assessment separately.','err');
+  const reason=prompt(`Reason for authorising correction of ${assessment}?`); if(!reason||!reason.trim())return;
+  const mins=prompt('Correction window in minutes (1–10080):','60'); if(mins===null)return;
+  const duration=Number(mins); if(!Number.isFinite(duration)||duration<1||duration>10080)return toast('Enter a duration from 1 to 10080 minutes.','err');
+  try { await api('unlockScores',{teacherEmail,className,subject,term,assessment,academicYear,reason:reason.trim(),correctionMinutes:duration});toast(`${assessment} correction authorised`,'ok');loadSubmissions(); }
+  catch(e){toast(e.message,'err');}
 }
 
 let DMN_KIND = 'affective';
@@ -2457,9 +2502,11 @@ async function replyToMessage(msgId, btn) {
 /* ============================================================
    CLASS TEACHER RENDERER
    ============================================================ */
+function getClassTeacherClass() { return String(S.user?.class_teacher_class || S.user?.class || '').trim(); }
+
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
-  const CLASS_NAME = S.user.class;
+  const CLASS_NAME = getClassTeacherClass();
   if (!CLASS_NAME) { q('main').innerHTML = '<div class="card"><div class="empty">No class assigned. Contact admin.</div></div>'; return; }
 
   q('main').innerHTML = `
@@ -2548,7 +2595,7 @@ async function renderClassTeacher() {
 }
 
 async function loadTeacherAcademicSummary(){
- const cls=S.user.class,term=q('ctPerfTerm')?.value,assessment=q('ctPerfAssessment')?.value,stats=q('ctPerfStats'),sb=q('ctPerfSubjects'),pb=q('ctPerfStudents');if(!cls||!stats||!sb||!pb)return;
+ const cls=getClassTeacherClass(),term=q('ctPerfTerm')?.value,assessment=q('ctPerfAssessment')?.value,stats=q('ctPerfStats'),sb=q('ctPerfSubjects'),pb=q('ctPerfStudents');if(!cls||!stats||!sb||!pb)return;
  sb.innerHTML=pb.innerHTML='<div class="empty">Loading class scores…</div>';
  try{
   const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
@@ -2564,7 +2611,7 @@ async function loadTeacherAcademicSummary(){
 async function ctLoadStudents() {
   const box = q('ctStudents'); if (!box) return;
   try {
-    const rows = await api('getStudents', { className: S.user.class });
+    const rows = await api('getStudents', { className: getClassTeacherClass() });
     if (!rows.length) { box.innerHTML = '<div class="empty">No students yet.</div>'; return; }
     box.innerHTML = `<div class="table-wrap"><table>
       <thead><tr><th>ID</th><th>Name</th><th></th></tr></thead>
@@ -2577,7 +2624,7 @@ async function ctLoadStudents() {
 async function ctAddBulk() {
   const lines = q('bulkNames').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (!lines.length) return toast('Nothing to add', 'err');
-  await addStudentsWithDetection(S.user.class, lines);
+  await addStudentsWithDetection(getClassTeacherClass(), lines);
 }
 async function ctRemove(id) {
   if (!confirm('Remove student?')) return;
@@ -2658,8 +2705,8 @@ async function ctLoadScores() {
   const box = q('ctScoreCard'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const [students, scores] = await Promise.all([
-      api('getStudents', { className: S.user.class }),
-      api('getScores', { className: S.user.class, subject, term })
+      api('getStudents', { className: getClassTeacherClass() }),
+      api('getScores', { className: getClassTeacherClass(), subject, term })
     ]);
     if (!students.length) { box.innerHTML = '<div class="empty">No students.</div>'; return; }
     const map = {}; scores.forEach(s => map[s.student_id] = s);
@@ -2675,7 +2722,7 @@ async function ctLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px"><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="ctSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}',q('ctSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently. Other assessment columns remain editable until submitted.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => ctSaveCell(inp, subject, term));
@@ -2688,15 +2735,16 @@ async function ctSaveCell(inp, subject, term) {
   if (inp.value !== '' && (!Number.isFinite(value) || value < 0 || value > max)) { inp.classList.add('score-invalid'); toast(`Enter a score between 0 and ${max}.`, 'err'); inp.focus(); return; }
   inp.classList.remove('score-invalid');
   try {
-    await api('saveScore', { className: S.user.class, subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
+    await api('saveScore', { className: getClassTeacherClass(), subject, term, field: inp.dataset.f, studentId: tr.dataset.student, value: inp.value });
     inp.classList.add('score-saved'); setTimeout(() => { inp.classList.remove('score-saved'); }, 1000);
     const total = Array.from(tr.querySelectorAll('input')).reduce((a,i)=>a+(Number(i.value)||0),0);
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
 }
-async function ctSubmit(subject, term) {
-  if (!confirm(`Submit & lock ${subject} / ${term}?`)) return;
-  try { await api('submitScores', { className: S.user.class, subject, term }); toast('Locked', 'ok'); }
+async function ctSubmit(subject, term, assessment) {
+  if (!assessment) return toast('Choose an assessment to submit.','err');
+  if (!confirm(`Submit & lock ${assessment} for ${subject} / ${term}? Only this assessment will be locked.`)) return;
+  try { await api('submitScores', { className: getClassTeacherClass(), subject, term, assessment, academicYear: q('ctYear')?.value || q('ctPerfYear')?.value || '2026/2027' }); toast(`${assessment} locked`, 'ok'); }
   catch (e) { toast(e.message, 'err'); }
 }
 
@@ -2785,7 +2833,7 @@ async function stLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px"><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}')">Submit &amp; Lock</button></div>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="stSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}',q('stSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => stSaveCell(inp, className, subject, term));
@@ -2804,9 +2852,10 @@ async function stSaveCell(inp, className, subject, term) {
     tr.querySelector('.total').textContent = total || '';
   } catch (e) { toast(e.message, 'err'); inp.style.background = '#fef2f2'; }
 }
-async function stSubmit(className, subject, term) {
-  if (!confirm(`Submit & lock ${subject} / ${className} / ${term}?`)) return;
-  try { await api('submitScores', { className, subject, term }); toast('Locked', 'ok'); }
+async function stSubmit(className, subject, term, assessment) {
+  if (!assessment) return toast('Choose an assessment to submit.','err');
+  if (!confirm(`Submit & lock ${assessment} for ${subject} / ${className} / ${term}? Only this assessment will be locked.`)) return;
+  try { await api('submitScores', { className, subject, term, assessment, academicYear: q('stYear')?.value || '2026/2027' }); toast(`${assessment} locked`, 'ok'); }
   catch (e) { toast(e.message, 'err'); }
 }
 async function stLoadHistory() {
@@ -2947,7 +2996,9 @@ async function renderParent() {
       return;
     }
     sel.innerHTML = wards.map((w, i) => `<option value="${i}">${esc(w.studentName)} · ${esc(w.className)}</option>`).join('');
-    const ps=q('pTestWard'); if(ps) ps.innerHTML=sel.innerHTML;
+    const ps=q('pTestWard'); if(ps) { ps.innerHTML=sel.innerHTML; ps.value=sel.value; }
+    sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; });
+    if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; });
   } catch (e) { q('pStatus').textContent = e.message; }
 }
 
@@ -3342,6 +3393,18 @@ async function downloadCurrentReportPDF() {
   }
 }
 
+async function loadAssessmentPublicationStatus(){
+ const className=q('assPubClass')?.value,term=q('assPubTerm')?.value,academicYear=q('assPubYear')?.value.trim();if(!className||!academicYear)return toast('Choose class and academic year.','err');
+ const box=q('assPubStatus');box.textContent='Loading assessment publication status…';
+ try{const r=await api('adminGetAssessmentPublication',{className,term,academicYear});const a=r.assessments||{};box.innerHTML=`<strong>${esc(className)} · ${esc(term)} · ${esc(academicYear)}</strong><div class="row" style="margin-top:8px;flex-wrap:wrap">${['T1','T2','T3','Exam'].map(k=>`<span class="status-pill ${a[k]?'status-ok':'status-warn'}">${k}: ${a[k]?'Published':'Unpublished'}</span>`).join('')}</div>`;}
+ catch(e){box.textContent=e.message;}
+}
+async function setAssessmentPublication(published){
+ const className=q('assPubClass')?.value,term=q('assPubTerm')?.value,assessment=q('assPubAssessment')?.value,academicYear=q('assPubYear')?.value.trim();if(!className||!academicYear)return toast('Choose class and academic year.','err');
+ if(!confirm(`${published?'Publish':'Unpublish'} ${assessment} for ${className}, ${term}, ${academicYear}?`))return;
+ const box=q('assPubStatus');box.textContent='Saving…';try{const r=await api('adminSetAssessmentPublication',{className,term,assessment,academicYear,published});box.textContent=`${r.assessment} ${published?'published':'unpublished'} for ${r.className} · ${r.term} · ${r.academicYear}.`;toast(box.textContent,'ok');await loadAssessmentPublicationStatus();}catch(e){box.textContent=e.message;toast(e.message,'err');}
+}
+
 /* TEST PERFORMANCE, CLASS ANALYTICS AND BROADSHEET */
 function fmtScore(v){ return v===null||v===undefined||v===''||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2}); }
 function exportTableCSV(tableId, filename){
@@ -3393,7 +3456,7 @@ async function parentLoadTestPerformance(){
   const terms=['Term1','Term2','Term3'].filter(t=>data.terms&&data.terms[t]&&data.terms[t].published);
   if(!terms.length){box.innerHTML='<div class="empty">No published test-performance data is available for this ward and academic year.</div>';return;}
   const summary=terms.map(t=>{const d=data.terms[t];return `<div class="card stat-card"><div class="sub">${t.replace('Term','Term ')}</div><div class="stat-number">${fmtScore(d.overallAverage)}</div><div class="sub">Overall average · ${d.complete?'Complete':'Incomplete'} · Position ${esc(d.positionClass??'—')}</div></div>`;}).join('');
-  const tables=terms.map(t=>{const d=data.terms[t];return `<div class="card"><div class="row" style="justify-content:space-between"><h2>${t.replace('Term','Term ')} Test Breakdown</h2><span class="status-pill ${d.complete?'status-ok':'status-warn'}">${d.complete?'Complete':'Incomplete'}</span></div><div class="table-wrap"><table><thead><tr><th>Subject</th><th>CA 1 /10</th><th>CA 2 /10</th><th>CA 3 /10</th><th>Exam /70</th><th>Total /100</th><th>Grade</th></tr></thead><tbody>${(d.subjects||[]).map(r=>`<tr><td><strong>${esc(r.subject)}</strong></td><td>${fmtScore(r.T1)}</td><td>${fmtScore(r.T2)}</td><td>${fmtScore(r.T3)}</td><td>${fmtScore(r.Exam)}</td><td>${fmtScore(r.total)}</td><td>${esc(r.grade||'—')}</td></tr>`).join('')}</tbody></table></div></div>`;}).join('');
+  const tables=terms.map(t=>{const d=data.terms[t], ap=d.assessmentPublished||{};const cols=[['T1','CA 1 /10'],['T2','CA 2 /10'],['T3','CA 3 /10'],['Exam','Exam /70']].filter(([k])=>ap[k]);const allPublished=cols.length===4;return `<div class="card"><div class="row" style="justify-content:space-between"><h2>${t.replace('Term','Term ')} Test Breakdown</h2><span class="status-pill ${d.complete?'status-ok':'status-warn'}">${d.complete?'Complete':'Partial assessment release'}</span></div><p class="sub">Published assessments only: ${cols.map(x=>x[1].replace(' /10','').replace(' /70','')).join(', ')}.</p><div class="table-wrap"><table><thead><tr><th>Subject</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}${allPublished?'<th>Total /100</th><th>Grade</th>':''}</tr></thead><tbody>${(d.subjects||[]).map(r=>`<tr><td><strong>${esc(r.subject)}</strong></td>${cols.map(([k])=>`<td>${fmtScore(r[k])}</td>`).join('')}${allPublished?`<td>${fmtScore(r.total)}</td><td>${esc(r.grade||'—')}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;}).join('');
   const annual=`<div class="card"><h2>Year-to-Date Subject Performance</h2><div class="table-wrap"><table id="parentAnnualTable"><thead><tr><th>Subject</th><th>Terms with Scores</th><th>Year Average</th><th>Best</th><th>Lowest</th></tr></thead><tbody>${(data.subjectYearSummary||[]).map(r=>`<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.termsWithScores}</td><td>${fmtScore(r.yearAverage)}</td><td>${fmtScore(r.best)}</td><td>${fmtScore(r.weakest)}</td></tr>`).join('')}</tbody></table></div><button class="sec" onclick="exportTableCSV('parentAnnualTable','GTMC_Year_Performance.csv')">Export Annual Summary</button></div>`;
   box.innerHTML=`<div class="page-head"><h2>${esc(data.student?.name||ward.studentName)} · ${esc(data.student?.className||ward.className)}</h2><p>Academic year ${esc(data.academicYear)} · Published terms only</p></div><div class="grid cols-3">${summary}</div>${tables}${annual}`;
  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
