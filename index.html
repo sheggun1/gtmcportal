@@ -301,6 +301,9 @@
     #reportCard .gtmc-student-details td{padding:2px 5px!important}
     #reportCard .gtmc-result-columns{grid-template-columns:minmax(0,1fr) 145px!important;gap:3px!important;margin-bottom:3px!important}
     #reportCard table{font-size:6.2px!important}
+    #reportCard .gtmc-result-columns{grid-template-columns:minmax(0,1fr) 110px!important}
+    #reportCard .report-vertical-head{height:58px!important;font-size:5.5px!important}
+    #reportCard .gtmc-subject-performance{font-size:5.5px!important}
     #reportCard td,#reportCard th{padding:1px 2px!important}
     #reportCard .gtmc-section-title{padding:3px!important;font-size:8px!important}
     #reportCard .gtmc-bottom-row{margin-bottom:5px!important}
@@ -309,6 +312,31 @@
     #reportCard .gtmc-footer{margin-top:2px!important;font-size:6px!important}
   }
 
+
+  /* GTMC complete academic-analysis extension */
+  .report-vertical-head{writing-mode:vertical-rl;transform:rotate(180deg);height:78px;min-width:18px;max-width:24px;white-space:normal!important;text-align:left!important;vertical-align:bottom!important;padding:3px!important;font-size:7px!important}
+  .gtmc-subject-performance{table-layout:fixed!important;width:100%!important;font-size:7px!important}
+  .gtmc-subject-performance th,.gtmc-subject-performance td{padding:2px!important;overflow-wrap:anywhere}
+  .gtmc-subject-performance td:first-child,.gtmc-subject-performance th:first-child{width:25%!important;text-align:left}
+  .compact-broadsheet{font-size:11px;min-width:max-content;border-collapse:collapse}
+  .compact-broadsheet th,.compact-broadsheet td{padding:5px 6px;text-align:center;white-space:nowrap}
+  .compact-broadsheet th{background:#eaf3ff;color:#073b72}
+  .compact-broadsheet .br-name,.br-name{text-align:left;font-weight:800;min-width:180px}
+  .compact-broadsheet .br-total{font-weight:800;background:#f1f7ff}
+  .vertical-head{max-width:34px;min-width:28px;white-space:normal!important;vertical-align:bottom!important;height:130px;padding:4px!important}
+  .vertical-head{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left!important}
+  .status-pill{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:800}
+  .status-ok{background:#dcfce7;color:#166534}.status-warn{background:#fef3c7;color:#92400e}
+  .score-invalid{border-color:#b91c1c!important;background:#fef2f2!important}
+  .score-saved{border-color:#15803d!important;background:#f0fdf4!important}
+  @media print{
+    @page{size:A4 portrait;margin:6mm}
+    body{display:block;background:#fff!important}
+    .topbar,.sidebar,.page-head,.card:not(:has(#reportCard)),button,.portal-toolbar{display:none!important}
+    .body-layout{display:block!important}.content{padding:0!important;overflow:visible!important}
+    #reportCard{width:100%!important;max-width:100%!important;zoom:.78!important;box-shadow:none!important;border:0!important}
+    .compact-broadsheet{font-size:7px!important}.compact-broadsheet th,.compact-broadsheet td{padding:2px!important}
+  }
 </style>
 </head>
 <body>
@@ -844,6 +872,10 @@ async function renderAdmin() {
           <div><label>Primary Colour</label><input id="tplPrimary" type="color" value="#0756a8"></div>
           <div><label>Secondary Colour</label><input id="tplSecondary" type="color" value="#ffffff"></div>
         </div>
+        <div class="card" style="margin-top:12px;background:#f7faff"><h2>Report Content Options</h2><div class="grid cols-4">
+          <label class="check"><input type="checkbox" id="tplShowTests" checked> Show CA scores</label><label class="check"><input type="checkbox" id="tplShowExam" checked> Show Exam</label><label class="check"><input type="checkbox" id="tplShowTotals" checked> Show Subject Totals</label><label class="check"><input type="checkbox" id="tplShowGrade" checked> Show Grades</label>
+          <label class="check"><input type="checkbox" id="tplShowTeacherRemark" checked> Teacher Remarks</label><label class="check"><input type="checkbox" id="tplShowPrincipalRemark" checked> Principal Remarks</label><label class="check"><input type="checkbox" id="tplShowAttendance" checked> Attendance</label><label class="check"><input type="checkbox" id="tplShowAffective" checked> Affective</label><label class="check"><input type="checkbox" id="tplShowPsychomotor" checked> Psychomotor</label><label class="check"><input type="checkbox" id="tplShowTermDates" checked> Term Dates</label><label class="check"><input type="checkbox" id="tplShowAIComment" checked> AI Comment</label><label class="check"><input type="checkbox" id="tplShowAnnualAverage" checked> Annual Average</label>
+        </div></div>
         <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button><button class="sec" onclick="previewTemplate()">Preview Template</button><button class="sec" onclick="resetTemplatePreview()">Reset Preview</button></div>
         <div id="tplStatus"></div>
         <div id="tplPreview" class="template-preview" aria-live="polite" style="display:none;margin-top:18px"></div>
@@ -941,6 +973,36 @@ async function renderAdmin() {
       </div>
     </div>
 
+    <div class="panel" data-panel="performance">
+      <div class="card">
+        <h2>Test Performance &amp; Class Analysis</h2>
+        <p class="sub">Live analysis from existing student and score records. Missing scores are not treated as zero.</p>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="perfClass"></select></div>
+          <div><label>Term</label><select id="perfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Assessment</label><select id="perfAssessment"><option value="total">Subject Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Exam /70</option></select></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadClassPerformance()">Analyse</button></div>
+        </div>
+      </div>
+      <div class="grid cols-4" id="perfStats"></div>
+      <div class="card"><div class="row" style="justify-content:space-between"><h2>Subject Performance</h2><button class="sec sm" onclick="exportTableCSV('performanceTable','GTMC_Subject_Performance.csv')">Export CSV</button></div><div id="perfSubjectBox" class="empty">Choose class and analyse.</div></div>
+      <div class="card"><h2>Student Performance</h2><div id="perfStudentBox" class="empty">Analysis will appear here.</div></div>
+    </div>
+
+    <div class="panel" data-panel="broadsheet">
+      <div class="card">
+        <h2>Class Broadsheet</h2><p class="sub">Compact score columns, bold student names, assessment selector, filters and CSV export.</p>
+        <div class="grid cols-4">
+          <div><label>Class</label><select id="brClass"></select></div>
+          <div><label>Term</label><select id="brTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+          <div><label>Subject</label><select id="brSubject"><option value="">All subjects</option></select></div>
+          <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadBroadsheet()">Load Broadsheet</button></div>
+        </div>
+        <div class="portal-toolbar" style="margin-top:12px"><input id="brSearch" class="table-search" placeholder="Search student name or ID" oninput="filterTableRows('broadsheetBox',this.value)"><button class="sec sm" onclick="exportTableCSV('broadsheetTable','GTMC_Broadsheet.csv')">Export CSV</button><button class="sec sm" onclick="printBroadsheet()">Print</button></div>
+      </div>
+      <div class="card" id="broadsheetBox"><div class="empty">Choose a class and load.</div></div>
+    </div>
+
     ${MY_ATTENDANCE_HTML}
     ${S.user.isOfficer ? ATTENDANCE_SUMMARY_HTML : ''}
     ${staffAttendancePanel}
@@ -957,6 +1019,8 @@ async function renderAdmin() {
     ]},
     { title: 'Academics', tabs: [
       { id: 'submissions', label: 'Submissions' },
+      { id: 'performance', label: 'Test Performance' },
+      { id: 'broadsheet', label: 'Broadsheet' },
       { id: 'domains', label: 'Domains' },
       { id: 'remarks', label: 'Principal Remarks' },
       { id: 'teacherRemarks', label: 'Teacher Remarks' },
@@ -984,7 +1048,10 @@ async function renderAdmin() {
 
   document.querySelector('.nav-item[data-tab="dashboard"]').dataset.onload = 'loadAdminDashboard';
   document.querySelector('.nav-item[data-tab="submissions"]').dataset.onload = 'loadSubmissions';
+  document.querySelector('.nav-item[data-tab="performance"]').dataset.onload = 'loadClassPerformance';
+  document.querySelector('.nav-item[data-tab="broadsheet"]').dataset.onload = 'initBroadsheet';
   document.querySelector('.nav-item[data-tab="domains"]').dataset.onload = 'reloadDomainEditor';
+  document.querySelector('.nav-item[data-tab="academicSummary"]').dataset.onload = 'loadTeacherAcademicSummary';
   document.querySelector('.nav-item[data-tab="remarks"]').dataset.onload = 'loadRemarksList';
   document.querySelector('.nav-item[data-tab="teacherRemarks"]').dataset.onload = 'loadTeacherRemarksTab';
   document.querySelector('.nav-item[data-tab="calendar"]').dataset.onload = 'loadSchoolCalendar';
@@ -1002,7 +1069,7 @@ async function renderAdmin() {
   document.querySelector('.nav-item[data-tab="staffMessages"]').dataset.onload = 'loadStaffMessagesAdmin';
 
   const classes = await loadClasses();
-  ['tClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass'].forEach(id => {
+  ['tClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass'].forEach(id => {
     const el = q(id); if (el) el.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('');
   });
   q('annClasses').innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -1351,6 +1418,8 @@ async function loadTemplate() {
     sv('tplStamp', t.schoolStampUrl || '');
     sv('tplPrimary', t.primaryColor || '#0756a8');
     sv('tplSecondary', t.secondaryColor || '#ffffff');
+    const checks = {tplShowTests:'showTests',tplShowExam:'showExam',tplShowTotals:'showSubjectTotals',tplShowGrade:'showGrade',tplShowTeacherRemark:'showTeacherRemark',tplShowPrincipalRemark:'showPrincipalRemark',tplShowAttendance:'showAttendance',tplShowAffective:'showAffective',tplShowPsychomotor:'showPsychomotor',tplShowTermDates:'showTermDates',tplShowAIComment:'showAIComment',tplShowAnnualAverage:'showAnnualAverage'};
+    Object.entries(checks).forEach(([id,key])=>{const el=q(id);if(el)el.checked=t[key]!==false;});
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
 async function saveTemplate() {
@@ -1363,7 +1432,9 @@ async function saveTemplate() {
     principalSignatureUrl: q('tplPrincipalSig').value.trim(),
     schoolStampUrl: q('tplStamp').value.trim(),
     primaryColor: q('tplPrimary').value,
-    secondaryColor: q('tplSecondary').value
+    secondaryColor: q('tplSecondary').value,
+    showTests:q('tplShowTests').checked, showExam:q('tplShowExam').checked, showSubjectTotals:q('tplShowTotals').checked, showGrade:q('tplShowGrade').checked,
+    showTeacherRemark:q('tplShowTeacherRemark').checked, showPrincipalRemark:q('tplShowPrincipalRemark').checked, showAttendance:q('tplShowAttendance').checked, showAffective:q('tplShowAffective').checked, showPsychomotor:q('tplShowPsychomotor').checked, showTermDates:q('tplShowTermDates').checked, showAIComment:q('tplShowAIComment').checked, showAnnualAverage:q('tplShowAnnualAverage').checked
   };
   try {
     await api('adminSaveReportTemplate', { template });
@@ -2419,6 +2490,12 @@ async function renderClassTeacher() {
       <div class="card" id="ctScoreCard"><div class="empty">Load a subject and term.</div></div>
     </div>
 
+    <div class="panel" data-panel="academicSummary">
+      <div class="card"><h2>Class Academic Summary &amp; Test Performance</h2><p class="sub">Class-only analysis based on entered scores. Incomplete subject records are shown as incomplete.</p>
+        <div class="grid cols-3"><div><label>Term</label><select id="ctPerfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div><div><label>Assessment</label><select id="ctPerfAssessment"><option value="total">Subject Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Exam /70</option></select></div><div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadTeacherAcademicSummary()">Analyse Class</button></div></div>
+      </div><div class="grid cols-4" id="ctPerfStats"></div><div class="card"><h2>Subject Analysis</h2><div id="ctPerfSubjects" class="empty">Choose assessment and analyse.</div></div><div class="card"><h2>Student Progress Snapshot</h2><div id="ctPerfStudents" class="empty">Analysis will appear here.</div></div>
+    </div>
+
     <div class="panel" data-panel="domains">
       <div class="card">
         <div class="grid cols-3">
@@ -2446,6 +2523,7 @@ async function renderClassTeacher() {
     { title: 'My Class', tabs: [
       { id: 'students', label: 'Students' },
       { id: 'scores', label: 'Scores' },
+      { id: 'academicSummary', label: 'Test Performance' },
       { id: 'domains', label: 'Domains' },
     ]},
     { title: 'Attendance', tabs: [
@@ -2467,6 +2545,20 @@ async function renderClassTeacher() {
   const subjects = await loadSubjects(CLASS_NAME);
   q('ctSubject').innerHTML = subjects.map(s => `<option>${esc(s)}</option>`).join('');
   await ctLoadStudents();
+}
+
+async function loadTeacherAcademicSummary(){
+ const cls=S.user.class,term=q('ctPerfTerm')?.value,assessment=q('ctPerfAssessment')?.value,stats=q('ctPerfStats'),sb=q('ctPerfSubjects'),pb=q('ctPerfStudents');if(!cls||!stats||!sb||!pb)return;
+ sb.innerHTML=pb.innerHTML='<div class="empty">Loading class scores…</div>';
+ try{
+  const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+  const val=r=>{if(assessment==='total'){const k=['T1','T2','T3','Exam'];return k.every(x=>r[x]!==''&&r[x]!==null&&r[x]!==undefined&&Number.isFinite(Number(r[x])))?k.reduce((a,x)=>a+Number(r[x]),0):null;}const v=r[assessment];return v===''||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);};
+  const subRows=subjects.map(sub=>{const values=students.map(st=>val((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,values,avg:values.length?values.reduce((a,b)=>a+b,0)/values.length:null,hi:values.length?Math.max(...values):null,lo:values.length?Math.min(...values):null,missing:students.length-values.length};});
+  const studRows=students.map(st=>{const vs=subjects.map(sub=>val((scoreMap[st.student_id]||{})[sub]||{}));const good=vs.filter(v=>v!==null);return {...st,avg:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,entered:good.length};}).sort((a,b)=>a.avg===null?1:b.avg===null?-1:b.avg-a.avg);
+  stats.innerHTML=[['Students',students.length],['Subjects',subjects.length],['Entered scores',subRows.reduce((a,r)=>a+r.values.length,0)],['Missing cells',students.length*subjects.length-subRows.reduce((a,r)=>a+r.values.length,0)]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
+  sb.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Entered</th><th>Missing</th></tr></thead><tbody>${subRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.hi)}</td><td>${fmtScore(r.lo)}</td><td>${r.values.length}/${students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
+  pb.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Rank*</th><th>Student</th><th>Average</th><th>Subjects entered</th><th>Status</th></tr></thead><tbody>${studRows.map((r,i)=>`<tr><td>${r.avg===null?'—':i+1}</td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.avg)}</td><td>${r.entered}/${subjects.length}</td><td><span class="status-pill ${r.entered===subjects.length?'status-ok':'status-warn'}">${r.entered===subjects.length?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub">*This is a selected-assessment snapshot, not the official published class position.</p>`;
+ }catch(e){stats.innerHTML='';sb.innerHTML=pb.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 
 async function ctLoadStudents() {
@@ -2775,10 +2867,10 @@ async function downloadStudentResultPDF() {
   if (!window.jspdf || !window.jspdf.jsPDF) return toast('PDF tools did not load. Check your internet connection.', 'err');
   try {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-    pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.text('GREATER TOMORROW MODEL COLLEGE',148.5,13,{align:'center'});
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text('Jesus, Our Teacher',148.5,19,{align:'center'});
-    pdf.setFontSize(11); pdf.text('STUDENT RESULT',148.5,27,{align:'center'});
+    const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.text('GREATER TOMORROW MODEL COLLEGE',105,13,{align:'center'});
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text('Jesus, Our Teacher',105,19,{align:'center'});
+    pdf.setFontSize(11); pdf.text('STUDENT RESULT',105,27,{align:'center'});
     pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Term: ${q('studentTerm').value}`,12,35);
     pdf.autoTable({startY:40,head:[['Subject','CA 1','CA 2','CA 3','Exam','Total','Grade']],body:rows.map(r=>[r.subject,r.T1??'—',r.T2??'—',r.T3??'—',r.Exam??'—',r.total??'—',r.grade||'—']),theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[4,62,122]},margin:{left:12,right:12},tableWidth:'auto'});
     pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
@@ -2825,6 +2917,12 @@ async function renderParent() {
         <textarea id="pQuestion" style="margin-top:10px;min-height:70px" placeholder="Which subjects should my child focus on?"></textarea>
         <div class="row" style="margin-top:8px"><button onclick="parentAsk()">Ask</button></div>
       </div>
+    </div>
+
+    <div class="panel" data-panel="testPerformance">
+      <div class="card"><h2>Test Performance</h2><p class="sub">View published test-level scores for your linked ward across available terms.</p>
+        <div class="grid cols-3"><div><label>Ward</label><select id="pTestWard"></select></div><div><label>Academic Year</label><input id="pTestYear" value="2026/2027"></div><div style="display:flex;align-items:flex-end"><button class="blue" onclick="parentLoadTestPerformance()">Load Test Performance</button></div></div>
+      </div><div id="pTestPerformanceBox"><div class="empty">Select a ward and load performance.</div></div>
     </div>`;
 
   buildNav([
@@ -2832,10 +2930,12 @@ async function renderParent() {
       { id: 'report', label: 'Report Card' },
       { id: 'announcements', label: 'Announcements' },
       { id: 'chat', label: 'Ask Assistant' },
+      { id: 'testPerformance', label: 'Test Performance' },
     ]},
   ], 'report');
 
   document.querySelector('.nav-item[data-tab="announcements"]').dataset.onload = 'parentLoadAnnouncements';
+  document.querySelector('.nav-item[data-tab="testPerformance"]').dataset.onload = 'parentLoadTestPerformance';
 
   try {
     const wards = await api('parentGetWards');
@@ -2847,6 +2947,7 @@ async function renderParent() {
       return;
     }
     sel.innerHTML = wards.map((w, i) => `<option value="${i}">${esc(w.studentName)} · ${esc(w.className)}</option>`).join('');
+    const ps=q('pTestWard'); if(ps) ps.innerHTML=sel.innerHTML;
   } catch (e) { q('pStatus').textContent = e.message; }
 }
 
@@ -3075,8 +3176,8 @@ function renderParentReport(r) {
         <div>
           <div style="font-weight:900;text-align:center;background:#043e7a;color:#fff;padding:3px;font-size:10.5px;
             text-transform:uppercase;letter-spacing:.5px">Subject Performance</div>
-          <table style="width:100%;border-collapse:collapse;font-size:10px">
-            <thead><tr style="background:#f2f2f2">${cols.join('')}</tr></thead>
+          <table class="gtmc-subject-performance" style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead><tr style="background:#f2f2f2">${cols.map((c,i)=>i===0?c:c.replace('<th','<th class="report-vertical-head"')).join('')}</tr></thead>
             <tbody>
               ${rows || '<tr><td colspan="20" style="text-align:center;padding:10px;color:#999">No subjects</td></tr>'}
               ${totalFooterRow}
@@ -3176,10 +3277,10 @@ function printCurrentResult() {
   const report = q('reportCard');
   if (!report) { toast('Load a result before printing.', 'err'); return; }
   const oldZoom = report.style.zoom;
-  // Fit the report to the landscape A4 printable area before opening print preview.
+  // Fit the report to the A4 portrait printable area before opening print preview.
   const width = Math.max(report.scrollWidth || 0, report.getBoundingClientRect().width || 0);
   const height = Math.max(report.scrollHeight || 0, report.getBoundingClientRect().height || 0);
-  const scale = Math.min(1, 1080 / Math.max(width, 1), 700 / Math.max(height, 1));
+  const scale = Math.min(1, 760 / Math.max(width, 1), 1050 / Math.max(height, 1));
   report.style.zoom = String(Math.max(0.42, scale));
   const restore = () => { report.style.zoom = oldZoom; window.removeEventListener('afterprint', restore); };
   window.addEventListener('afterprint', restore);
@@ -3215,7 +3316,7 @@ async function downloadCurrentReportPDF() {
       }
     });
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
     const margin = 14;
@@ -3239,6 +3340,63 @@ async function downloadCurrentReportPDF() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = oldText || '⬇ Download Result PDF (A4)'; }
   }
+}
+
+/* TEST PERFORMANCE, CLASS ANALYTICS AND BROADSHEET */
+function fmtScore(v){ return v===null||v===undefined||v===''||!Number.isFinite(Number(v))?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2}); }
+function exportTableCSV(tableId, filename){
+  const table=q(tableId); if(!table) return toast('Load a table first.','err');
+  const rows=[...table.querySelectorAll('tr')].filter(tr=>tr.style.display!=='none').map(tr=>[...tr.children].map(td=>'"'+String(td.innerText||'').replace(/"/g,'""').replace(/\s+/g,' ').trim()+'"').join(','));
+  if(rows.length<2) return toast('No rows to export.','err');
+  const blob=new Blob(['\ufeff'+rows.join('\r\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
+}
+async function initBroadsheet(){
+  try { const classes=await loadClasses(); ['brClass','perfClass'].forEach(id=>{const el=q(id);if(el && !el.options.length)el.innerHTML=classes.map(c=>`<option>${esc(c)}</option>`).join('');}); await updateBroadsheetSubjects(); }
+  catch(e){toast(e.message,'err');}
+}
+async function updateBroadsheetSubjects(){
+  const cls=q('brClass')?.value; if(!cls)return; try{const subs=await loadSubjects(cls);const sel=q('brSubject');if(sel){const keep=sel.value;sel.innerHTML='<option value="">All subjects</option>'+subs.map(x=>`<option>${esc(x)}</option>`).join('');if([...sel.options].some(o=>o.value===keep))sel.value=keep;}}catch(e){toast(e.message,'err');}
+}
+async function loadBroadsheet(){
+  const cls=q('brClass').value,term=q('brTerm').value,subject=q('brSubject').value,box=q('broadsheetBox'); box.innerHTML='<div class="empty">Loading scores…</div>';
+  try{
+    const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+    const showSubs=subject?[subject]:subjects; const data=students.map(st=>{const scores=scoreMap[st.student_id]||{};let total=0,complete=0,possible=0;const vals={};showSubs.forEach(sub=>{const r=scores[sub]||{};const all=['T1','T2','T3','Exam'].every(k=>r[k]!==''&&r[k]!==null&&r[k]!==undefined&&Number.isFinite(Number(r[k])));const t=all?['T1','T2','T3','Exam'].reduce((a,k)=>a+Number(r[k]),0):null;vals[sub]={...r,total:t};if(t!==null){total+=t;complete++;}possible++;});return {...st,vals,total,average:complete===possible&&possible?total/possible:null,complete:complete===possible&&possible>0};});
+    data.sort((a,b)=>{if(a.average===null)return 1;if(b.average===null)return -1;return b.average-a.average;});let rank=0,last=null;
+    data.forEach((r,i)=>{if(r.average!==null){if(last===null||r.average!==last)rank=i+1;r.position=rank;last=r.average;}else r.position='—';});
+    const headers=['Position','Student ID','Student Name',...showSubs.flatMap(sub=>[sub+' CA1',sub+' CA2',sub+' CA3',sub+' Exam',sub+' Total']), 'Average'];
+    const rows=data.map(st=>`<tr><td>${st.position}</td><td>${esc(st.student_id||'')}</td><td class="br-name">${esc(st.name||'')}</td>${showSubs.map(sub=>{const r=st.vals[sub];return ['T1','T2','T3','Exam'].map(k=>`<td>${fmtScore(r[k])}</td>`).join('')+`<td class="br-total">${fmtScore(r.total)}</td>`;}).join('')}<td><strong>${fmtScore(st.average)}</strong></td></tr>`).join('');
+    box.innerHTML=`<div class="portal-note">${esc(cls)} · ${esc(term)} · ${students.length} students · ${showSubs.length} subject(s). Incomplete records remain unranked.</div><div class="table-wrap"><table id="broadsheetTable" class="compact-broadsheet"><thead><tr>${headers.map((h,i)=>`<th class="${i>2?'vertical-head':''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    window.__GTMC_BROADSHEET={className:cls,term,subjects:showSubs,data};
+  }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
+}
+function printBroadsheet(){if(!q('broadsheetTable'))return toast('Load the broadsheet first.','err');window.print();}
+async function loadClassPerformance(){
+ const cls=q('perfClass')?.value,term=q('perfTerm')?.value,assessment=q('perfAssessment')?.value,stats=q('perfStats'),sb=q('perfSubjectBox'),pb=q('perfStudentBox');if(!cls)return;
+ sb.innerHTML=pb.innerHTML='<div class="empty">Loading analysis…</div>';
+ try{
+  const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+  const getVal=(r)=>{if(assessment==='total'){const keys=['T1','T2','T3','Exam'];return keys.every(k=>r[k]!==''&&r[k]!==null&&r[k]!==undefined&&Number.isFinite(Number(r[k])))?keys.reduce((a,k)=>a+Number(r[k]),0):null;}const v=r[assessment];return v===''||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);};
+  const subjectRows=subjects.map(sub=>{const vals=students.map(st=>getVal((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,vals,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,missing:students.length-vals.length};});
+  const vals=students.map(st=>{const per=subjects.map(sub=>getVal((scoreMap[st.student_id]||{})[sub]||{}));const good=per.filter(v=>v!==null);return {...st,average:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,completed:good.length,totalSubjects:subjects.length};});
+  const overall=subjectRows.flatMap(r=>r.vals),completeStudents=vals.filter(x=>x.average!==null);
+  stats.innerHTML=[['Students',students.length],['Subjects',subjects.length],['Scores entered',overall.length],['Missing score cells',students.length*subjects.length-overall.length]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
+  sb.innerHTML=`<div class="table-wrap"><table id="performanceTable"><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores Entered</th><th>Missing</th></tr></thead><tbody>${subjectRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.high)}</td><td>${fmtScore(r.low)}</td><td>${r.vals.length}/${students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
+  vals.sort((a,b)=>a.average===null?1:b.average===null?-1:b.average-a.average);let rank=0,last=null;vals.forEach((r,i)=>{if(r.average!==null){if(last===null||r.average!==last)rank=i+1;r.rank=rank;last=r.average;}else r.rank='—';});
+  pb.innerHTML=`<div class="table-wrap"><table id="performanceStudentsTable"><thead><tr><th>Position*</th><th>Student</th><th>Average</th><th>Subjects Complete</th><th>Status</th></tr></thead><tbody>${vals.map(r=>`<tr><td>${r.rank}</td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.average)}</td><td>${r.completed}/${r.totalSubjects}</td><td><span class="status-pill ${r.completed===r.totalSubjects?'status-ok':'status-warn'}">${r.completed===r.totalSubjects?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub" style="margin-top:8px">*Ranking shown here is an analysis of the selected assessment and is not a substitute for the official school ranking.</p>`;
+ }catch(e){stats.innerHTML='';sb.innerHTML=pb.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
+}
+async function parentLoadTestPerformance(){
+ const idx=q('pTestWard')?.value; if(idx===''||idx==null)return toast('Choose a ward first.','err');const ward=(window.__WARDS||[])[Number(idx)];if(!ward)return toast('Ward selection is unavailable.','err');const year=q('pTestYear').value.trim(),box=q('pTestPerformanceBox');if(!year)return toast('Enter the academic year.','err');box.innerHTML='<div class="empty">Loading published test results…</div>';
+ try{
+  const data=await api('parentGetTestBreakdown',{className:ward.className,studentId:ward.studentId,academicYear:year});window.__PARENT_TEST_PERFORMANCE=data;
+  const terms=['Term1','Term2','Term3'].filter(t=>data.terms&&data.terms[t]&&data.terms[t].published);
+  if(!terms.length){box.innerHTML='<div class="empty">No published test-performance data is available for this ward and academic year.</div>';return;}
+  const summary=terms.map(t=>{const d=data.terms[t];return `<div class="card stat-card"><div class="sub">${t.replace('Term','Term ')}</div><div class="stat-number">${fmtScore(d.overallAverage)}</div><div class="sub">Overall average · ${d.complete?'Complete':'Incomplete'} · Position ${esc(d.positionClass??'—')}</div></div>`;}).join('');
+  const tables=terms.map(t=>{const d=data.terms[t];return `<div class="card"><div class="row" style="justify-content:space-between"><h2>${t.replace('Term','Term ')} Test Breakdown</h2><span class="status-pill ${d.complete?'status-ok':'status-warn'}">${d.complete?'Complete':'Incomplete'}</span></div><div class="table-wrap"><table><thead><tr><th>Subject</th><th>CA 1 /10</th><th>CA 2 /10</th><th>CA 3 /10</th><th>Exam /70</th><th>Total /100</th><th>Grade</th></tr></thead><tbody>${(d.subjects||[]).map(r=>`<tr><td><strong>${esc(r.subject)}</strong></td><td>${fmtScore(r.T1)}</td><td>${fmtScore(r.T2)}</td><td>${fmtScore(r.T3)}</td><td>${fmtScore(r.Exam)}</td><td>${fmtScore(r.total)}</td><td>${esc(r.grade||'—')}</td></tr>`).join('')}</tbody></table></div></div>`;}).join('');
+  const annual=`<div class="card"><h2>Year-to-Date Subject Performance</h2><div class="table-wrap"><table id="parentAnnualTable"><thead><tr><th>Subject</th><th>Terms with Scores</th><th>Year Average</th><th>Best</th><th>Lowest</th></tr></thead><tbody>${(data.subjectYearSummary||[]).map(r=>`<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.termsWithScores}</td><td>${fmtScore(r.yearAverage)}</td><td>${fmtScore(r.best)}</td><td>${fmtScore(r.weakest)}</td></tr>`).join('')}</tbody></table></div><button class="sec" onclick="exportTableCSV('parentAnnualTable','GTMC_Year_Performance.csv')">Export Annual Summary</button></div>`;
+  box.innerHTML=`<div class="page-head"><h2>${esc(data.student?.name||ward.studentName)} · ${esc(data.student?.className||ward.className)}</h2><p>Academic year ${esc(data.academicYear)} · Published terms only</p></div><div class="grid cols-3">${summary}</div>${tables}${annual}`;
+ }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 
 async function parentAsk() {
