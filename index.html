@@ -6,6 +6,7 @@
 <title>Greater Tomorrow Model College — Grade System</title>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
   :root{
     --login-bg-image: url('school.jpg');
@@ -230,6 +231,14 @@
     #reportCard { border:none !important; padding:0 !important; max-width:100% !important;
       box-shadow:none !important; font-size:10px; }
     #reportCard tr { page-break-inside:avoid; }
+    body * { visibility:hidden !important; }
+    #reportCard, #reportCard * { visibility:visible !important; }
+    #reportCard { position:absolute!important;left:0!important;top:0!important;width:100%!important; }
+    #reportCard .gtmc-result-columns { grid-template-columns:minmax(0,1fr) 165px!important;gap:4px!important; }
+    #reportCard .gtmc-report-header { grid-template-columns:54px 1fr!important; }
+    #reportCard .gtmc-report-logo { width:50px!important;height:50px!important; }
+    #reportCard table { font-size:7px!important; }
+    #reportCard td,#reportCard th { padding:1px 2px!important; }
   }
 
   /* GTMC professional frontend refresh */
@@ -2653,6 +2662,7 @@ async function renderParent() {
         <div class="row" style="margin-top:10px">
           <button class="blue" onclick="parentLoad()">Load Result</button>
           <button class="sec" onclick="window.print()">Print</button>
+          <button class="ok" onclick="downloadCurrentReportPDF()">⬇ Download Result PDF (A4)</button>
         </div>
         <div id="pStatus" class="portal-note">Choose ward, term and year.</div>
       </div>
@@ -3010,6 +3020,60 @@ function renderParentReport(r) {
       </div>
     </div>
   `;
+}
+
+async function downloadCurrentReportPDF() {
+  const report = q('reportCard');
+  if (!report || !window.__CURRENT_RESULT) {
+    toast('Load a student result before downloading the PDF.', 'err');
+    return;
+  }
+  if (!window.html2canvas || !window.jspdf || !window.jspdf.jsPDF) {
+    toast('PDF tools did not load. Check your internet connection and try again.', 'err');
+    return;
+  }
+  const btn = document.querySelector('button[onclick="downloadCurrentReportPDF()"]');
+  const oldText = btn ? btn.textContent : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Preparing PDF…'; }
+    const canvas = await window.html2canvas(report, {
+      scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false,
+      windowWidth: Math.max(report.scrollWidth, report.clientWidth),
+      onclone: clonedDoc => {
+        const cloned = clonedDoc.getElementById('reportCard');
+        if (cloned) {
+          cloned.style.width = '1200px';
+          cloned.style.maxWidth = 'none';
+          cloned.style.boxShadow = 'none';
+          cloned.style.borderRadius = '0';
+        }
+      }
+    });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4', compress: true });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+    const availableW = pageW - margin * 2;
+    const availableH = pageH - margin * 2;
+    const ratio = Math.min(availableW / canvas.width, availableH / canvas.height);
+    const imageW = canvas.width * ratio;
+    const imageH = canvas.height * ratio;
+    const x = (pageW - imageW) / 2;
+    const y = (pageH - imageH) / 2;
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, y, imageW, imageH, undefined, 'FAST');
+    const ward = window.__CURRENT_WARD || {};
+    const studentName = (ward.studentName || window.__CURRENT_RESULT.student?.name || 'Student').replace(/[^\w-]+/g, '_');
+    const term = (q('pTerm')?.value || window.__CURRENT_RESULT.term || 'Term').replace(/[^\w-]+/g, '_');
+    const year = (q('pYear')?.value || window.__CURRENT_RESULT.academicYear || '').replace(/[^\w-]+/g, '_');
+    pdf.save(`${studentName}_${term}_${year}_Result.pdf`);
+    toast('Result PDF downloaded (single A4 landscape page).', 'ok');
+  } catch (e) {
+    console.error(e);
+    toast('Could not create the PDF. Try again or use Print > Save as PDF.', 'err');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldText || '⬇ Download Result PDF (A4)'; }
+  }
 }
 
 async function parentAsk() {
