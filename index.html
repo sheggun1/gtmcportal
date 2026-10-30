@@ -3533,6 +3533,300 @@ async function parentAsk() {
     q('pQuestion').value = '';
   } catch (e) { chat.innerHTML = `<div class="chat-message ai">${esc(e.message)}</div>`; }
 }
+// GTMC UPGRADE BLOCK
+// Option A: paste this whole file inside your <script>, just above the line that says START.
+// Option B: save it next to your HTML as gtmc-upgrade.js and add
+//           <script src="gtmc-upgrade.js"></script> right after the main </script>.
+// Login, API calls, scoring, grading, positions and publishing logic are untouched.
+
+/* ---------- 1. UI/UX refresh (scoped to the app, login untouched) ---------- */
+(function () {
+  const css = `
+  #appView{--ring:0 0 0 3px rgba(7,86,168,.18)}
+  #appView .topbar{background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid #dce6f1;box-shadow:0 1px 0 rgba(4,62,122,.05)}
+  #appView .topbar .brand-logo{box-shadow:0 2px 8px rgba(4,62,122,.25)}
+  #appView .sidebar{padding:18px 12px;background:#fbfdff}
+  #appView .sidebar .group-title{letter-spacing:.12em;padding-bottom:8px}
+  #appView .nav-item{padding:10px 12px;border-radius:8px;font-weight:600;transition:background .15s,color .15s,transform .15s}
+  #appView .nav-item:hover{background:#eef5fd;transform:translateX(2px)}
+  #appView .nav-item.active{background:#e6f0fc;color:#043e7a;box-shadow:inset 3px 0 0 #0756a8}
+  #appView main.content{padding:28px 32px;max-width:1500px;width:100%}
+  #appView .page-head h1{font-size:24px;letter-spacing:-.02em}
+  #appView .card{border-radius:14px;border:1px solid #e3ebf4;box-shadow:0 1px 2px rgba(4,62,122,.04),0 6px 20px rgba(4,62,122,.04);transition:box-shadow .2s}
+  #appView .card:hover{box-shadow:0 2px 4px rgba(4,62,122,.05),0 10px 28px rgba(4,62,122,.07)}
+  #appView .stat-card{border-top:0;background:linear-gradient(180deg,#fff,#f6faff)}
+  #appView .stat-number{font-variant-numeric:tabular-nums}
+  #appView button{border-radius:8px;box-shadow:0 1px 2px rgba(4,62,122,.12);transition:background .15s,box-shadow .15s,transform .05s}
+  #appView button.sec{box-shadow:none}
+  #appView button:focus-visible,#appView input:focus,#appView select:focus,#appView textarea:focus{outline:none;box-shadow:var(--ring);border-color:#0756a8}
+  #appView input,#appView select,#appView textarea{border-radius:8px;border-color:#cfdbe8;transition:border-color .15s,box-shadow .15s}
+  #appView label{letter-spacing:.06em}
+  #appView .table-wrap{border-radius:10px;border-color:#e3ebf4;overflow:auto}
+  #appView th{background:#f3f8fe;color:#043e7a;position:sticky;top:0;z-index:1}
+  #appView tbody tr:nth-child(even) td{background:#fafcff}
+  #appView tbody tr:hover td{background:#eef5fd}
+  #appView .badge{border-radius:999px}
+  #appView .portal-note{border-radius:10px;background:#f0f7ff;border-color:#cfe3f8}
+  #appView .empty{background:#fafcff;border:1px dashed #d8e4f0;border-radius:10px}
+  .toast{border-radius:10px;backdrop-filter:blur(6px)}
+  @media(max-width:900px){
+    #appView main.content{padding:16px}
+    #appView .nav-item{border-radius:999px;background:#f3f8fe}
+    #appView .nav-item.active{background:#0756a8;color:#fff;box-shadow:none}
+    #appView .nav-item.active .dot{background:#fff}
+  }
+
+  /* ---------- Report card ---------- */
+  .rc{--rcp:#0756a8;background:#fff;color:#111;border:1.5px solid #1f2937;max-width:900px;margin:0 auto;padding:14px;font:11px/1.35 Inter,'Segoe UI',Arial,sans-serif}
+  .rc *{box-sizing:border-box}
+  .rc-head{display:grid;grid-template-columns:84px 1fr 84px;align-items:center;gap:10px;border:1.5px solid #1f2937;padding:8px;margin-bottom:8px}
+  .rc-logo{width:76px;height:76px;border:1.5px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;font:900 30px Georgia,serif;color:var(--rcp)}
+  .rc-logo img{width:100%;height:100%;object-fit:contain}
+  .rc-ctr{text-align:center}
+  .rc-name{font-size:21px;font-weight:900;letter-spacing:.4px;color:var(--rcp);text-transform:uppercase;line-height:1.1}
+  .rc-ctr div{margin-top:2px;font-size:10.5px;color:#374151}
+  .rc-title{font-weight:800;color:#111!important}
+  .rc-info{width:100%;border-collapse:collapse;margin-bottom:8px;border:1.5px solid #1f2937}
+  .rc-info td{padding:6px 8px;border:0}
+  .rc-info .k{background:var(--rcp);color:#fff;font-weight:800;font-size:9.5px;letter-spacing:.05em;width:90px;text-transform:uppercase}
+  .rc-info .v{font-weight:700;border-bottom:1px solid #e5e7eb}
+  .rc-main{display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:10px;margin-bottom:8px}
+  .rc-bar{background:var(--rcp);color:#fff;text-align:center;font-weight:800;font-size:10.5px;letter-spacing:.06em;padding:5px;text-transform:uppercase}
+  .rc-scroll{overflow-x:auto}
+  .rc-t{width:100%;border-collapse:collapse;font-size:10.5px}
+  .rc-t th{background:var(--rcp);color:#fff;font-size:9px;padding:4px;border:1px solid #fff;text-align:center;text-transform:uppercase;position:static}
+  .rc-t td{border:1px solid #cbd5e1;padding:3px 5px;text-align:center}
+  .rc-t td.l{text-align:left;text-transform:uppercase}
+  .rc-t tbody tr:nth-child(even) td{background:#f8fafc}
+  .rc-t tbody tr:hover td{background:inherit}
+  .rc-t tr.tot td{background:#eef4fb!important;font-weight:800}
+  .rc-t th.rc-sub{background:#e8f0fa;color:var(--rcp);text-align:left;font-size:9px}
+  .rc-t td.c{font-weight:800}
+  .rc-side>div{margin-bottom:8px;border:1px solid #cbd5e1}
+  .rc-legend{font-size:8.5px;color:#fff;background:var(--rcp);text-align:center;padding:4px}
+  .rc-grades{width:100%;margin-bottom:8px}
+  .rc-grades td{font-weight:800;line-height:1.2}
+  .rc-grades small{font-weight:600;color:#475569}
+  .rc-rem{border:1.5px solid #1f2937;padding:7px 9px;margin-top:6px;min-height:26px}
+  .rc-sig{display:flex;justify-content:space-around;align-items:flex-end;gap:6px;padding:6px;min-height:62px;font-size:9px;text-align:center}
+  .rc-sig img{max-height:54px;max-width:100px;object-fit:contain}
+  .rc-foot{text-align:center;font-size:9px;color:#6b7280;font-style:italic;margin-top:8px}
+  #reportCard.rc{max-width:900px!important;border:1.5px solid #1f2937!important;border-radius:0}
+  @media(max-width:760px){.rc-main{grid-template-columns:1fr}.rc-head{grid-template-columns:60px 1fr}.rc-head>.rc-logo:last-child{display:none}.rc-name{font-size:16px}}
+  @media print{
+    @page{size:A4 portrait;margin:6mm}
+    #reportCard.rc{zoom:1!important;width:100%!important;max-width:none!important;padding:6px!important;font-size:9px!important;box-shadow:none!important}
+    #reportCard.rc table{font-size:8.5px!important}
+    #reportCard.rc td,#reportCard.rc th{padding:2px 3px!important}
+    #reportCard.rc .rc-main{grid-template-columns:minmax(0,1fr) 200px!important}
+    #reportCard.rc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }`;
+  const el = document.createElement('style');
+  el.id = 'gtmc-upgrade-css';
+  el.textContent = css;
+  document.head.appendChild(el);
+})();
+
+/* ---------- 2. Report card (template layout, your scoring logic) ---------- */
+function gtmcCardHTML(r, withId) {
+  const t = r.template || {}, cal = r.calendar || {}, d = r.domains || {};
+  const n = v => (v === '' || v == null || !isFinite(Number(v))) ? null : Number(v);
+  const f = v => v == null ? '—' : v;
+  const subs = (r.subjects || []).filter(s => ['T1', 'T2', 'T3', 'Exam'].some(k => n(s[k]) !== null));
+  const caOf = s => {
+    const a = [s.T1, s.T2, s.T3].map(n);
+    return s.caTotal ?? s.testsTotal ?? (a.some(x => x !== null) ? a.reduce((x, y) => x + (y || 0), 0) : null);
+  };
+  const pos = s => s.position ?? s.rank;
+  const has = fn => subs.some(s => fn(s) != null);
+
+  const cols = [['S/N', (s, i) => i + 1], ['Subject', s => `<b>${esc(s.subject)}</b>`, 'l']];
+  if (t.showTests !== false) cols.push(['CA1<br>(10)', s => s.T1], ['CA2<br>(10)', s => s.T2], ['CA3<br>(10)', s => s.T3], ['CA<br>(30)', caOf]);
+  if (t.showExam !== false) cols.push(['Exam<br>(70)', s => s.Exam]);
+  if (r.term !== 'Term1' && has(s => s.term1Total)) cols.push(['T1<br>Total', s => s.term1Total]);
+  if (r.term === 'Term3' && has(s => s.term2Total)) cols.push(['T2<br>Total', s => s.term2Total]);
+  if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : `<b>${s.total}</b>`]);
+  if (r.term !== 'Term1' && has(s => s.cumulative)) cols.push(['Cumul.<br>Avg', s => s.cumulative]);
+  if (has(pos)) cols.push(['Position', s => pos(s) == null ? null : esc(pos(s))]);
+  if (t.showGrade !== false) cols.push(['Grade', s => s.grade ? `<b>${esc(s.grade)}</b>` : null]);
+
+  const body = subs.map((s, i) => '<tr>' + cols.map(c => `<td${c[2] ? ' class="' + c[2] + '"' : ''}>${f(c[1](s, i))}</td>`).join('') + '</tr>').join('')
+    || `<tr><td colspan="${cols.length}" style="padding:14px;font-style:italic;color:#6b7280">No scores have been entered for any subject this term.</td></tr>`;
+
+  const done = subs.filter(s => s.total != null);
+  const got = done.reduce((a, s) => a + Number(s.total), 0), max = subs.length * 100;
+  const avg = (done.length === subs.length && subs.length) ? Math.round(got / max * 10000) / 100 : null;
+  const size = r.classSize ?? r.totalStudents ?? r.numberInClass;
+
+  const rate = (o, k) => { const v = Number(o && o[k]); return v >= 1 && v <= 5 ? v : '—'; };
+  const dom = (h, items, o) => `<tr><th colspan="2" class="rc-sub">${h}</th></tr>` +
+    items.map(([k, l]) => `<tr><td class="l" style="text-transform:none;text-align:left">${esc(l)}</td><td class="c">${rate(o, k)}</td></tr>`).join('');
+  const domRows = (t.showAffective !== false ? dom('Affective', AFFECTIVE_ITEMS, r.affective) : '') +
+    (t.showPsychomotor !== false ? dom('Psychomotor', PSYCHOMOTOR_ITEMS, r.psychomotor) : '');
+
+  const sc = (t.gradeScale || []).slice().sort((a, b) => Number(b.min) - Number(a.min));
+  const opened = cal.days_school_opened || d.days_opened;
+  const present = r.daysPresent ?? d.days_present;
+  const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
+
+  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
+  if (size) sum.push(['No. in<br>Class', size]);
+  if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
+    .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
+
+  const P = t.primaryColor || '#0756a8';
+  const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="" onerror="this.remove()">` : 'G';
+  const sig = t.principalSignatureUrl ? `<div><img src="${esc(t.principalSignatureUrl)}" alt="" onerror="this.remove()"><br>${esc(t.principalName || 'Principal')}</div>` : '';
+  const stamp = t.schoolStampUrl ? `<div><img src="${esc(t.schoolStampUrl)}" alt="" onerror="this.remove()"></div>` : '';
+  const rem = (label, txt) => `<div class="rc-rem"><b>${label}:</b> ${esc(txt || '—')}</div>`;
+  const rd = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  return `<div ${withId ? 'id="reportCard" ' : ''}class="rc" style="--rcp:${esc(P)}">
+  <div class="rc-head">
+    <div class="rc-logo">${logo}</div>
+    <div class="rc-ctr">
+      <div class="rc-name">${esc(t.schoolName || 'GREATER TOMORROW MODEL COLLEGE')}</div>
+      <div>${esc(t.schoolAddress || 'Embassy Island, Moferere Area, Ado-Ekiti')}</div>
+      <div><i>${esc(t.schoolMotto || 'Jesus, Our Teacher')}</i></div>
+      <div class="rc-title">TERMINAL REPORT SHEET &mdash; ${esc(r.term)} &middot; ${esc(r.academicYear)} SESSION</div>
+    </div>
+    <div class="rc-logo" style="visibility:hidden"></div>
+  </div>
+  <table class="rc-info"><tr>
+    <td class="k">Name</td><td class="v">${esc(r.student.name)}</td>
+    <td class="k">Adm. No</td><td class="v">${esc(r.student.studentId)}</td>
+    <td class="k">Class</td><td class="v">${esc(r.student.className)}</td></tr><tr>
+    <td class="k">Session</td><td class="v">${esc(r.academicYear)}</td>
+    <td class="k">Term</td><td class="v">${esc(r.term)}</td>
+    <td class="k">Subjects</td><td class="v">${subs.length}</td></tr></table>
+  <div class="rc-main">
+    <div>
+      <div class="rc-bar">Cognitive Domain</div>
+      <div class="rc-scroll"><table class="rc-t"><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+    </div>
+    <div class="rc-side">
+      ${domRows ? `<div><div class="rc-bar">Affective / Psychomotor Domain</div><table class="rc-t"><tbody>${domRows}</tbody></table><div class="rc-legend">5 = Excellent &middot; 4 = Very Good &middot; 3 = Good &middot; 2 = Fair &middot; 1 = Needs Improvement</div></div>` : ''}
+      ${t.showAttendance !== false ? `<div><div class="rc-bar">Attendance Summary</div><table class="rc-t"><tbody>
+        <tr><td class="l" style="text-transform:none">No. of days school opened</td><td class="c">${f(opened)}</td></tr>
+        <tr><td class="l" style="text-transform:none">No. of times present</td><td class="c">${f(present)}</td></tr>
+        <tr><td class="l" style="text-transform:none">No. of times absent</td><td class="c">${f(absent)}</td></tr></tbody></table></div>` : ''}
+      ${t.showTermDates !== false ? `<div><div class="rc-bar">Term Schedule</div><table class="rc-t"><tbody>
+        <tr><td class="l" style="text-transform:none">School close</td><td class="c">${esc(cal.school_vacates || '—')}</td></tr>
+        <tr><td class="l" style="text-transform:none">Next term resumes</td><td class="c">${esc(cal.next_term_begins || '—')}</td></tr></tbody></table></div>` : ''}
+      ${(sig || stamp) ? `<div class="rc-sig">${sig}${stamp}</div>` : ''}
+    </div>
+  </div>
+  ${sc.length ? `<div class="rc-bar">Grade Scale</div><table class="rc-t rc-grades"><tbody><tr>${sc.map(g => `<td>${esc(g.grade)}<br><small>${Number(g.min)}&ndash;${Number(g.max)}</small></td>`).join('')}</tr></tbody></table>` : ''}
+  <div class="rc-bar">Performance Summary</div>
+  <table class="rc-t" style="margin-bottom:6px"><thead><tr>${sum.map(s => `<th>${s[0]}</th>`).join('')}</tr></thead><tbody><tr>${sum.map(s => `<td class="c" style="font-size:13px">${s[1]}</td>`).join('')}</tr></tbody></table>
+  ${t.showTeacherRemark !== false ? rem('Form Master/Mistress', r.teacherRemark) : ''}
+  ${t.showPrincipalRemark !== false ? rem('Head Teacher', r.principalRemark) : ''}
+  ${(t.showAIComment !== false && r.aiComment) ? rem('Comment', r.aiComment) : ''}
+  <div class="rc-foot">Report generated on ${rd}. Please contact the school if you notice any discrepancy.</div>
+</div>`;
+}
+
+/* Parent / student on-screen report (same data, new layout) */
+renderParentReport = function (r) {
+  const b = Number(r.debtTotal) || 0;
+  q('pReportBox').innerHTML =
+    (b > 0 ? `<div class="debt-banner"><span>⚠ Outstanding balance: <strong>₦${b.toLocaleString()}</strong> — kindly settle at the school bursary.</span></div>` : '') +
+    gtmcCardHTML(r, true);
+};
+
+/* ---------- 3. PDFs use the same design as the screen ---------- */
+async function gtmcAddCardPage(doc, r, first) {
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
+  host.innerHTML = gtmcCardHTML(r, false);
+  document.body.appendChild(host);
+  try {
+    const c = await window.html2canvas(host, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 900 });
+    if (!first) doc.addPage();
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), m = 18;
+    const k = Math.min((W - 2 * m) / c.width, (H - 2 * m) / c.height);
+    doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', (W - c.width * k) / 2, m, c.width * k, c.height * k, undefined, 'FAST');
+  } finally { host.remove(); }
+}
+
+async function gtmcExport(each) {
+  Object.keys(_bulkCache).forEach(k => delete _bulkCache[k]);
+  const className = q('pdfClass').value, term = q('pdfTerm').value, year = q('pdfYear').value.trim();
+  if (!className || !term || !year) return toast('Pick class/term/year', 'err');
+  if (!window.html2canvas || !window.jspdf) return toast('PDF tools did not load. Check your internet connection.', 'err');
+  const status = q('pdfStatus');
+  status.textContent = 'Building…';
+  try {
+    const students = await api('getStudents', { className });
+    if (!students.length) { status.textContent = 'No students.'; return; }
+    const { jsPDF } = window.jspdf;
+    let doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+    for (let i = 0; i < students.length; i++) {
+      const st = students[i];
+      status.textContent = `Building ${i + 1}/${students.length} — ${st.name}`;
+      const r = await buildReportPayload(className, st.student_id, st.name, term, year);
+      r.classSize = students.length;
+      if (each) {
+        doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+        await gtmcAddCardPage(doc, r, true);
+        doc.save(`${className}_${term}_${st.student_id}_${String(st.name).replace(/[^\w]+/g, '_')}.pdf`);
+        await new Promise(res => setTimeout(res, 250));
+      } else {
+        await gtmcAddCardPage(doc, r, i === 0);
+      }
+    }
+    if (!each) doc.save(`${className}_${term}_${year.replace(/[^\w]/g, '_')}.pdf`);
+    status.textContent = each ? `Done — ${students.length} files downloaded.` : `Done — ${students.length} student page(s).`;
+    toast('PDF saved', 'ok');
+  } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
+}
+exportClassPDF = () => gtmcExport(false);
+exportEachStudentPDF = () => gtmcExport(true);
+
+/* Parent "Download Result PDF" uses the same card, one A4 portrait page */
+downloadCurrentReportPDF = async function () {
+  const r = window.__CURRENT_RESULT;
+  if (!r) return toast('Load a student result before downloading the PDF.', 'err');
+  if (!window.html2canvas || !window.jspdf) return toast('PDF tools did not load. Check your internet connection.', 'err');
+  try {
+    const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+    await gtmcAddCardPage(doc, r, true);
+    const clean = v => String(v || '').replace(/[^\w-]+/g, '_');
+    doc.save(`${clean((window.__CURRENT_WARD || {}).studentName || r.student?.name || 'Student')}_${clean(r.term)}_${clean(r.academicYear)}_Result.pdf`);
+    toast('Result PDF downloaded (A4).', 'ok');
+  } catch (e) { console.error(e); toast('Could not create the PDF. Try Print > Save as PDF.', 'err'); }
+};
+
+/* ---------- 4. Class teacher: add the missing Test Performance tab ---------- */
+const _gtmcRenderClassTeacher = renderClassTeacher;
+renderClassTeacher = async function () {
+  await _gtmcRenderClassTeacher();
+  const m = q('main');
+  if (!m || m.querySelector('[data-panel="performance"]') || !getClassTeacherClass()) return;
+  m.insertAdjacentHTML('beforeend', `
+  <div class="panel" data-panel="performance">
+    <div class="page-head"><h1>Test Performance</h1><p>Analysis of ${esc(getClassTeacherClass())} from existing score records. Missing scores are not treated as zero.</p></div>
+    <div class="card"><div class="grid cols-3">
+      <div><label>Term</label><select id="ctPerfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
+      <div><label>Assessment</label><select id="ctPerfAssessment"><option value="total">Subject Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Exam /70</option></select></div>
+      <div style="display:flex;align-items:flex-end"><button class="blue" onclick="loadTeacherAcademicSummary()">Analyse</button></div>
+    </div></div>
+    <div class="grid cols-4" id="ctPerfStats"></div>
+    <div class="card"><h2>Subject Performance</h2><div id="ctPerfSubjects" class="empty">Choose a term and analyse.</div></div>
+    <div class="card"><h2>Student Performance</h2><div id="ctPerfStudents" class="empty">Analysis will appear here.</div></div>
+  </div>`);
+  const dom = document.querySelector('.nav-item[data-tab="domains"]');
+  if (dom) {
+    const it = document.createElement('div');
+    it.className = 'nav-item';
+    it.dataset.tab = 'performance';
+    it.dataset.onload = 'loadTeacherAcademicSummary';
+    it.onclick = () => setNav('performance');
+    it.innerHTML = '<span class="dot"></span><span>Test Performance</span>';
+    dom.after(it);
+  }
+};
+
 
 /* START */
 applyLogoFallback();
