@@ -1074,6 +1074,7 @@ async function renderAdmin() {
       <div class="grid cols-4" id="perfStats"></div>
       <div class="card"><div class="row" style="justify-content:space-between"><h2>Subject Performance</h2><button class="sec sm" onclick="exportTableCSV('performanceTable','GTMC_Subject_Performance.csv')">Export CSV</button></div><div id="perfSubjectBox" class="empty">Choose class and analyse.</div></div>
       <div class="card"><h2>Student Performance</h2><div id="perfStudentBox" class="empty">Analysis will appear here.</div></div>
+      <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>AI Academic Analysis</h2><button class="blue" onclick="askPerformanceAI(false)">Generate AI Analysis</button></div><div id="perfAIBox" class="empty">Generate an AI explanation of this class performance.</div></div>
     </div>
 
     <div class="panel" data-panel="broadsheet">
@@ -2647,15 +2648,18 @@ async function renderClassTeacher() {
 
 async function loadTeacherAcademicSummary(){
  const cls=getClassTeacherClass(),term=q('ctPerfTerm')?.value,assessment=q('ctPerfAssessment')?.value,stats=q('ctPerfStats'),sb=q('ctPerfSubjects'),pb=q('ctPerfStudents');if(!cls||!stats||!sb||!pb)return;
+ if(q('ctPerfAIBox'))q('ctPerfAIBox').innerHTML='<div class="empty">Run AI analysis after the scores load.</div>';
  sb.innerHTML=pb.innerHTML='<div class="empty">Loading class scores…</div>';
  try{
   const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+  window.__GTMC_PERF_SCOREMAP=scoreMap;
   const val=r=>{if(assessment==='total'){const k=['T1','T2','T3','Exam'];return k.every(x=>r[x]!==''&&r[x]!==null&&r[x]!==undefined&&Number.isFinite(Number(r[x])))?k.reduce((a,x)=>a+Number(r[x]),0):null;}const v=r[assessment];return v===''||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);};
   const subRows=subjects.map(sub=>{const values=students.map(st=>val((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,values,avg:values.length?values.reduce((a,b)=>a+b,0)/values.length:null,hi:values.length?Math.max(...values):null,lo:values.length?Math.min(...values):null,missing:students.length-values.length};});
   const studRows=students.map(st=>{const vs=subjects.map(sub=>val((scoreMap[st.student_id]||{})[sub]||{}));const good=vs.filter(v=>v!==null);return {...st,avg:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,entered:good.length};}).sort((a,b)=>a.avg===null?1:b.avg===null?-1:b.avg-a.avg);
   stats.innerHTML=[['Students',students.length],['Subjects',subjects.length],['Entered scores',subRows.reduce((a,r)=>a+r.values.length,0)],['Missing cells',students.length*subjects.length-subRows.reduce((a,r)=>a+r.values.length,0)]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
   sb.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Entered</th><th>Missing</th></tr></thead><tbody>${subRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.hi)}</td><td>${fmtScore(r.lo)}</td><td>${r.values.length}/${students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
   pb.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Rank*</th><th>Student</th><th>Average</th><th>Subjects entered</th><th>Status</th></tr></thead><tbody>${studRows.map((r,i)=>`<tr><td>${r.avg===null?'—':i+1}</td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.avg)}</td><td>${r.entered}/${subjects.length}</td><td><span class="status-pill ${r.entered===subjects.length?'status-ok':'status-warn'}">${r.entered===subjects.length?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub">*This is a selected-assessment snapshot, not the official published class position.</p>`;
+  pb.insertAdjacentHTML('beforeend', `<h2 style="margin-top:18px">Student Ranking in Each Subject</h2>${buildSubjectRankingsHtml(students,subjects,val)}`);
  }catch(e){stats.innerHTML='';sb.innerHTML=pb.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 
@@ -3487,11 +3491,36 @@ async function loadBroadsheet(){
   }catch(e){box.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 function printBroadsheet(){if(!q('broadsheetTable'))return toast('Load the broadsheet first.','err');window.print();}
+function buildSubjectRankingsHtml(students, subjects, getVal) {
+  return subjects.map(function (subject, subjectIndex) {
+    const ranked = students.map(function (st) {
+      return { name: st.name || '', id: st.student_id || '', score: getVal(((window.__GTMC_PERF_SCOREMAP || {})[st.student_id] || {})[subject] || {}) };
+    }).filter(function (r) { return r.score !== null; }).sort(function (a,b) { return b.score-a.score; });
+    let last = null, rank = 0;
+    ranked.forEach(function (r,i) { if (last === null || r.score !== last) rank = i+1; r.rank = rank; last = r.score; });
+    return `<div class="card" style="margin:10px 0"><h3>${esc(subject)}</h3><div class="row" style="justify-content:space-between"><div class="sub">${ranked.length} score(s) · ${students.length-ranked.length} missing</div><button class="sec sm" onclick="exportTableCSV('subjectRankTable_${subjectIndex}','GTMC_Subject_Ranking.csv')">Export ranking</button></div><div class="table-wrap"><table id="subjectRankTable_${subjectIndex}"><thead><tr><th>Rank</th><th>Student</th><th>Score</th></tr></thead><tbody>${ranked.map(function(r){return `<tr><td><strong>${r.rank}</strong>${r.rank===1?' 🏆':''}</td><td class="br-name">${esc(r.name)}</td><td><strong>${fmtScore(r.score)}</strong></td></tr>`;}).join('') || '<tr><td colspan="3">No scores entered.</td></tr>'}</tbody></table></div></div>`;
+  }).join('');
+}
+async function askPerformanceAI(isTeacher) {
+  const cls = isTeacher ? getClassTeacherClass() : q('perfClass')?.value;
+  const term = isTeacher ? q('ctPerfTerm')?.value : q('perfTerm')?.value;
+  const assessment = isTeacher ? q('ctPerfAssessment')?.value : q('perfAssessment')?.value;
+  const box = q(isTeacher ? 'ctPerfAIBox' : 'perfAIBox');
+  if (!cls || !term || !assessment || !box) return toast('Choose the class, term and assessment first.','err');
+  box.innerHTML = '<div class="empty">AI is analysing the class results…</div>';
+  try {
+    const result = await api('adminAskPerformanceAI',{className:cls,term:term,assessment:assessment});
+    box.innerHTML = `<div style="white-space:pre-wrap;line-height:1.7">${esc(result.answer)}</div><p class="sub" style="margin-top:12px">AI-generated guidance based on the selected assessment. Review before making academic decisions.</p>`;
+  } catch(e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
 async function loadClassPerformance(){
  const cls=q('perfClass')?.value,term=q('perfTerm')?.value,assessment=q('perfAssessment')?.value,stats=q('perfStats'),sb=q('perfSubjectBox'),pb=q('perfStudentBox');if(!cls)return;
+ if(q('perfAIBox'))q('perfAIBox').innerHTML='<div class="empty">Run AI analysis after the scores load.</div>';
  sb.innerHTML=pb.innerHTML='<div class="empty">Loading analysis…</div>';
  try{
   const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+  window.__GTMC_PERF_SCOREMAP=scoreMap;
   const getVal=(r)=>{if(assessment==='total'){const keys=['T1','T2','T3','Exam'];return keys.every(k=>r[k]!==''&&r[k]!==null&&r[k]!==undefined&&Number.isFinite(Number(r[k])))?keys.reduce((a,k)=>a+Number(r[k]),0):null;}const v=r[assessment];return v===''||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);};
   const subjectRows=subjects.map(sub=>{const vals=students.map(st=>getVal((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,vals,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,missing:students.length-vals.length};});
   const vals=students.map(st=>{const per=subjects.map(sub=>getVal((scoreMap[st.student_id]||{})[sub]||{}));const good=per.filter(v=>v!==null);return {...st,average:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,completed:good.length,totalSubjects:subjects.length};});
@@ -3500,6 +3529,7 @@ async function loadClassPerformance(){
   sb.innerHTML=`<div class="table-wrap"><table id="performanceTable"><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores Entered</th><th>Missing</th></tr></thead><tbody>${subjectRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.high)}</td><td>${fmtScore(r.low)}</td><td>${r.vals.length}/${students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
   vals.sort((a,b)=>a.average===null?1:b.average===null?-1:b.average-a.average);let rank=0,last=null;vals.forEach((r,i)=>{if(r.average!==null){if(last===null||r.average!==last)rank=i+1;r.rank=rank;last=r.average;}else r.rank='—';});
   pb.innerHTML=`<div class="table-wrap"><table id="performanceStudentsTable"><thead><tr><th>Position*</th><th>Student</th><th>Average</th><th>Subjects Complete</th><th>Status</th></tr></thead><tbody>${vals.map(r=>`<tr><td>${r.rank}</td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.average)}</td><td>${r.completed}/${r.totalSubjects}</td><td><span class="status-pill ${r.completed===r.totalSubjects?'status-ok':'status-warn'}">${r.completed===r.totalSubjects?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub" style="margin-top:8px">*Ranking shown here is an analysis of the selected assessment and is not a substitute for the official school ranking.</p>`;
+  pb.insertAdjacentHTML('beforeend', `<h2 style="margin-top:18px">Student Ranking in Each Subject</h2>${buildSubjectRankingsHtml(students,subjects,getVal)}`);
  }catch(e){stats.innerHTML='';sb.innerHTML=pb.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 async function parentLoadTestPerformance(){
@@ -3817,6 +3847,7 @@ renderClassTeacher = async function () {
     <div class="grid cols-4" id="ctPerfStats"></div>
     <div class="card"><h2>Subject Performance</h2><div id="ctPerfSubjects" class="empty">Choose a term and analyse.</div></div>
     <div class="card"><h2>Student Performance</h2><div id="ctPerfStudents" class="empty">Analysis will appear here.</div></div>
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>AI Academic Analysis</h2><button class="blue" onclick="askPerformanceAI(true)">Generate AI Analysis</button></div><div id="ctPerfAIBox" class="empty">Generate an AI explanation of this class performance.</div></div>
   </div>`);
   const dom = document.querySelector('.nav-item[data-tab="domains"]');
   if (dom) {
