@@ -1334,11 +1334,12 @@ function switchDomainKind(kind) {
   reloadDomainEditor();
 }
 async function reloadDomainEditor() {
-  const className = hasRole('admin') ? q('dmnClass').value : S.user.class;
-  const term = q('dmnTerm').value;
+  const className = hasRole('admin') ? q('dmnClass').value.trim() : getClassTeacherClass();
+  const term = q('dmnTerm').value.trim();
   const year = q('dmnYear').value.trim();
   const box = q('domainEditorBox');
-  if (!className || !term || !year) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
+  if (!className) { box.innerHTML = '<div class="empty">No class has been assigned to your account. Contact the administrator.</div>'; return; }
+  if (!term || !year) { box.innerHTML = '<div class="empty">Fill class, term and year.</div>'; return; }
   box.innerHTML = '<div class="empty">Loading…</div>';
   try {
     const [students, existing] = await Promise.all([
@@ -2557,7 +2558,7 @@ async function replyToMessage(msgId, btn) {
 /* ============================================================
    CLASS TEACHER RENDERER
    ============================================================ */
-function getClassTeacherClass() { return String(S.user?.class_teacher_class || S.user?.class || '').trim(); }
+function getClassTeacherClass() { return String(S.user?.class_teacher_class || '').trim(); }
 
 async function renderClassTeacher() {
   q('roleTag').textContent = 'Class Teacher · Jesus, Our Teacher';
