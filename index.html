@@ -3056,6 +3056,14 @@ async function renderParent() {
     const ps=q('pTestWard'); if(ps) { ps.innerHTML=sel.innerHTML; ps.value=sel.value; }
     sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; });
     if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; });
+    const academicAlert = document.createElement('div');
+    academicAlert.id = 'pAcademicAlert';
+    academicAlert.style.marginBottom = '14px';
+    const reportPanel = document.querySelector('[data-panel="report"]');
+    if (reportPanel) reportPanel.insertBefore(academicAlert, reportPanel.firstChild);
+    sel.addEventListener('change', () => { if (ps) ps.value = sel.value; parentLoadTestPerformance(); });
+    if (ps) ps.addEventListener('change', () => { sel.value = ps.value; parentLoadTestPerformance(); });
+    if (ps && ps.value !== '') await parentLoadTestPerformance();
   } catch (e) { q('pStatus').textContent = e.message; }
 }
 
