@@ -3113,6 +3113,7 @@ async function parentLoad() {
     q('pStatus').textContent = 'Loaded.';
     renderParentReport(r);
     renderParentAcademicAlert(r, ward, term);
+    if (typeof window.gtmcRenderParentInsights === 'function') window.gtmcRenderParentInsights();
   } catch (e) {
     q('pStatus').textContent = e.message;
     q('pReportBox').innerHTML = '';
@@ -4150,6 +4151,24 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     const r=window.__CURRENT_RESULT||{},rows=window.__GTMC_PARENT_EXPORT||[];
     downloadCSV('Ward_Academic_Insights.csv',[['Subject','Total','Grade','Remark']].concat(rows));
   };
+  window.gtmcRenderParentInsights=function(){
+    const host=$('pReportBox'); if(!host||!window.__CURRENT_RESULT)return;
+    const r=window.__CURRENT_RESULT, ward=window.__CURRENT_WARD||{};
+    let panel=$('gtmcParentInsights');
+    if(!panel){panel=document.createElement('div');panel.id='gtmcParentInsights';panel.className='card';host.insertAdjacentElement('beforebegin',panel);}
+    const source=Array.isArray(r.subjects)?r.subjects:[];
+    const subs=source.map(function(x){let v=num(x.total);if(v===null)v=num(x.finalTotal);if(v===null)v=num(x.totalScore);if(v===null)v=num(x.score);return {subject:x.subject||'Subject',score:v,grade:x.grade||'',remark:x.remark||''};}).filter(x=>x.score!==null);
+    if(!subs.length){panel.innerHTML='<h2>My Ward — Academic Insights</h2><div class="portal-note">No published subject totals were found for this term. Confirm that the result is published and reload it.</div>';window.__GTMC_PARENT_EXPORT=[];return;}
+    const average=avg(subs.map(x=>x.score));
+    const ordered=subs.slice().sort((a,b)=>a.score-b.score), weakest=ordered[0], strongest=ordered[ordered.length-1];
+    const low=subs.filter(x=>x.score<50).sort((a,b)=>a.score-b.score);
+    const chart=ordered.map(function(x){const w=Math.max(0,Math.min(100,x.score));return '<div style="display:grid;grid-template-columns:minmax(95px,1fr) minmax(90px,2fr) 52px;gap:9px;align-items:center;margin:10px 0"><strong>'+safe(x.subject)+'</strong><div style="height:12px;background:#e5edf6;border-radius:20px;overflow:hidden"><div style="height:100%;width:'+w+'%;background:'+(w<50?'#c2410c':'#0756a8')+';border-radius:20px"></div></div><strong style="text-align:right">'+x.score.toFixed(1)+'%</strong></div>';}).join('');
+    panel.innerHTML='<div class="row" style="justify-content:space-between"><div><h2>My Ward — Academic Insights</h2><p class="sub">Published result · '+safe(r.term)+' · '+safe(r.academicYear)+'</p></div><button class="sec sm" onclick="gtmcExportParentInsights()">Download CSV</button></div>'+
+      '<div class="grid cols-4"><div class="gtmc-kpi"><span class="sub">Overall average</span><strong>'+average.toFixed(1)+'%</strong>'+badge(average)+'</div><div class="gtmc-kpi"><span class="sub">Subjects counted</span><strong>'+subs.length+'</strong></div><div class="gtmc-kpi"><span class="sub">Strongest subject</span><strong style="font-size:16px">'+safe(strongest.subject)+'</strong><span class="sub">'+strongest.score.toFixed(1)+'%</span></div><div class="gtmc-kpi"><span class="sub">Weakest subject</span><strong style="font-size:16px">'+safe(weakest.subject)+'</strong><span class="sub">'+weakest.score.toFixed(1)+'%</span></div></div>'+
+      '<h2 style="margin-top:16px">Subject Performance Chart</h2><p class="sub">Ordered from weakest to strongest.</p>'+chart+
+      (low.length?'<div class="portal-note" style="margin-top:12px"><strong>Subjects needing attention:</strong> '+low.map(x=>safe(x.subject)+' ('+x.score.toFixed(1)+'%)').join(', ')+'.</div>':'<div class="portal-note" style="margin-top:12px"><strong>Weakest subject:</strong> '+safe(weakest.subject)+' ('+weakest.score.toFixed(1)+'%). This is the lowest recorded subject, even though it is not below 50%.</div>');
+    window.__GTMC_PARENT_EXPORT=subs.map(x=>[x.subject,x.score,x.grade,x.remark]);
+  };
   function addDarkMode(){
     const top=document.querySelector('.topbar .user');if(!top||$('gtmcDarkToggle'))return;
     const b=document.createElement('button');b.id='gtmcDarkToggle';b.className='sec sm';b.textContent=document.body.classList.contains('gtmc-dark')?'Light mode':'Dark mode';
@@ -4163,8 +4182,6 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
   if(typeof oldCT==='function')window.renderClassTeacher=async function(){await Promise.resolve(oldCT.apply(this,arguments));addStaffPanel();addDarkMode();};
   const oldST=window.renderSubjectTeacher;
   if(typeof oldST==='function')window.renderSubjectTeacher=async function(){await Promise.resolve(oldST.apply(this,arguments));addStaffPanel();addDarkMode();};
-  const oldParentLoad=window.parentLoad;
-  if(typeof oldParentLoad==='function')window.parentLoad=async function(){const out=await Promise.resolve(oldParentLoad.apply(this,arguments));await addParentInsights();return out;};
   const oldParent=window.renderParent;
   if(typeof oldParent==='function')window.renderParent=async function(){await Promise.resolve(oldParent.apply(this,arguments));addDarkMode();};
 })();
