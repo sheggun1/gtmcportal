@@ -3995,5 +3995,180 @@ renderClassTeacher = async function () {
 })();
 </script>
 
+
+<style id="gtmc-advanced-style">
+#gtmcInsights .gtmc-bar{height:9px;background:#e5edf6;border-radius:20px;overflow:hidden;min-width:90px}
+#gtmcInsights .gtmc-bar span{display:block;height:100%;background:#0756a8;border-radius:20px}
+#gtmcInsights .gtmc-kpi{background:#f1f7fd;border:1px solid #dce6f1;border-radius:10px;padding:14px}
+#gtmcInsights .gtmc-kpi strong{font-size:25px;color:#043e7a;display:block}
+#gtmcInsights .gtmc-chart-row{display:grid;grid-template-columns:minmax(90px,1fr) 2fr 55px;gap:10px;align-items:center;margin:9px 0;font-size:12px}
+#gtmcInsights .gtmc-chart-row .gtmc-bar{min-width:0}
+#gtmcInsights .gtmc-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+#gtmcParentInsights .gtmc-kpi{background:#f1f7fd;border:1px solid #dce6f1;border-radius:10px;padding:14px}
+#gtmcParentInsights .gtmc-kpi strong{font-size:24px;color:#043e7a;display:block}
+body.gtmc-dark{--bg:#101827;--surface:#172438;--surface-2:#1d2d43;--ink:#e6eef8;--muted:#a9bad0;--line:#31445d;--line-strong:#49617d;background:#101827;color:#e6eef8}
+body.gtmc-dark .topbar,body.gtmc-dark .sidebar,body.gtmc-dark .card,body.gtmc-dark table,body.gtmc-dark input,body.gtmc-dark select,body.gtmc-dark textarea{background:#172438;color:#e6eef8}
+body.gtmc-dark th{background:#1d2d43;color:#d8e8fb}
+body.gtmc-dark td{border-color:#31445d}
+body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6eef8;border-color:#31445d}
+@media(max-width:650px){#gtmcInsights .gtmc-chart-row{grid-template-columns:85px 1fr 45px;gap:6px}}
+@media print{#gtmcInsights .gtmc-tools,#gtmcParentInsights .gtmc-tools{display:none!important}}
+</style>
+<script id="gtmc-advanced-suite">
+(function(){
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const safe=v=>typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v);
+  const num=v=>(v===''||v===null||v===undefined||!Number.isFinite(Number(v)))?null:Number(v);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const pct=v=>v===null?null:Math.max(0,Math.min(100,v));
+  const totalOf=row=>{
+    if(!row)return null;
+    const direct=num(row.total);
+    if(direct!==null)return direct;
+    const keys=['T1','T2','T3','Exam'];
+    return keys.every(k=>num(row[k])!==null)?keys.reduce((s,k)=>s+Number(row[k]),0):null;
+  };
+  const status=v=>v===null?'Incomplete':v<40?'Critical':v<50?'Poor':v<70?'Needs improvement':'On track';
+  const badge=v=>'<span class="badge '+(v===null?'warn':v<50?'err':v<70?'warn':'ok')+'">'+status(v)+'</span>';
+  const csvCell=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  function downloadCSV(name,rows){
+    if(!rows||!rows.length){toast('There is no data to export.','err');return;}
+    const csv=rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
+    const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+  }
+  function addNav(id,label,group){
+    const side=$('sidebar'),main=$('main');
+    if(!side||!main||main.querySelector('[data-panel="'+id+'"]'))return;
+    const g=document.createElement('div');g.className='group';
+    g.innerHTML='<div class="group-title">'+safe(group)+'</div><div class="nav-item" data-tab="'+id+'"><span class="dot"></span><span>'+safe(label)+'</span></div>';
+    side.appendChild(g);
+    const nav=g.querySelector('.nav-item');nav.addEventListener('click',()=>setNav(id));
+  }
+  function addStaffPanel(){
+    const main=$('main');if(!main||main.querySelector('[data-panel="gtmcInsights"]'))return;
+    main.insertAdjacentHTML('beforeend',
+      '<div class="panel" data-panel="gtmcInsights" id="gtmcInsights">'+
+      '<div class="page-head"><h1>Academic Intelligence Centre</h1><p>Performance monitoring, student support, subject analysis and downloadable reports using existing portal records.</p></div>'+
+      '<div class="card"><div class="grid cols-4">'+
+      '<div><label>Class</label><select id="gtmcAIClass"></select></div>'+
+      '<div><label>Term</label><select id="gtmcAITerm"><option value="Term1">Term 1</option><option value="Term2">Term 2</option><option value="Term3">Term 3</option></select></div>'+
+      '<div><label>Search student</label><input id="gtmcAISearch" placeholder="Student name or ID"></div>'+
+      '<div style="display:flex;align-items:flex-end"><button class="blue" onclick="gtmcRunInsights()">Analyse</button></div></div>'+
+      '<div class="gtmc-tools"><button class="sec sm" onclick="gtmcRunInsights()">Refresh analysis</button><button class="sec sm" onclick="gtmcExportInsights()">Export CSV</button><button class="sec sm" onclick="window.print()">Print dashboard</button><span class="sub">Only recorded scores are analysed. Missing scores are never treated as zero.</span></div></div>'+
+      '<div id="gtmcAIStats" class="grid cols-4"></div>'+
+      '<div class="card"><h2>Academic Performance Overview</h2><div id="gtmcAIOverview" class="empty">Select a class and analyse.</div></div>'+
+      '<div class="card"><h2>Subject Performance</h2><div id="gtmcAISubjects" class="empty">Subject analysis will appear here.</div></div>'+
+      '<div class="card"><h2>Student Performance & Support List</h2><div id="gtmcAIStudents" class="empty">Student analysis will appear here.</div></div>'+
+      '<div class="card"><h2>Senior School Examination Readiness</h2><p class="sub">An indicative monitoring guide based on recorded subject totals; it is not an official WAEC/NECO prediction.</p><div id="gtmcAIReadiness" class="empty">Available for SS1–SS3 classes.</div></div></div>');
+    addNav('gtmcInsights','Academic Intelligence','Academic Tools');
+    const input=$('gtmcAISearch');if(input)input.addEventListener('input',()=>gtmcRenderStudentRows(window.__GTMC_AI_ROWS||[]));
+    const cls=$('gtmcAIClass');
+    if(cls){
+      const fixed=hasRole('class_teacher')?getClassTeacherClass():'';
+      loadClasses().then(list=>{
+        let allowed=list;
+        if(fixed)allowed=[fixed];
+        const mine=String((S.user&&S.user.classes)||'').split(',').map(x=>x.trim()).filter(Boolean);
+        if(!fixed&&hasRole('subject_teacher')&&mine.length)allowed=allowed.filter(x=>mine.includes(x));
+        cls.innerHTML=allowed.map(x=>'<option value="'+safe(x)+'">'+safe(x)+'</option>').join('');
+        if(!allowed.length)cls.innerHTML='<option value="">No class available</option>';
+        if(allowed.length)gtmcRunInsights();
+      }).catch(e=>{cls.innerHTML='<option value="">Unable to load classes</option>';toast(e.message,'err');});
+    }
+  }
+  window.gtmcRunInsights=async function(){
+    const cls=$('gtmcAIClass')?.value,term=$('gtmcAITerm')?.value;
+    const stats=$('gtmcAIStats'),overview=$('gtmcAIOverview'),subjectsBox=$('gtmcAISubjects'),studentsBox=$('gtmcAIStudents'),readiness=$('gtmcAIReadiness');
+    if(!cls||!term||!stats)return;
+    [overview,subjectsBox,studentsBox,readiness].forEach(x=>{if(x)x.innerHTML='<div class="empty">Loading academic records…</div>';});
+    try{
+      const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
+      const subjectRows=subjects.map(sub=>{
+        const vals=students.map(st=>totalOf((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);
+        return {subject:sub,average:avg(vals),high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,entered:vals.length,missing:students.length-vals.length};
+      });
+      const rows=students.map(st=>{
+        const bySubject=subjects.map(sub=>({subject:sub,score:totalOf((scoreMap[st.student_id]||{})[sub]||{})})).filter(x=>x.score!==null);
+        const average=avg(bySubject.map(x=>x.score));
+        const sorted=bySubject.slice().sort((a,b)=>b.score-a.score);
+        return {id:st.student_id,name:st.name||st.student_id,average,entered:bySubject.length,offered:subjects.length,best:sorted[0]||null,weakest:sorted[sorted.length-1]||null,bySubject};
+      }).sort((a,b)=>a.average===null?1:b.average===null?-1:b.average-a.average);
+      window.__GTMC_AI_ROWS=rows;window.__GTMC_AI_SUBJECTS=subjectRows;window.__GTMC_AI_CLASS=cls;window.__GTMC_AI_TERM=term;
+      const complete=rows.filter(x=>x.average!==null),flagged=complete.filter(x=>x.average<50),classAverage=avg(complete.map(x=>x.average));
+      stats.innerHTML=[['Students on register',students.length],['Class average',classAverage===null?'—':classAverage.toFixed(1)+'%'],['Below 50%',flagged.length],['Score completion',students.length&&subjects.length?Math.round(subjectRows.reduce((a,x)=>a+x.entered,0)/(students.length*subjects.length)*100)+'%':'—']].map(x=>'<div class="gtmc-kpi"><span class="sub">'+x[0]+'</span><strong>'+x[1]+'</strong></div>').join('');
+      const ranked=complete.slice(),top=ranked[0],low=ranked[ranked.length-1];
+      overview.innerHTML='<div class="grid cols-3"><div class="gtmc-kpi"><span class="sub">Best overall student</span><strong style="font-size:17px">'+(top?safe(top.name):'—')+'</strong>'+(top?top.average.toFixed(1)+'%':'No complete totals')+'</div><div class="gtmc-kpi"><span class="sub">Lowest recorded average</span><strong style="font-size:17px">'+(low?safe(low.name):'—')+'</strong>'+(low?low.average.toFixed(1)+'%':'—')+'</div><div class="gtmc-kpi"><span class="sub">Needs academic support</span><strong>'+flagged.length+'</strong><span class="sub">Below 50% based on available subject totals</span></div></div>';
+      subjectsBox.innerHTML=subjectRows.length?subjectRows.map(x=>'<div class="gtmc-chart-row"><strong>'+safe(x.subject)+'</strong><div class="gtmc-bar"><span style="width:'+pct(x.average||0)+'%"></span></div><span>'+(x.average===null?'—':x.average.toFixed(1)+'%')+'</span></div>').join(''):'<div class="empty">No subjects are configured for this class.</div>';
+      gtmcRenderStudentRows(rows);
+      const isSenior=/^SS[123]/i.test(cls.replace(/\s/g,''));
+      if(!isSenior){readiness.innerHTML='<div class="portal-note">This readiness indicator is intended for SS1–SS3. The class selected is '+safe(cls)+'.</div>';}
+      else{
+        const core=subjectRows.filter(x=>/english|mathematics/i.test(x.subject));
+        const coreComplete=core.length&&core.every(x=>x.average!==null);
+        const coreAvg=avg(core.map(x=>x.average).filter(x=>x!==null));
+        readiness.innerHTML='<div class="grid cols-3"><div class="gtmc-kpi"><span class="sub">Subjects with recorded totals</span><strong>'+subjectRows.filter(x=>x.average!==null).length+'/'+subjects.length+'</strong></div><div class="gtmc-kpi"><span class="sub">English/Mathematics average</span><strong>'+(coreAvg===null?'—':coreAvg.toFixed(1)+'%')+'</strong></div><div class="gtmc-kpi"><span class="sub">Core subjects complete</span><strong>'+(core.length?(coreComplete?'Yes':'No'):'Not identified')+'</strong></div></div><p class="sub" style="margin-top:10px">Readiness is based only on subjects configured for '+safe(cls)+'. It is a support indicator, not an examination forecast.</p>';
+      }
+    }catch(e){stats.innerHTML='';[overview,subjectsBox,studentsBox,readiness].forEach(x=>{if(x)x.innerHTML='<div class="empty">'+safe(e.message)+'</div>';});}
+  };
+  window.gtmcRenderStudentRows=function(rows){
+    const box=$('gtmcAIStudents');if(!box)return;
+    const term=$('gtmcAITerm')?.value||'';
+    const needle=String($('gtmcAISearch')?.value||'').toLowerCase().trim();
+    const shown=(rows||[]).filter(x=>(x.name+' '+x.id).toLowerCase().includes(needle));
+    if(!shown.length){box.innerHTML='<div class="empty">No matching students.</div>';return;}
+    box.innerHTML='<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Average</th><th>Subjects recorded</th><th>Strongest subject</th><th>Needs attention</th><th>Status</th></tr></thead><tbody>'+
+      shown.map(x=>'<tr><td>'+(x.average===null?'—':rows.indexOf(x)+1)+'</td><td><strong>'+safe(x.name)+'</strong><br><small>'+safe(x.id)+'</small></td><td>'+(x.average===null?'—':x.average.toFixed(1)+'%')+'</td><td>'+x.entered+'/'+x.offered+'</td><td>'+(x.best?safe(x.best.subject)+' ('+x.best.score.toFixed(1)+')':'—')+'</td><td>'+(x.weakest?safe(x.weakest.subject)+' ('+x.weakest.score.toFixed(1)+')':'—')+'</td><td>'+badge(x.average)+'</td></tr>').join('')+
+      '</tbody></table></div><p class="sub" style="margin-top:8px">'+safe(window.__GTMC_AI_CLASS||'')+' · '+safe(term)+' · Rankings use available subject totals only; incomplete records are shown but not ranked.</p>';
+  };
+  window.gtmcExportInsights=function(){
+    const rows=window.__GTMC_AI_ROWS||[];
+    downloadCSV((window.__GTMC_AI_CLASS||'Class')+'_'+(window.__GTMC_AI_TERM||'Term')+'_Academic_Analysis.csv',
+      [['Student ID','Student Name','Average (%)','Subjects Recorded','Subjects Offered','Strongest Subject','Strongest Score','Weakest Subject','Weakest Score','Status']].concat(rows.map(x=>[x.id,x.name,x.average===null?'':x.average.toFixed(1),x.entered,x.offered,x.best?.subject||'',x.best?.score??'',x.weakest?.subject||'',x.weakest?.score??'',status(x.average)])));
+  };
+  async function addParentInsights(){
+    const host=$('pReportBox');if(!host||!window.__CURRENT_RESULT)return;
+    const r=window.__CURRENT_RESULT,ward=window.__CURRENT_WARD||{};
+    let panel=$('gtmcParentInsights');
+    if(!panel){panel=document.createElement('div');panel.id='gtmcParentInsights';panel.className='card';host.insertAdjacentElement('beforebegin',panel);}
+    const subs=(Array.isArray(r.subjects)?r.subjects:[]).filter(s=>num(s.total)!==null);
+    if(!subs.length){panel.innerHTML='<h2>My Ward — Academic Insights</h2><div class="portal-note">Insights will appear when published subject totals are available.</div>';return;}
+    const average=avg(subs.map(s=>Number(s.total)));
+    const sorted=subs.slice().sort((a,b)=>Number(b.total)-Number(a.total));
+    const flagged=subs.filter(s=>Number(s.total)<50);
+    const isSenior=/^SS[123]/i.test(String(ward.className||r.student?.className||'').replace(/\s/g,''));
+    panel.innerHTML='<div class="row" style="justify-content:space-between"><div><h2>My Ward — Academic Insights</h2><p class="sub">Based on published results for '+safe(r.term)+' · '+safe(r.academicYear)+'</p></div><button class="sec sm" onclick="gtmcExportParentInsights()">Download CSV</button></div>'+
+      '<div class="grid cols-4"><div class="gtmc-kpi"><span class="sub">Overall average</span><strong>'+average.toFixed(1)+'%</strong>'+badge(average)+'</div><div class="gtmc-kpi"><span class="sub">Subjects counted</span><strong>'+subs.length+'</strong></div><div class="gtmc-kpi"><span class="sub">Strongest subject</span><strong style="font-size:16px">'+safe(sorted[0].subject||'—')+'</strong><span class="sub">'+Number(sorted[0].total).toFixed(1)+'%</span></div><div class="gtmc-kpi"><span class="sub">Needs attention</span><strong>'+flagged.length+'</strong><span class="sub">Below 50%</span></div></div>'+
+      '<h2 style="margin-top:16px">Subject Progress</h2>'+subs.map(s=>'<div class="gtmc-chart-row"><strong>'+safe(s.subject)+'</strong><div class="gtmc-bar"><span style="width:'+pct(Number(s.total))+'%"></span></div><span>'+Number(s.total).toFixed(1)+'%</span></div>').join('')+
+      (flagged.length?'<div class="portal-note" style="margin-top:12px"><strong>Areas needing attention:</strong> '+flagged.map(s=>safe(s.subject)).join(', ')+'. Encourage regular revision and contact the subject teacher for guidance.</div>':'<div class="portal-note" style="margin-top:12px">No published subject total is currently below 50%. Continue encouraging consistent study.</div>')+
+      (isSenior?'<div class="portal-note">Senior-school monitoring: '+subs.length+' subject(s) have published totals. This is an academic support summary, not a WAEC/NECO prediction.</div>':'');
+    window.__GTMC_PARENT_EXPORT=subs.map(s=>[s.subject,s.total,s.grade||'',s.remark||'']);
+  }
+  window.gtmcExportParentInsights=function(){
+    const r=window.__CURRENT_RESULT||{},rows=window.__GTMC_PARENT_EXPORT||[];
+    downloadCSV('Ward_Academic_Insights.csv',[['Subject','Total','Grade','Remark']].concat(rows));
+  };
+  function addDarkMode(){
+    const top=document.querySelector('.topbar .user');if(!top||$('gtmcDarkToggle'))return;
+    const b=document.createElement('button');b.id='gtmcDarkToggle';b.className='sec sm';b.textContent=document.body.classList.contains('gtmc-dark')?'Light mode':'Dark mode';
+    b.onclick=()=>{document.body.classList.toggle('gtmc-dark');localStorage.setItem('gtmc_dark',document.body.classList.contains('gtmc-dark')?'1':'0');b.textContent=document.body.classList.contains('gtmc-dark')?'Light mode':'Dark mode';};
+    top.insertBefore(b,top.firstChild);
+  }
+  if(localStorage.getItem('gtmc_dark')==='1')document.body.classList.add('gtmc-dark');
+  const oldAdmin=window.renderAdmin;
+  if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addDarkMode();};
+  const oldCT=window.renderClassTeacher;
+  if(typeof oldCT==='function')window.renderClassTeacher=async function(){await Promise.resolve(oldCT.apply(this,arguments));addStaffPanel();addDarkMode();};
+  const oldST=window.renderSubjectTeacher;
+  if(typeof oldST==='function')window.renderSubjectTeacher=async function(){await Promise.resolve(oldST.apply(this,arguments));addStaffPanel();addDarkMode();};
+  const oldParentLoad=window.parentLoad;
+  if(typeof oldParentLoad==='function')window.parentLoad=async function(){const out=await Promise.resolve(oldParentLoad.apply(this,arguments));await addParentInsights();return out;};
+  const oldParent=window.renderParent;
+  if(typeof oldParent==='function')window.renderParent=async function(){await Promise.resolve(oldParent.apply(this,arguments));addDarkMode();};
+})();
+</script>
+
 </body>
 </html>
