@@ -3861,5 +3861,112 @@ renderClassTeacher = async function () {
   }
 };
 </script>
+
+<script>
+/* GTMC PERFORMANCE MONITORING ADD-ON v1 — frontend-only, existing read APIs only */
+(function () {
+  function safe(v){return typeof esc==="function"?esc(v==null?"":String(v)):String(v==null?"":v);}
+  function n(v){return v===""||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);}
+  function rawScore(row,a){row=row||{};if(a==="total"){var k=["T1","T2","T3","Exam"];if(!k.every(function(x){return n(row[x])!==null;}))return null;return k.reduce(function(s,x){return s+Number(row[x]);},0);}return n(row[a]);}
+  function pct(v,a){return v===null?null:a==="Exam"?v/70*100:["T1","T2","T3"].indexOf(a)>=0?v/10*100:v;}
+  function status(p){return p===null?"Incomplete":p<40?"Critical":p<50?"Poor":p<70?"Needs improvement":"On track";}
+  function badge(p){var c=p===null?"warn":p<50?"err":p<70?"warn":"ok";return '<span class="badge '+c+'">'+status(p)+'</span>';}
+  function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+
+  var oldClass=window.loadTeacherAcademicSummary;
+  if(typeof oldClass==="function")window.loadTeacherAcademicSummary=async function(){
+    await oldClass.apply(this,arguments);
+    var cls=typeof getClassTeacherClass==="function"?getClassTeacherClass():"";
+    var term=document.getElementById("ctPerfTerm")?.value;
+    var assessment=document.getElementById("ctPerfAssessment")?.value||"total";
+    var target=document.getElementById("ctPerfStudents");
+    if(!cls||!term||!target)return;
+    try{
+      var data=await Promise.all([api("getStudents",{className:cls}),loadSubjects(cls),api("getClassScores",{className:cls,term})]);
+      var students=data[0],subjects=data[1],scoreMap=data[2];
+      var rows=students.map(function(st){
+        var scores=subjects.map(function(sub){return rawScore((scoreMap[st.student_id]||{})[sub],assessment);});
+        var complete=scores.length>0&&scores.every(function(v){return v!==null;});
+        return {name:st.name||st.student_id,average:complete?mean(scores.map(function(v){return pct(v,assessment);})):null,entered:scores.filter(function(v){return v!==null;}).length};
+      }).sort(function(a,b){return a.average===null?1:b.average===null?-1:b.average-a.average;});
+      var ranked=rows.filter(function(r){return r.average!==null;}),top=ranked[0],low=ranked[ranked.length-1];
+      var flagged=rows.filter(function(r){return r.average!==null&&r.average<50;});
+      var html='<div id="ctPerfEarlyWarning" class="card" style="border-left:4px solid #b45309;margin-bottom:14px"><h2>Class Performance Alerts</h2>'+
+        '<div class="grid cols-3" style="margin:10px 0"><div><div class="sub">Best overall student</div><strong>'+(top?safe(top.name):"—")+'</strong><div>'+(top?top.average.toFixed(1)+"%":"No complete scores")+'</div></div>'+
+        '<div><div class="sub">Lowest overall student</div><strong>'+(low?safe(low.name):"—")+'</strong><div>'+(low?low.average.toFixed(1)+"%":"—")+'</div></div>'+
+        '<div><div class="sub">Students needing attention</div><strong style="font-size:24px;color:#b91c1c">'+flagged.length+'</strong><div class="sub">Below 50%, complete records</div></div></div>';
+      if(flagged.length){
+        html+='<h3 style="margin:12px 0 6px">Students requiring follow-up</h3><div class="table-wrap"><table><thead><tr><th>Student</th><th>Average</th><th>Alert</th></tr></thead><tbody>';
+        flagged.forEach(function(r){html+='<tr><td><strong>'+safe(r.name)+'</strong></td><td>'+r.average.toFixed(1)+'%</td><td>'+badge(r.average)+'</td></tr>';});
+        html+='</tbody></table></div>';
+      }else html+='<div class="portal-note">No complete student record is currently below 50%. Continue monitoring incomplete records.</div>';
+      html+='<p class="sub" style="margin-top:8px">Only complete records are ranked. CA and examination marks are converted to percentages. This is an early-support indicator, not a final judgement.</p></div>';
+      var old=document.getElementById("ctPerfEarlyWarning");if(old)old.remove();
+      target.insertAdjacentHTML("afterbegin",html);
+    }catch(e){var old=document.getElementById("ctPerfEarlyWarning");if(old)old.remove();}
+  };
+
+  var oldSubject=window.renderSubjectTeacher;
+  if(typeof oldSubject==="function")window.renderSubjectTeacher=async function(){
+    await oldSubject.apply(this,arguments);
+    var main=document.getElementById("main");
+    if(!main||main.querySelector('[data-panel="stPerformance"]'))return;
+    main.insertAdjacentHTML("beforeend",'<div class="panel" data-panel="stPerformance"><div class="page-head"><h1>Student Performance</h1><p>Rankings and early academic alerts for your assigned subjects.</p></div><div class="card"><div class="grid cols-4"><div><label>Class</label><select id="stPerfClass"></select></div><div><label>Subject</label><select id="stPerfSubject"></select></div><div><label>Term</label><select id="stPerfTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div><div><label>Assessment</label><select id="stPerfAssessment"><option value="total">Subject Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Exam /70</option></select></div></div><div class="row" style="margin-top:12px"><button class="blue" onclick="loadSubjectTeacherPerformance()">Analyse Performance</button></div></div><div id="stPerfSummary"></div><div class="card" id="stPerfResults"><div class="empty">Choose a class, subject and assessment.</div></div></div>');
+    var hist=main.querySelector('.nav-item[data-tab="history"]');
+    if(hist){var nav=document.createElement("div");nav.className="nav-item";nav.dataset.tab="stPerformance";nav.dataset.onload="loadSubjectTeacherPerformance";nav.innerHTML='<span class="dot"></span><span>Student Performance</span>';hist.after(nav);}
+    try{var classes=await loadClasses(),sel=document.getElementById("stPerfClass");sel.innerHTML=classes.map(function(c){return '<option value="'+safe(c)+'">'+safe(c)+'</option>';}).join("");sel.addEventListener("change",fillSubjectPerformanceOptions);await fillSubjectPerformanceOptions();}
+    catch(e){var b=document.getElementById("stPerfResults");if(b)b.textContent=e.message;}
+  };
+  window.fillSubjectPerformanceOptions=async function(){
+    var cls=document.getElementById("stPerfClass")?.value,sel=document.getElementById("stPerfSubject");if(!cls||!sel)return;
+    var all=await loadSubjects(cls),mine=String((S.user&&S.user.subjects)||"").split(",").map(function(x){return x.trim();}).filter(Boolean);
+    var allowed=mine.length?all.filter(function(s){return mine.indexOf(s)>=0;}):all;
+    sel.innerHTML=allowed.map(function(s){return '<option value="'+safe(s)+'">'+safe(s)+'</option>';}).join("")||'<option value="">No assigned subjects</option>';
+  };
+  window.loadSubjectTeacherPerformance=async function(){
+    var cls=document.getElementById("stPerfClass")?.value,sub=document.getElementById("stPerfSubject")?.value,term=document.getElementById("stPerfTerm")?.value,a=document.getElementById("stPerfAssessment")?.value||"total";
+    var box=document.getElementById("stPerfResults"),sum=document.getElementById("stPerfSummary");if(!box||!cls||!sub){if(box)box.innerHTML='<div class="empty">Choose an assigned class and subject.</div>';return;}
+    box.innerHTML='<div class="empty">Analysing scores…</div>';if(sum)sum.innerHTML="";
+    try{
+      var data=await Promise.all([api("getStudents",{className:cls}),api("getClassScores",{className:cls,term})]),students=data[0],scoreMap=data[1];
+      var mine=String((S.user&&S.user.subjects)||"").split(",").map(function(x){return x.trim();}).filter(Boolean);
+      if(mine.length&&mine.indexOf(sub)<0)throw new Error("This subject is not assigned to your account.");
+      var rows=students.map(function(st){var score=rawScore((scoreMap[st.student_id]||{})[sub],a);return {name:st.name||st.student_id,score:score,percent:pct(score,a)};}).sort(function(x,y){return x.percent===null?1:y.percent===null?-1:y.percent-x.percent;});
+      var done=rows.filter(function(r){return r.percent!==null;}),top=done[0],low=done[done.length-1],average=mean(done.map(function(r){return r.percent;})),flagged=done.filter(function(r){return r.percent<50;});
+      if(sum)sum.innerHTML='<div class="grid cols-4"><div class="card stat-card"><div class="sub">Students</div><div class="stat-number">'+students.length+'</div></div><div class="card stat-card"><div class="sub">Class average</div><div class="stat-number">'+(average===null?"—":average.toFixed(1)+"%")+'</div></div><div class="card stat-card"><div class="sub">Best student</div><strong>'+(top?safe(top.name):"—")+'</strong><div class="sub">'+(top?top.percent.toFixed(1)+"%":"")+'</div></div><div class="card stat-card"><div class="sub">Weakest student</div><strong>'+(low?safe(low.name):"—")+'</strong><div class="sub">'+(low?low.percent.toFixed(1)+"%":"")+'</div></div></div><div class="portal-note" style="margin-bottom:14px">'+flagged.length+' student(s) below 50% in '+safe(sub)+'. Missing scores are not ranked.</div>';
+      var html='<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Percentage</th><th>Performance</th></tr></thead><tbody>';
+      rows.forEach(function(r,i){html+='<tr><td>'+(r.percent===null?"—":i+1)+'</td><td><strong>'+safe(r.name)+'</strong></td><td>'+(r.score===null?"—":r.score.toFixed(1))+'</td><td>'+(r.percent===null?"—":r.percent.toFixed(1)+"%")+'</td><td>'+badge(r.percent)+'</td></tr>';});
+      box.innerHTML=html+'</tbody></table></div><p class="sub" style="margin-top:8px">Assessment: '+safe(a)+' · '+safe(term)+' · '+safe(cls)+'. Marks are converted to percentage equivalents.</p>';
+    }catch(e){box.innerHTML='<div class="empty">'+safe(e.message)+'</div>';}
+  };
+
+  var oldParentLoad=window.parentLoadTestPerformance;
+  window.parentLoadTestPerformance=async function(){
+    if(typeof oldParentLoad==="function")await oldParentLoad.apply(this,arguments);
+    var data=window.__PARENT_TEST_PERFORMANCE,sel=document.getElementById("pTestWard")||document.getElementById("pWard");
+    var ward=window.__WARDS&&sel?window.__WARDS[Number(sel.value)]:null;
+    var terms=["Term1","Term2","Term3"].filter(function(t){return data&&data.terms&&data.terms[t]&&data.terms[t].published;});
+    var latest=terms.length?terms[terms.length-1]:null,d=latest?data.terms[latest]:null,p=d?n(d.overallAverage):null,host=document.getElementById("pAcademicAlert");
+    if(!host)return;
+    if(p===null){host.innerHTML="";return;}
+    if(p<50){
+      var critical=p<40;
+      host.innerHTML='<div class="card" role="status" style="border-left:4px solid '+(critical?'#b91c1c':'#b45309')+';background:'+(critical?'#fff7f7':'#fffbeb')+'"><h2 style="color:'+(critical?'#991b1b':'#92400e')+'">Academic Performance Alert · '+safe(ward?.studentName||data.student?.name||"Your ward")+'</h2><p>Your ward’s published overall average for '+safe(latest.replace("Term","Term "))+' is <strong>'+p.toFixed(1)+'%</strong>. This is below the suggested 50% attention threshold.</p><p style="margin-top:6px">'+(critical?'The result indicates that your child needs urgent academic support.':'Your child may benefit from closer study support and regular follow-up.')+' Please contact the class teacher to discuss steps for improvement.</p></div>';
+    }else host.innerHTML='<div class="portal-note">Academic update: '+safe(ward?.studentName||data.student?.name||"Your ward")+' has a published average of '+p.toFixed(1)+'% for '+safe(latest.replace("Term","Term "))+'.</div>';
+  };
+  var oldParentRender=window.renderParent;
+  if(typeof oldParentRender==="function")window.renderParent=async function(){
+    await oldParentRender.apply(this,arguments);
+    var report=document.querySelector('[data-panel="report"]');
+    if(report&&!document.getElementById("pAcademicAlert")){var alert=document.createElement("div");alert.id="pAcademicAlert";alert.style.marginBottom="14px";report.insertBefore(alert,report.firstChild);}
+    var wardSel=document.getElementById("pWard"),testSel=document.getElementById("pTestWard");
+    var refresh=function(){if(testSel&&wardSel)testSel.value=wardSel.value;if(typeof window.parentLoadTestPerformance==="function")window.parentLoadTestPerformance();};
+    if(wardSel)wardSel.addEventListener("change",refresh);
+    if(testSel)testSel.addEventListener("change",refresh);
+    if(testSel&&testSel.value!=="")await window.parentLoadTestPerformance();
+  };
+})();
+</script>
+
 </body>
 </html>
