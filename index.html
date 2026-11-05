@@ -3054,17 +3054,40 @@ async function renderParent() {
     }
     sel.innerHTML = wards.map((w, i) => `<option value="${i}">${esc(w.studentName)} · ${esc(w.className)}</option>`).join('');
     const ps=q('pTestWard'); if(ps) { ps.innerHTML=sel.innerHTML; ps.value=sel.value; }
-    sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; });
-    if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; });
+    sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; parentLoad(); });
+    if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; parentLoad(); });
     const academicAlert = document.createElement('div');
     academicAlert.id = 'pAcademicAlert';
     academicAlert.style.marginBottom = '14px';
     const reportPanel = document.querySelector('[data-panel="report"]');
     if (reportPanel) reportPanel.insertBefore(academicAlert, reportPanel.firstChild);
+    await parentLoad();
     sel.addEventListener('change', () => { if (ps) ps.value = sel.value; parentLoadTestPerformance(); });
     if (ps) ps.addEventListener('change', () => { sel.value = ps.value; parentLoadTestPerformance(); });
     if (ps && ps.value !== '') await parentLoadTestPerformance();
   } catch (e) { q('pStatus').textContent = e.message; }
+}
+
+
+function renderParentAcademicAlert(result, ward, term) {
+  const host = q('pAcademicAlert');
+  if (!host) return;
+  const average = result && result.overallAverage !== undefined && result.overallAverage !== null
+    ? Number(result.overallAverage) : null;
+  if (average === null || !Number.isFinite(average)) {
+    host.innerHTML = '<div class="portal-note">Academic performance alert will appear when a complete published result is available.</div>';
+    return;
+  }
+  if (average < 50) {
+    const critical = average < 40;
+    host.innerHTML = `<div class="card" role="status" style="border-left:4px solid ${critical ? '#b91c1c' : '#b45309'};background:${critical ? '#fff7f7' : '#fffbeb'}">
+      <h2 style="color:${critical ? '#991b1b' : '#92400e'}">Academic Performance Alert</h2>
+      <p><strong>${esc(ward.studentName)}</strong> has an overall average of <strong>${average.toFixed(1)}%</strong> in ${esc(term)} (${esc(q('pYear').value)}).</p>
+      <p style="margin-top:6px">${critical ? 'This result requires urgent academic attention.' : 'This result is below the school’s 50% attention threshold.'} Please contact the class teacher to agree on support and follow-up.</p>
+    </div>`;
+  } else {
+    host.innerHTML = `<div class="portal-note">Academic update: ${esc(ward.studentName)} has an overall average of ${average.toFixed(1)}% in ${esc(term)}.</div>`;
+  }
 }
 
 async function parentLoad() {
@@ -3079,6 +3102,7 @@ async function parentLoad() {
     window.__CURRENT_WARD = ward;
     q('pStatus').textContent = 'Loaded.';
     renderParentReport(r);
+    renderParentAcademicAlert(r, ward, term);
   } catch (e) {
     q('pStatus').textContent = e.message;
     q('pReportBox').innerHTML = '';
@@ -3948,31 +3972,6 @@ renderClassTeacher = async function () {
     }catch(e){box.innerHTML='<div class="empty">'+safe(e.message)+'</div>';}
   };
 
-  var oldParentLoad=window.parentLoadTestPerformance;
-  window.parentLoadTestPerformance=async function(){
-    if(typeof oldParentLoad==="function")await oldParentLoad.apply(this,arguments);
-    var data=window.__PARENT_TEST_PERFORMANCE,sel=document.getElementById("pTestWard")||document.getElementById("pWard");
-    var ward=window.__WARDS&&sel?window.__WARDS[Number(sel.value)]:null;
-    var terms=["Term1","Term2","Term3"].filter(function(t){return data&&data.terms&&data.terms[t]&&data.terms[t].published;});
-    var latest=terms.length?terms[terms.length-1]:null,d=latest?data.terms[latest]:null,p=d?n(d.overallAverage):null,host=document.getElementById("pAcademicAlert");
-    if(!host)return;
-    if(p===null){host.innerHTML="";return;}
-    if(p<50){
-      var critical=p<40;
-      host.innerHTML='<div class="card" role="status" style="border-left:4px solid '+(critical?'#b91c1c':'#b45309')+';background:'+(critical?'#fff7f7':'#fffbeb')+'"><h2 style="color:'+(critical?'#991b1b':'#92400e')+'">Academic Performance Alert · '+safe(ward?.studentName||data.student?.name||"Your ward")+'</h2><p>Your ward’s published overall average for '+safe(latest.replace("Term","Term "))+' is <strong>'+p.toFixed(1)+'%</strong>. This is below the suggested 50% attention threshold.</p><p style="margin-top:6px">'+(critical?'The result indicates that your child needs urgent academic support.':'Your child may benefit from closer study support and regular follow-up.')+' Please contact the class teacher to discuss steps for improvement.</p></div>';
-    }else host.innerHTML='<div class="portal-note">Academic update: '+safe(ward?.studentName||data.student?.name||"Your ward")+' has a published average of '+p.toFixed(1)+'% for '+safe(latest.replace("Term","Term "))+'.</div>';
-  };
-  var oldParentRender=window.renderParent;
-  if(typeof oldParentRender==="function")window.renderParent=async function(){
-    await oldParentRender.apply(this,arguments);
-    var report=document.querySelector('[data-panel="report"]');
-    if(report&&!document.getElementById("pAcademicAlert")){var alert=document.createElement("div");alert.id="pAcademicAlert";alert.style.marginBottom="14px";report.insertBefore(alert,report.firstChild);}
-    var wardSel=document.getElementById("pWard"),testSel=document.getElementById("pTestWard");
-    var refresh=function(){if(testSel&&wardSel)testSel.value=wardSel.value;if(typeof window.parentLoadTestPerformance==="function")window.parentLoadTestPerformance();};
-    if(wardSel)wardSel.addEventListener("change",refresh);
-    if(testSel)testSel.addEventListener("change",refresh);
-    if(testSel&&testSel.value!=="")await window.parentLoadTestPerformance();
-  };
 })();
 </script>
 
