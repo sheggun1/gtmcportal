@@ -181,39 +181,41 @@ function staffReplyPaymentNotification_(p, token) {
     var current = String(r[ix.status] || '');
     if (current === 'Confirmed / Cleared') throw new Error('This payment has already been cleared and cannot be processed again.');
     if (status === 'Confirmed / Cleared') {
-      var ref = String(r[ix.reference] || '').trim().toLowerCase();
-      if (ref) {
-        var ledger = sheetToObjects(getSheet('FeePayments'));
-        if (ledger.some(function(x) { return String(x.reference || '').trim().toLowerCase() === ref; })) {
+      var ledger = sheetToObjects(getSheet('FeePayments'));
+      var priorLedgerEntry = ledger.find(function(x) { return String(x.notification_id || '') === id; });
+      var paymentId = priorLedgerEntry ? String(priorLedgerEntry.id) : '';
+      if (!priorLedgerEntry) {
+        var ref = String(r[ix.reference] || '').trim().toLowerCase();
+        if (ref && ledger.some(function(x) { return String(x.reference || '').trim().toLowerCase() === ref; })) {
           throw new Error('This payment reference already exists in the payment ledger.');
         }
-      }
-      var amount = Number(r[ix.amount] || 0);
-      if (!isFinite(amount) || amount <= 0) throw new Error('Invalid payment amount on this notification.');
-      var paymentId = 'RCPT' + Date.now() + Utilities.getUuid().slice(0, 6).toUpperCase();
-      var recordedAt = new Date();
-      getSheet('FeePayments').appendRow([
-        paymentId, id, r[ix.student_id], r[ix.student_name], r[ix.class],
-        r[ix.academic_year], r[ix.term], r[ix.fee_category], amount,
-        r[ix.payment_date], r[ix.payment_time], r[ix.sender_name], r[ix.reference],
-        staff.email, recordedAt, false, ''
-      ]);
-      // Debtors.amount is the legacy aggregate outstanding balance. Reduce it once,
-      // never below zero. Fee category remains recorded in the separate ledger.
-      var debtSheet = getSheet('Debtors');
-      var debts = debtSheet.getDataRange().getValues();
-      var debtRow = -1;
-      for (var i = 1; i < debts.length; i++) {
-        if (String(debts[i][0]) === String(r[ix.student_id]) &&
-            String(debts[i][1]) === String(r[ix.class]) &&
-            String(debts[i][2]) === String(r[ix.academic_year]) &&
-            String(debts[i][3]) === String(r[ix.term])) { debtRow = i + 1; break; }
-      }
-      if (debtRow > 0) {
-        var outstanding = Number(debts[debtRow - 1][4] || 0);
-        debtSheet.getRange(debtRow, 5).setValue(Math.max(0, outstanding - amount));
-        debtSheet.getRange(debtRow, 7).setValue(recordedAt);
-        debtSheet.getRange(debtRow, 8).setValue(staff.email);
+        var amount = Number(r[ix.amount] || 0);
+        if (!isFinite(amount) || amount <= 0) throw new Error('Invalid payment amount on this notification.');
+        paymentId = 'RCPT' + Date.now() + Utilities.getUuid().slice(0, 6).toUpperCase();
+        var recordedAt = new Date();
+        getSheet('FeePayments').appendRow([
+          paymentId, id, r[ix.student_id], r[ix.student_name], r[ix.class],
+          r[ix.academic_year], r[ix.term], r[ix.fee_category], amount,
+          r[ix.payment_date], r[ix.payment_time], r[ix.sender_name], r[ix.reference],
+          staff.email, recordedAt, false, ''
+        ]);
+        // Debtors.amount is the legacy aggregate outstanding balance. Reduce it once,
+        // never below zero. Fee category remains recorded in the separate ledger.
+        var debtSheet = getSheet('Debtors');
+        var debts = debtSheet.getDataRange().getValues();
+        var debtRow = -1;
+        for (var i = 1; i < debts.length; i++) {
+          if (String(debts[i][0]) === String(r[ix.student_id]) &&
+              String(debts[i][1]) === String(r[ix.class]) &&
+              String(debts[i][2]) === String(r[ix.academic_year]) &&
+              String(debts[i][3]) === String(r[ix.term])) { debtRow = i + 1; break; }
+        }
+        if (debtRow > 0) {
+          var outstanding = Number(debts[debtRow - 1][4] || 0);
+          debtSheet.getRange(debtRow, 5).setValue(Math.max(0, outstanding - amount));
+          debtSheet.getRange(debtRow, 7).setValue(recordedAt);
+          debtSheet.getRange(debtRow, 8).setValue(staff.email);
+        }
       }
       found.sheet.getRange(found.row, ix.ledger_payment_id + 1).setValue(paymentId);
     }
