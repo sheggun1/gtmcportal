@@ -116,5 +116,9 @@
     }
     return prevBoot.apply(this,arguments);
   };
-  if(S.token && S.user && typeof hasRole==='function' && hasRole('bursar')) installBursar();
+  if(S.token && S.user && typeof hasRole==='function') setTimeout(function(){
+    if(hasRole('bursar')) installBursar();
+    else if(hasRole('parent')) installParent();
+    else if(hasRole('admin')) installStaff();
+  },700);
 })();
