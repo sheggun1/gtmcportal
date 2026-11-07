@@ -4,20 +4,24 @@
  * Run setupSheets() once, then redeploy the existing web app as a new version.
  * Existing score sheets and Debtors rows are preserved.
  */
-META_SCHEMA.PaymentNotifications = {
+var __gtmcPaymentOriginalSetupSheets = setupSheets;
+setupSheets = function() {
+  META_SCHEMA.PaymentNotifications = {
   headers: [
     'id','parent_email','parent_name','student_id','student_name','class',
     'academic_year','term','fee_category','payment_date','payment_time',
     'amount','sender_name','reference','note','status','reply',
     'replied_by','replied_at','created_at','updated_at','ledger_payment_id'
   ]
-};
-META_SCHEMA.FeePayments = {
+  };
+  META_SCHEMA.FeePayments = {
   headers: [
     'id','notification_id','student_id','student_name','class','academic_year',
     'term','fee_category','amount','payment_date','payment_time','sender_name',
     'reference','recorded_by','recorded_at','voided','void_reason'
   ]
+  };
+  return __gtmcPaymentOriginalSetupSheets();
 };
 
 var __gtmcPaymentOriginalRoute = route;
