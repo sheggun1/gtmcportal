@@ -19,12 +19,12 @@
       '<div><label>Payment Date</label><input id="payDate" type="date"></div>'+
       '<div><label>Payment Time</label><input id="payTime" type="time"></div>'+
       '<div><label>Amount Paid (₦)</label><input id="payAmount" type="number" min="1" step="0.01" placeholder="e.g. 50000"></div>'+
-      '<div><label>Sender\\'s Name</label><input id="paySender" placeholder="Name shown by the bank / sender"></div>'+
+      '<div><label>Sender\'s Name</label><input id="paySender" placeholder="Name shown by the bank / sender"></div>'+
       '<div><label>Transaction Reference (optional)</label><input id="payReference" placeholder="Bank transfer reference"></div></div>'+
       '<div style="margin-top:12px"><label>Additional Information (optional)</label><textarea id="payNote" rows="2" placeholder="Bank name or any useful detail"></textarea></div>'+
       '<div class="row" style="margin-top:14px"><button class="ok" onclick="submitParentPaymentNotification()">Submit Payment Notification</button><button class="sec" onclick="loadParentPaymentNotifications()">Refresh My Notifications</button></div>'+
       '<div id="paySubmitStatus" class="portal-note" style="margin-top:12px">Select your ward and enter the payment details.</div></div>'+
-      '<div class="card"><div class="row" style="justify-content:space-between"><div><h2>My Payment History</h2><p class="sub">Your submitted payments and the school\\'s replies.</p></div><button class="sec sm" onclick="loadParentPaymentNotifications()">Refresh</button></div><div id="parentPaymentRows"><div class="empty">Loading payment notifications…</div></div></div></div>');
+      '<div class="card"><div class="row" style="justify-content:space-between"><div><h2>My Payment History</h2><p class="sub">Your submitted payments and the school\'s replies.</p></div><button class="sec sm" onclick="loadParentPaymentNotifications()">Refresh</button></div><div id="parentPaymentRows"><div class="empty">Loading payment notifications…</div></div></div></div>');
     addNav('parentPayments','Payment Notifications');
     var sel=q('payWard'),src=q('pWard');
     if(sel&&window.__WARDS){sel.innerHTML=window.__WARDS.map(function(w,i){return '<option value="'+i+'">'+h(w.studentName)+' · '+h(w.className)+'</option>';}).join('');if(src)sel.value=src.value;sel.addEventListener('change',loadParentPaymentNotifications);}
@@ -83,7 +83,7 @@
         return '<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2>'+h(r.studentName)+' · '+h(r.className)+'</h2><p class="sub">'+h(r.parentName)+' ('+h(r.parentEmail)+') · Submitted '+h(r.createdAt?new Date(r.createdAt).toLocaleString():'')+'</p></div>'+badge(r.status)+'</div>'+
         '<div class="grid cols-4" style="margin:12px 0"><div><small class="sub">Amount</small><strong>₦'+Number(r.amount||0).toLocaleString()+'</strong></div><div><small class="sub">Fee category</small><strong>'+h(r.feeCategory)+'</strong></div><div><small class="sub">Payment date/time</small><strong>'+h(r.paymentDate)+' '+h(r.paymentTime)+'</strong></div><div><small class="sub">Sender name</small><strong>'+h(r.senderName)+'</strong></div><div><small class="sub">Academic period</small><strong>'+h(r.term)+' · '+h(r.academicYear)+'</strong></div><div><small class="sub">Transaction reference</small><strong>'+h(r.reference||'Not supplied')+'</strong></div><div><small class="sub">Parent note</small><strong>'+h(r.note||'—')+'</strong></div><div><small class="sub">Notification ID</small><strong>'+id+'</strong></div></div>'+
         (r.reply?'<div class="portal-note"><strong>Previous reply:</strong> '+h(r.reply)+'</div>':'')+
-        (r.status==='Confirmed / Cleared'?'':'<div class="grid cols-2"><div><label>Response</label><select id="pstat_'+id+'"><option>Confirmed / Cleared</option><option>Rejected / Not Found</option><option>More Information Required</option></select></div><div><label>Reply to parent (required)</label><textarea id="preply_'+id+'" rows="2">'+h(r.reply||'')+'</textarea></div></div><div class="row" style="margin-top:12px"><button class="ok" onclick="replyStaffPaymentNotification(\\''+id+'\\')">Save Reply / Process</button></div>')+
+        (r.status==='Confirmed / Cleared'?'':'<div class="grid cols-2"><div><label>Response</label><select id="pstat_'+id+'"><option>Confirmed / Cleared</option><option>Rejected / Not Found</option><option>More Information Required</option></select></div><div><label>Reply to parent (required)</label><textarea id="preply_'+id+'" rows="2">'+h(r.reply||'')+'</textarea></div></div><div class="row" style="margin-top:12px"><button class="ok" onclick="replyStaffPaymentNotification(\''+id+'\')">Save Reply / Process</button></div>')+
         '<p class="sub" style="margin-top:8px">A payment is added to the ledger and the outstanding debt is reduced only when Confirmed / Cleared is saved.</p></div>';
       }).join('');
     }catch(e){box.innerHTML='<div class="empty">'+h(e.message)+'</div>';}
@@ -97,7 +97,7 @@
   };
   function installBursar(){
     q('roleTag').textContent='Bursar Portal · Jesus, Our Teacher';
-    q('sidebar').innerHTML='<div class="group"><div class="group-title">Finance</div><div class="nav-item active" data-tab="staffPayments" onclick="setNav(\\'staffPayments\\')"><span class="dot"></span><span>Payment Notifications</span></div></div>';
+    q('sidebar').innerHTML='<div class="group"><div class="group-title">Finance</div><div class="nav-item active" data-tab="staffPayments" onclick="setNav(\'staffPayments\')"><span class="dot"></span><span>Payment Notifications</span></div></div>';
     q('main').innerHTML='<div class="page-head"><h1>Bursar Dashboard</h1><p>Review parent payment notifications and respond to payment enquiries.</p></div>';
     installStaff();setNav('staffPayments');
   }
@@ -116,4 +116,5 @@
     }
     return prevBoot.apply(this,arguments);
   };
+  if(S.token && S.user && typeof hasRole==='function' && hasRole('bursar')) installBursar();
 })();
