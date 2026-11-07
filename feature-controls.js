@@ -5,7 +5,6 @@
 (function(){
   'use strict';
   var FEATURES=[
-    ['dashboard','Dashboard','Administration','Main overview and quick actions.'],
     ['teachers','Staff & User Management','Administration','Create and manage staff accounts and assignments.'],
     ['parents','Parent Accounts','Administration','Parent account and ward-link management.'],
     ['submissions','Assessment Submissions','Academics','Review and manage submitted assessments.'],
@@ -128,7 +127,7 @@
         '<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><div><h2>Portal feature visibility</h2><p class="sub">Changes apply centrally to parent, teacher, bursar, registrar and leadership portals where the feature is used.</p></div><button class="sec sm" onclick="GTMC_LOAD_FEATURE_FLAGS().then(function(){GTMC_RENDER_FEATURE_CONTROLS()})">Reload settings</button></div><div class="portal-note">Hidden features are removed from navigation and cannot be opened through the portal menu. The backend add-on also blocks the mapped feature endpoints.</div><div id="featureControlRows"></div><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="ok" onclick="GTMC_SAVE_FEATURE_FLAGS()">Save Feature Settings</button></div><div id="featureControlStatus" class="portal-note" style="margin-top:12px"></div></div></div>');
     }
     if(!side.querySelector('[data-tab="featureControls"]')){
-      side.insertAdjacentHTML('beforeend','<div class="group" id="featureControlsNavGroup"><div class="group-title">System Settings</div><div class="nav-item" data-tab="featureControls" onclick="setNav(\\'featureControls\\')"><span class="dot"></span><span>Feature Control Centre</span></div></div>');
+      side.insertAdjacentHTML('beforeend','<div class="group" id="featureControlsNavGroup"><div class="group-title">System Settings</div><div class="nav-item" data-tab="featureControls" onclick="setNav('featureControls')"><span class="dot"></span><span>Feature Control Centre</span></div></div>');
     }
     renderControls();
     applyVisibility();
@@ -144,7 +143,6 @@
   };
   var oldBuildNav=window.buildNav;
   if(typeof oldBuildNav==='function')window.buildNav=function(items,defaultTab){
-    if(Array.isArray(items))items.forEach(function(g){if(g&&Array.isArray(g.tabs))g.tabs=g.tabs.filter(function(t){return enabled(t.id);});});
     if(!enabled(defaultTab))defaultTab='dashboard';
     var result=oldBuildNav.apply(this,[items,defaultTab]);
     applyVisibility();
