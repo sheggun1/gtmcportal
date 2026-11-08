@@ -541,7 +541,7 @@ async function boot() {
   q('appView').style.display = 'flex';
   q('userLabel').textContent = S.user.name || S.user.email;
   q('userRole').textContent = roleList().map(r => ({
-    admin:'Administrator', class_teacher:'Class Teacher', subject_teacher:'Subject Teacher',
+    admin:'Administrator', principal:'Principal', vice_principal:'Vice Principal', vice_principal_admin:'Vice Principal', vice_principal_academic:'Vice Principal', class_teacher:'Class Teacher', subject_teacher:'Subject Teacher',
     student:'Student', parent:'Parent'
   })[r] || r).join(' · ');
   const portalSwitch = q('portalSwitchBtn');
@@ -560,6 +560,7 @@ async function boot() {
   }
 
   if (hasRole('admin')) renderAdmin();
+  else if (hasRole('principal') || hasRole('vice_principal') || hasRole('vice_principal_admin') || hasRole('vice_principal_academic')) renderLeadership();
   else if (hasRole('class_teacher')) renderClassTeacher();
   else if (hasRole('subject_teacher')) renderSubjectTeacher();
   else if (hasRole('student')) renderStudent();
@@ -717,6 +718,86 @@ const MESSAGE_ADMIN_HTML = `
     </div>
     <div id="msgStatus" class="portal-note" style="display:none;margin-top:10px"></div>
   </div>
+/* ============================================================
+   LEADERSHIP PORTAL — aggregate academic overview only
+   Principal and Vice Principal never receive student-level marks
+   or financial records through this dashboard.
+   ============================================================ */
+async function renderLeadership() {
+  const isPrincipal = hasRole('principal');
+  const roleName = isPrincipal ? 'Principal' : 'Vice Principal';
+  q('roleTag').textContent = roleName + ' · Read-only academic overview';
+  q('sidebar').innerHTML = `
+    <div class="group">
+      <div class="group-title">Leadership</div>
+      <div class="nav-item active" data-tab="leadershipDashboard" onclick="setNav('leadershipDashboard')"><span class="dot"></span><span>Academic Overview</span></div>
+      <div class="nav-item" data-tab="leadershipNotifications" onclick="setNav('leadershipNotifications')"><span class="dot"></span><span>Notifications</span></div>
+    </div>`;
+  q('main').innerHTML = `
+    <div class="page-head"><h1>${esc(roleName)} Dashboard</h1><p>School-wide academic performance and assessment progress. This is an aggregate, read-only view.</p></div>
+    <div class="panel active" data-panel="leadershipDashboard">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div><h2>Academic Performance Overview</h2><p class="sub">No student names, admission numbers, individual marks or financial records are displayed.</p></div>
+          <div style="min-width:150px"><label>Academic term</label><select id="leadershipTerm"><option value="Term1">First Term</option><option value="Term2">Second Term</option><option value="Term3">Third Term</option></select></div>
+          <button class="blue" onclick="loadLeadershipDashboard()">Refresh</button>
+        </div>
+      </div>
+      <div class="grid cols-3" id="leadershipStats">
+        <div class="card stat-card"><div class="sub">Classes covered</div><div class="stat-number" id="leadClassCount">—</div></div>
+        <div class="card stat-card"><div class="sub">School average</div><div class="stat-number" id="leadOverallAverage">—</div></div>
+        <div class="card stat-card"><div class="sub">Classes needing attention</div><div class="stat-number" id="leadAttentionCount">—</div></div>
+      </div>
+      <div class="card"><h2>Class Performance Summary</h2><p class="sub">Aggregate class averages and assessment submission coverage.</p><div id="leadClasses"><div class="empty">Loading academic summary…</div></div></div>
+      <div class="grid cols-2">
+        <div class="card"><h2>Classes Requiring Attention</h2><div id="leadWeakClasses"><div class="empty">Loading…</div></div></div>
+        <div class="card"><h2>Subject Performance</h2><div id="leadSubjects"><div class="empty">Loading…</div></div></div>
+      </div>
+      <div class="portal-note" id="leadGeneratedAt">Loading latest summary…</div>
+    </div>
+    <div class="panel" data-panel="leadershipNotifications">
+      <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Notifications</h2><p class="sub">School notifications addressed to your leadership role or account.</p></div><button class="sec sm" onclick="loadLeadershipNotifications()">Refresh</button></div><div id="leadNotifications"><div class="empty">Loading notifications…</div></div></div>
+    </div>`;
+  await Promise.all([loadLeadershipDashboard(), loadLeadershipNotifications()]);
+}
+
+async function loadLeadershipDashboard() {
+  const termEl = q('leadershipTerm'), classBox = q('leadClasses');
+  if (!classBox) return;
+  classBox.innerHTML = '<div class="empty">Loading aggregate academic data…</div>';
+  try {
+    const data = await api('leadershipGetDashboard', { term: termEl ? termEl.value : 'Term1' });
+    const classes = Array.isArray(data.classes) ? data.classes : [];
+    const weak = Array.isArray(data.weakestClasses) ? data.weakestClasses : [];
+    const subjects = Array.isArray(data.subjectPerformance) ? data.subjectPerformance : [];
+    if (q('leadClassCount')) q('leadClassCount').textContent = classes.length;
+    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = Number(data.overallAverage || 0).toFixed(2) + '%';
+    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = classes.filter(x => x.performance === 'Needs Attention' || x.performance === 'No Scores').length;
+    classBox.innerHTML = classes.length ? `<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Submission coverage</th></tr></thead><tbody>${classes.map(x => `<tr><td><strong>${esc(x.className)}</strong></td><td>${Number(x.studentCount)||0}</td><td>${Number(x.average||0).toFixed(2)}%</td><td><span class="badge ${x.performance==='Strong'?'ok':x.performance==='Satisfactory'?'info':'warn'}">${esc(x.performance||'No data')}</span></td><td>${Number(x.submissionCoverage)||0}%</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No class summary is available for this term yet.</div>';
+    const weakBox = q('leadWeakClasses');
+    if (weakBox) weakBox.innerHTML = weak.length ? `<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Status</th></tr></thead><tbody>${weak.map(x => `<tr><td>${esc(x.className)}</td><td>${Number(x.average||0).toFixed(2)}%</td><td>${esc(x.performance||'Needs review')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No class performance data is available yet.</div>';
+    const subjectBox = q('leadSubjects');
+    if (subjectBox) subjectBox.innerHTML = subjects.length ? `<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th></tr></thead><tbody>${subjects.map(x => `<tr><td>${esc(x.subject)}</td><td>${Number(x.average||0).toFixed(2)}%</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Subject averages will appear when scores have been entered.</div>';
+    if (q('leadGeneratedAt')) q('leadGeneratedAt').textContent = 'Summary generated: ' + (data.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'time unavailable') + '. ' + (data.note || 'Aggregate academic indicators only.');
+  } catch (e) {
+    classBox.innerHTML = '<div class="empty">Academic summary could not be loaded: ' + esc(e.message) + '</div>';
+    ['leadWeakClasses','leadSubjects'].forEach(id => { if(q(id)) q(id).innerHTML='<div class="empty">Summary unavailable.</div>'; });
+  }
+}
+
+async function loadLeadershipNotifications() {
+  const box = q('leadNotifications');
+  if (!box) return;
+  box.innerHTML = '<div class="empty">Loading notifications…</div>';
+  try {
+    const rows = await api('getMyNotifications', { limit: 100 });
+    box.innerHTML = Array.isArray(rows) && rows.length ? rows.map(n => `<div style="padding:13px 0;border-bottom:1px solid var(--line)"><strong>${esc(n.title || n.subject || 'School notification')}</strong><p style="margin-top:5px;white-space:pre-wrap">${esc(n.message || n.body || n.text || '')}</p><small style="color:var(--muted)">${esc(n.created_at ? new Date(n.created_at).toLocaleString() : '')}</small></div>`).join('') : '<div class="empty">No notifications at the moment.</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="empty">Notifications could not be loaded: ' + esc(e.message) + '</div>';
+  }
+}
+
+
   <div class="card">
     <h2>Recent Messages</h2>
     <div id="msgHistory"><div class="empty">No messages yet.</div></div>
