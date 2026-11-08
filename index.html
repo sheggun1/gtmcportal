@@ -718,6 +718,15 @@ const MESSAGE_ADMIN_HTML = `
     </div>
     <div id="msgStatus" class="portal-note" style="display:none;margin-top:10px"></div>
   </div>
+
+
+
+  <div class="card">
+    <h2>Recent Messages</h2>
+    <div id="msgHistory"><div class="empty">No messages yet.</div></div>
+  </div>
+</div>`;
+
 /* ============================================================
    LEADERSHIP PORTAL — aggregate academic overview only
    Principal and Vice Principal never receive student-level marks
@@ -796,13 +805,6 @@ async function loadLeadershipNotifications() {
     box.innerHTML = '<div class="empty">Notifications could not be loaded: ' + esc(e.message) + '</div>';
   }
 }
-
-
-  <div class="card">
-    <h2>Recent Messages</h2>
-    <div id="msgHistory"><div class="empty">No messages yet.</div></div>
-  </div>
-</div>`;
 
 /* ============================================================
    ADMIN RENDERER
