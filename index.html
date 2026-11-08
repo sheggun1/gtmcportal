@@ -728,10 +728,14 @@ const MESSAGE_ADMIN_HTML = `
 </div>`;
 
 /* ============================================================
-   LEADERSHIP PORTAL — aggregate academic overview only
-   Principal and Vice Principal never receive student-level marks
-   or financial records through this dashboard.
+   LEADERSHIP PORTAL — aggregate academic monitoring
+   Uses existing read endpoints only; no Apps Script changes.
+   Student identifiers and marks remain local to the calculation
+   and are never rendered in the leadership interface.
    ============================================================ */
+let LEADERSHIP_AGGREGATES = null;
+let LEADERSHIP_LOAD_ID = 0;
+
 async function renderLeadership() {
   const isPrincipal = hasRole('principal');
   const roleName = isPrincipal ? 'Principal' : 'Vice Principal';
@@ -743,54 +747,199 @@ async function renderLeadership() {
       <div class="nav-item" data-tab="leadershipNotifications" onclick="setNav('leadershipNotifications')"><span class="dot"></span><span>Notifications</span></div>
     </div>`;
   q('main').innerHTML = `
-    <div class="page-head"><h1>${esc(roleName)} Dashboard</h1><p>School-wide academic performance and assessment progress. This is an aggregate, read-only view.</p></div>
+    <div class="page-head"><h1>${esc(roleName)} Dashboard</h1><p>Monitor school, class and subject performance by term and assessment. Aggregate academic information only.</p></div>
     <div class="panel active" data-panel="leadershipDashboard">
       <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div class="row" style="justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap">
           <div><h2>Academic Performance Overview</h2><p class="sub">No student names, admission numbers, individual marks or financial records are displayed.</p></div>
-          <div style="min-width:150px"><label>Academic term</label><select id="leadershipTerm"><option value="Term1">First Term</option><option value="Term2">Second Term</option><option value="Term3">Third Term</option></select></div>
+          <div style="min-width:145px;flex:1"><label for="leadershipTerm">Academic Term</label><select id="leadershipTerm" onchange="loadLeadershipDashboard()"><option value="Term1">First Term</option><option value="Term2">Second Term</option><option value="Term3">Third Term</option></select></div>
+          <div style="min-width:145px;flex:1"><label for="leadershipAssessment">Assessment</label><select id="leadershipAssessment" onchange="loadLeadershipDashboard()"><option value="total">Overall Total /100</option><option value="T1">CA 1 /10</option><option value="T2">CA 2 /10</option><option value="T3">CA 3 /10</option><option value="Exam">Examination /70</option></select></div>
           <button class="blue" onclick="loadLeadershipDashboard()">Refresh</button>
         </div>
       </div>
       <div class="grid cols-3" id="leadershipStats">
-        <div class="card stat-card"><div class="sub">Classes covered</div><div class="stat-number" id="leadClassCount">—</div></div>
+        <div class="card stat-card"><div class="sub">Classes monitored</div><div class="stat-number" id="leadClassCount">—</div></div>
         <div class="card stat-card"><div class="sub">School average</div><div class="stat-number" id="leadOverallAverage">—</div></div>
         <div class="card stat-card"><div class="sub">Classes needing attention</div><div class="stat-number" id="leadAttentionCount">—</div></div>
       </div>
-      <div class="card"><h2>Class Performance Summary</h2><p class="sub">Aggregate class averages and assessment submission coverage.</p><div id="leadClasses"><div class="empty">Loading academic summary…</div></div></div>
+      <div class="card">
+        <h2>Class Performance</h2><p class="sub">Select a class to inspect its overall performance and subject-by-subject results.</p>
+        <div style="max-width:360px;margin:10px 0 14px"><label for="leadershipClass">Select Class</label><select id="leadershipClass" onchange="renderLeadershipDetails()"><option value="">All classes</option></select></div>
+        <div id="leadClasses"><div class="empty">Loading class performance…</div></div>
+        <div id="leadClassDetail" style="margin-top:16px"></div>
+      </div>
+      <div class="card">
+        <h2>Subject Performance Across Classes</h2><p class="sub">Choose a subject to compare its performance in every class offering it.</p>
+        <div style="max-width:360px;margin:10px 0 14px"><label for="leadershipSubject">Select Subject</label><select id="leadershipSubject" onchange="renderLeadershipDetails()"><option value="">Select a subject</option></select></div>
+        <div id="leadSubjectDetail"><div class="empty">Select a subject to view its class-by-class performance.</div></div>
+      </div>
       <div class="grid cols-2">
         <div class="card"><h2>Classes Requiring Attention</h2><div id="leadWeakClasses"><div class="empty">Loading…</div></div></div>
-        <div class="card"><h2>Subject Performance</h2><div id="leadSubjects"><div class="empty">Loading…</div></div></div>
+        <div class="card"><h2>School Subject Overview</h2><div id="leadSubjects"><div class="empty">Loading…</div></div></div>
       </div>
-      <div class="portal-note" id="leadGeneratedAt">Loading latest summary…</div>
+      <div class="portal-note" id="leadGeneratedAt">Loading academic data…</div>
     </div>
     <div class="panel" data-panel="leadershipNotifications">
       <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Notifications</h2><p class="sub">School notifications addressed to your leadership role or account.</p></div><button class="sec sm" onclick="loadLeadershipNotifications()">Refresh</button></div><div id="leadNotifications"><div class="empty">Loading notifications…</div></div></div>
     </div>`;
+  LEADERSHIP_AGGREGATES = null;
   await Promise.all([loadLeadershipDashboard(), loadLeadershipNotifications()]);
 }
 
+function leadershipBucket_() {
+  return {sum:0,count:0,high:null,low:null};
+}
+function leadershipAdd_(bucket,value) {
+  if (!Number.isFinite(value)) return;
+  bucket.sum += value; bucket.count++;
+  bucket.high = bucket.high === null ? value : Math.max(bucket.high,value);
+  bucket.low = bucket.low === null ? value : Math.min(bucket.low,value);
+}
+function leadershipAverage_(bucket) {
+  return bucket && bucket.count ? bucket.sum / bucket.count : null;
+}
+function leadershipScore_(row,assessment) {
+  if (!row || typeof row !== 'object') return null;
+  const keys = assessment === 'total' ? ['T1','T2','T3','Exam'] : [assessment];
+  const vals = keys.map(k => row[k]);
+  if (vals.some(v => v === '' || v === null || v === undefined || !Number.isFinite(Number(v)))) return null;
+  const raw = vals.reduce((a,v) => a + Number(v),0);
+  const max = assessment === 'total' ? 100 : assessment === 'Exam' ? 70 : 10;
+  return {raw,percent:(raw/max)*100};
+}
+
 async function loadLeadershipDashboard() {
-  const termEl = q('leadershipTerm'), classBox = q('leadClasses');
+  const classBox = q('leadClasses');
   if (!classBox) return;
-  classBox.innerHTML = '<div class="empty">Loading aggregate academic data…</div>';
+  const loadId = ++LEADERSHIP_LOAD_ID;
+  const term = q('leadershipTerm')?.value || 'Term1';
+  const assessment = q('leadershipAssessment')?.value || 'total';
+  const assessmentLabel = ({total:'Overall Total /100',T1:'CA 1 /10',T2:'CA 2 /10',T3:'CA 3 /10',Exam:'Examination /70'})[assessment] || assessment;
+  classBox.innerHTML = '<div class="empty">Loading class and subject performance…</div>';
+  if (q('leadClassDetail')) q('leadClassDetail').innerHTML = '';
+  if (q('leadSubjectDetail')) q('leadSubjectDetail').innerHTML = '<div class="empty">Select a subject to view its class-by-class performance.</div>';
   try {
-    const data = await api('leadershipGetDashboard', { term: termEl ? termEl.value : 'Term1' });
-    const classes = Array.isArray(data.classes) ? data.classes : [];
-    const weak = Array.isArray(data.weakestClasses) ? data.weakestClasses : [];
-    const subjects = Array.isArray(data.subjectPerformance) ? data.subjectPerformance : [];
+    if (!LEADERSHIP_AGGREGATES || LEADERSHIP_AGGREGATES.term !== term) {
+      const classNames = await loadClasses();
+      const results = [];
+      // Keep requests controlled: three classes are processed at a time.
+      for (let i=0; i<classNames.length; i+=3) {
+        const batch = await Promise.all(classNames.slice(i,i+3).map(async className => {
+          const [students,subjects,scoreMap] = await Promise.all([
+            api('getStudents',{className}),
+            loadSubjects(className),
+            api('getClassScores',{className,term})
+          ]);
+          const subjectRows = {};
+          const classBuckets = {total:leadershipBucket_(),T1:leadershipBucket_(),T2:leadershipBucket_(),T3:leadershipBucket_(),Exam:leadershipBucket_()};
+          const totalCells = students.length * subjects.length;
+          let entered = 0;
+          subjects.forEach(subject => {
+            const bucketByAssessment = {total:leadershipBucket_(),T1:leadershipBucket_(),T2:leadershipBucket_(),T3:leadershipBucket_(),Exam:leadershipBucket_()};
+            students.forEach(student => {
+              const row = (scoreMap && scoreMap[student.student_id] && scoreMap[student.student_id][subject]) || {};
+              ['T1','T2','T3','Exam','total'].forEach(key => {
+                const score = leadershipScore_(row,key);
+                if (score) {
+                  leadershipAdd_(bucketByAssessment[key],score.percent);
+                  leadershipAdd_(classBuckets[key],score.percent);
+                  if (key === 'total') entered++;
+                }
+              });
+            });
+            subjectRows[subject] = bucketByAssessment;
+          });
+          return {className,studentCount:students.length,subjectCount:subjects.length,totalCells,entered,subjectRows,classBuckets};
+        }));
+        results.push(...batch);
+      }
+      LEADERSHIP_AGGREGATES = {term,classes:results};
+    }
+    if (loadId !== LEADERSHIP_LOAD_ID) return;
+    const classes = LEADERSHIP_AGGREGATES.classes;
+    const schoolBucket = leadershipBucket_();
+    const subjectBuckets = {};
+    const classSummaries = classes.map(c => {
+      const bucket = c.classBuckets[assessment];
+      if (bucket) {
+        leadershipAdd_(schoolBucket, leadershipAverage_(bucket));
+      }
+      Object.entries(c.subjectRows).forEach(([subject,byAssessment]) => {
+        const b = byAssessment[assessment];
+        if (!subjectBuckets[subject]) subjectBuckets[subject] = leadershipBucket_();
+        if (b && b.count) {
+          // Weight the school subject average by actual entered score cells.
+          subjectBuckets[subject].sum += b.sum;
+          subjectBuckets[subject].count += b.count;
+          subjectBuckets[subject].high = subjectBuckets[subject].high === null ? b.high : Math.max(subjectBuckets[subject].high,b.high);
+          subjectBuckets[subject].low = subjectBuckets[subject].low === null ? b.low : Math.min(subjectBuckets[subject].low,b.low);
+        }
+      });
+      const average = leadershipAverage_(bucket);
+      const coverage = c.totalCells ? (c.entered/c.totalCells)*100 : 0;
+      return {...c,average,coverage,status:average===null?'No Scores':average<50?'Needs Attention':average<60?'Satisfactory':'Strong'};
+    });
+    const validClassAverages = classSummaries.filter(c=>c.average!==null);
+    const schoolAverage = validClassAverages.length ? validClassAverages.reduce((sum,c)=>sum+c.average,0)/validClassAverages.length : null;
     if (q('leadClassCount')) q('leadClassCount').textContent = classes.length;
-    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = Number(data.overallAverage || 0).toFixed(2) + '%';
-    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = classes.filter(x => x.performance === 'Needs Attention' || x.performance === 'No Scores').length;
-    classBox.innerHTML = classes.length ? `<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Submission coverage</th></tr></thead><tbody>${classes.map(x => `<tr><td><strong>${esc(x.className)}</strong></td><td>${Number(x.studentCount)||0}</td><td>${Number(x.average||0).toFixed(2)}%</td><td><span class="badge ${x.performance==='Strong'?'ok':x.performance==='Satisfactory'?'info':'warn'}">${esc(x.performance||'No data')}</span></td><td>${Number(x.submissionCoverage)||0}%</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No class summary is available for this term yet.</div>';
-    const weakBox = q('leadWeakClasses');
-    if (weakBox) weakBox.innerHTML = weak.length ? `<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Status</th></tr></thead><tbody>${weak.map(x => `<tr><td>${esc(x.className)}</td><td>${Number(x.average||0).toFixed(2)}%</td><td>${esc(x.performance||'Needs review')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No class performance data is available yet.</div>';
-    const subjectBox = q('leadSubjects');
-    if (subjectBox) subjectBox.innerHTML = subjects.length ? `<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th></tr></thead><tbody>${subjects.map(x => `<tr><td>${esc(x.subject)}</td><td>${Number(x.average||0).toFixed(2)}%</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Subject averages will appear when scores have been entered.</div>';
-    if (q('leadGeneratedAt')) q('leadGeneratedAt').textContent = 'Summary generated: ' + (data.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'time unavailable') + '. ' + (data.note || 'Aggregate academic indicators only.');
+    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = schoolAverage===null?'—':schoolAverage.toFixed(2)+'%';
+    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = classSummaries.filter(c=>c.status==='Needs Attention'||c.status==='No Scores').length;
+    const classSelect = q('leadershipClass');
+    if (classSelect) {
+      const selected = classSelect.value;
+      classSelect.innerHTML = '<option value="">All classes</option>'+classSummaries.map(c=>'<option value="'+esc(c.className)+'">'+esc(c.className)+'</option>').join('');
+      if (classSummaries.some(c=>c.className===selected)) classSelect.value=selected;
+    }
+    const subjectSelect = q('leadershipSubject');
+    if (subjectSelect) {
+      const selected = subjectSelect.value;
+      const names = Object.keys(subjectBuckets).sort((a,b)=>a.localeCompare(b));
+      subjectSelect.innerHTML = '<option value="">Select a subject</option>'+names.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
+      if (names.includes(selected)) subjectSelect.value=selected;
+      else if (names.length) subjectSelect.value=names[0];
+    }
+    const statusClass = c => c.status==='Strong'?'ok':c.status==='Satisfactory'?'info':'warn';
+    classBox.innerHTML = classSummaries.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Score coverage</th></tr></thead><tbody>'+classSummaries.map(c=>'<tr><td><strong>'+esc(c.className)+'</strong></td><td>'+c.studentCount+'</td><td>'+(c.average===null?'—':c.average.toFixed(2)+'%')+'</td><td><span class="badge '+statusClass(c)+'">'+c.status+'</span></td><td>'+c.coverage.toFixed(1)+'%</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes were returned.</div>';
+    const weak = classSummaries.filter(c=>c.status==='Needs Attention'||c.status==='No Scores').sort((a,b)=>(a.average??-1)-(b.average??-1));
+    if (q('leadWeakClasses')) q('leadWeakClasses').innerHTML = weak.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Status</th></tr></thead><tbody>'+weak.map(c=>'<tr><td>'+esc(c.className)+'</td><td>'+(c.average===null?'—':c.average.toFixed(2)+'%')+'</td><td>'+c.status+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes are currently below the attention threshold.</div>';
+    const subjectList = Object.entries(subjectBuckets).map(([subject,b])=>({subject,average:leadershipAverage_(b),count:b.count})).sort((a,b)=>(a.average??-1)-(b.average??-1));
+    if (q('leadSubjects')) q('leadSubjects').innerHTML = subjectList.length ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Scores</th></tr></thead><tbody>'+subjectList.map(x=>'<tr><td>'+esc(x.subject)+'</td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+x.count+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">Subject averages will appear when scores are available.</div>';
+    renderLeadershipDetails();
+    if (q('leadGeneratedAt')) q('leadGeneratedAt').textContent = 'Term: '+({Term1:'First Term',Term2:'Second Term',Term3:'Third Term'}[term]||term)+' · Assessment: '+assessmentLabel+'. Averages are normalized to percentages; class average is the mean of available subject-score averages. Score coverage counts entered overall-total cells. Academic year is not filtered because the existing score retrieval call does not expose a verified year parameter.';
   } catch (e) {
-    classBox.innerHTML = '<div class="empty">Academic summary could not be loaded: ' + esc(e.message) + '</div>';
-    ['leadWeakClasses','leadSubjects'].forEach(id => { if(q(id)) q(id).innerHTML='<div class="empty">Summary unavailable.</div>'; });
+    if (loadId !== LEADERSHIP_LOAD_ID) return;
+    classBox.innerHTML = '<div class="empty">Academic performance could not be loaded: '+esc(e.message)+'</div>';
+    ['leadWeakClasses','leadSubjects','leadClassDetail','leadSubjectDetail'].forEach(id=>{if(q(id))q(id).innerHTML='<div class="empty">Analysis unavailable.</div>';});
+    if(q('leadOverallAverage'))q('leadOverallAverage').textContent='—';
+    if(q('leadClassCount'))q('leadClassCount').textContent='—';
+    if(q('leadAttentionCount'))q('leadAttentionCount').textContent='—';
+  }
+}
+
+function renderLeadershipDetails() {
+  const data = LEADERSHIP_AGGREGATES;
+  if (!data) return;
+  const assessment = q('leadershipAssessment')?.value || 'total';
+  const selectedClass = q('leadershipClass')?.value || '';
+  const selectedSubject = q('leadershipSubject')?.value || '';
+  const classBox = q('leadClassDetail'), subjectBox = q('leadSubjectDetail');
+  const avg = b => leadershipAverage_(b);
+  if (classBox) {
+    if (!selectedClass) {
+      classBox.innerHTML = '<div class="portal-note">Select a class above to see its subject-level breakdown.</div>';
+    } else {
+      const c = data.classes.find(x=>x.className===selectedClass);
+      const rows = c ? Object.entries(c.subjectRows).map(([subject,by])=>({subject,bucket:by[assessment],average:avg(by[assessment])})).sort((a,b)=>(a.average??-1)-(b.average??-1)) : [];
+      classBox.innerHTML = c ? '<h3>'+esc(c.className)+' — Subject Breakdown</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><strong>'+esc(x.subject)+'</strong></td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+(x.bucket?.high===null||!x.bucket?'—':x.bucket.high.toFixed(2)+'%')+'</td><td>'+(x.bucket?.low===null||!x.bucket?'—':x.bucket.low.toFixed(2)+'%')+'</td><td>'+(x.bucket?.count||0)+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">Class data is unavailable.</div>';
+    }
+  }
+  if (subjectBox) {
+    if (!selectedSubject) {
+      subjectBox.innerHTML = '<div class="empty">Select a subject to view its performance across classes.</div>';
+    } else {
+      const rows = data.classes.filter(c=>c.subjectRows[selectedSubject]).map(c=>({className:c.className,bucket:c.subjectRows[selectedSubject][assessment]})).map(x=>({...x,average:avg(x.bucket)})).sort((a,b)=>(a.average??-1)-(b.average??-1));
+      subjectBox.innerHTML = rows.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><strong>'+esc(x.className)+'</strong></td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+(x.bucket?.high===null||!x.bucket?'—':x.bucket.high.toFixed(2)+'%')+'</td><td>'+(x.bucket?.low===null||!x.bucket?'—':x.bucket.low.toFixed(2)+'%')+'</td><td>'+(x.bucket?.count||0)+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes offer this subject in the selected term.</div>';
+    }
   }
 }
 
