@@ -1,0 +1,822 @@
+/* GTMC full non-result UI refresh.
+   This file intentionally targets only operational, communication, finance,
+   account, library and staff-attendance panels. Academic/result panels are not
+   selected here. Do not add score, result, report-card or print selectors. */
+
+:root{
+  --gtmc-ui-ink:#18324a;
+  --gtmc-ui-muted:#63778d;
+  --gtmc-ui-line:#dce7f2;
+  --gtmc-ui-soft:#f5f9fe;
+  --gtmc-ui-blue:#0756a8;
+  --gtmc-ui-blue-dark:#043e7a;
+  --gtmc-ui-shadow:0 8px 24px rgba(4,62,122,.055);
+}
+
+/* Shared sign-in screen */
+#loginView{
+  background:
+    linear-gradient(135deg,rgba(6,43,80,.72),rgba(7,86,168,.58),rgba(2,29,61,.78)),
+    var(--login-bg-image, none) center/cover no-repeat;
+}
+#loginView .login-card{
+  max-width:460px;
+  padding:clamp(26px,5vw,42px);
+  border:1px solid rgba(255,255,255,.7);
+  border-top:5px solid #d9ad43;
+  border-radius:20px;
+  box-shadow:0 24px 70px rgba(2,29,61,.28);
+}
+#loginView .login-logo{
+  width:82px;height:82px;
+  box-shadow:0 8px 24px rgba(4,62,122,.2);
+}
+#loginView .login-card h1{letter-spacing:.015em}
+#loginView .login-card input{
+  min-height:46px;
+  border-radius:9px;
+  border-color:#cbd9e8;
+  margin-bottom:14px;
+}
+#loginView .login-card button.primary-btn{
+  min-height:46px;
+  border-radius:9px;
+  box-shadow:0 5px 14px rgba(7,86,168,.2);
+}
+
+/* These are the approved non-result operational panels only. */
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+){
+  min-width:0;
+  color:var(--gtmc-ui-ink);
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .page-head{
+  padding:4px 2px 16px;
+  margin-bottom:16px;
+  border-bottom:1px solid var(--gtmc-ui-line);
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .page-head h1{
+  color:#043e7a;
+  font-size:clamp(20px,2.3vw,27px);
+  letter-spacing:-.025em;
+  line-height:1.2;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .page-head p{
+  max-width:760px;
+  color:var(--gtmc-ui-muted);
+  line-height:1.6;
+}
+
+/* Cards, section hierarchy and operational summaries */
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .card{
+  min-width:0;
+  padding:clamp(16px,2vw,23px);
+  margin-bottom:16px;
+  border:1px solid var(--gtmc-ui-line);
+  border-radius:15px;
+  background:#fff;
+  box-shadow:var(--gtmc-ui-shadow);
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .card h2{
+  color:#073f78;
+  font-size:15px;
+  line-height:1.35;
+  letter-spacing:-.01em;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .sub{
+  color:var(--gtmc-ui-muted);
+  line-height:1.55;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .grid{gap:14px}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .row{row-gap:10px}
+
+/* Forms and filters */
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) label{
+  color:#526b84;
+  font-size:10.5px;
+  letter-spacing:.055em;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) select,
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) textarea{
+  min-height:40px;
+  border:1px solid #cbd9e8;
+  border-radius:9px;
+  background:#fff;
+  color:#18324a;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) input:focus,
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) select:focus,
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) textarea:focus{
+  outline:0;
+  border-color:#0756a8;
+  box-shadow:0 0 0 3px rgba(7,86,168,.12);
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) button{
+  min-height:36px;
+  border-radius:8px;
+  font-weight:700;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) button:focus-visible{
+  outline:3px solid rgba(7,86,168,.25);
+  outline-offset:2px;
+}
+
+/* Tables: compact on desktop, scroll safely on small screens */
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .table-wrap{
+  max-width:100%;
+  overflow:auto;
+  border:1px solid var(--gtmc-ui-line);
+  border-radius:11px;
+  background:#fff;
+  -webkit-overflow-scrolling:touch;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) table{
+  min-width:640px;
+  font-variant-numeric:tabular-nums;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#f0f6fd;
+  color:#164b7f;
+  border-bottom:1px solid #d8e5f2;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) td{
+  vertical-align:middle;
+  border-bottom-color:#e7eef6;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) tr:hover td{background:#f8fbff}
+
+/* Communication, learning resources and empty states */
+#appView .panel[data-panel="announcements"] .ann-card{
+  padding:16px 18px;
+  border:1px solid #d9e7f5;
+  border-left:4px solid #0756a8;
+  border-radius:11px;
+  background:#f8fbff;
+  box-shadow:0 3px 12px rgba(4,62,122,.035);
+}
+#appView .panel[data-panel="announcements"] .ann-card .msg{line-height:1.65}
+#appView .panel[data-panel="library"] #libraryRows .card{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+#appView .panel[data-panel="library"] #libraryRows h3{
+  color:#073f78;
+  font-size:15px;
+  line-height:1.35;
+}
+#appView .panel[data-panel="library"] #libraryRows .button{
+  align-self:flex-start;
+  border-radius:8px;
+  padding:9px 13px;
+}
+#appView .panel[data-panel="chat"] .chat-message{
+  padding:13px 16px;
+  border:1px solid #e0e9f3;
+  border-radius:13px;
+  line-height:1.65;
+}
+#appView .panel[data-panel="chat"] .chat-message.user{
+  background:#edf5ff;
+  border-color:#d5e6f8;
+}
+#appView .panel[data-panel="chat"] .chat-message.ai{
+  background:#f3faf6;
+  border-color:#d9eee2;
+}
+#appView .panel:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"]
+) .empty{
+  padding:28px 18px;
+  border:1px dashed #cfdeed;
+  border-radius:11px;
+  background:#f8fbff;
+  font-style:normal;
+}
+
+/* Payment and finance information */
+#appView .panel:is([data-panel="bursarFinance"],[data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="debtors"]) .portal-note{
+  border-radius:10px;
+  line-height:1.55;
+}
+#appView .panel:is([data-panel="bursarFinance"],[data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="debtors"]) .badge{
+  letter-spacing:.025em;
+  line-height:1.4;
+}
+
+/* Account and feature management */
+#appView .panel:is([data-panel="userManagement"],[data-panel="teachers"],[data-panel="parents"],[data-panel="students"],[data-panel="featureControls"]) .table-search{
+  max-width:380px;
+  min-width:min(100%,220px);
+}
+#appView .panel[data-panel="userManagement"] select[multiple],
+#appView .panel[data-panel="teachers"] select[multiple]{
+  min-height:112px;
+}
+#appView .panel[data-panel="featureControls"] .check{
+  min-height:94px;
+  align-items:flex-start;
+  border:1px solid #dce7f2;
+  border-radius:11px;
+  background:#f8fbff;
+}
+
+/* Mobile ergonomics */
+@media(max-width:700px){
+  #appView .panel:is(
+    [data-panel="library"],
+    [data-panel="myAttendance"],
+    [data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],
+    [data-panel="staffAttendance"],
+    [data-panel="staffLinks"],
+    [data-panel="staffMessages"],
+    [data-panel="leadershipNotifications"],
+    [data-panel="teachers"],
+    [data-panel="parents"],
+    [data-panel="students"],
+    [data-panel="debtors"],
+    [data-panel="calendar"],
+    [data-panel="announcements"],
+    [data-panel="chat"],
+    [data-panel="bursarFinance"],
+    [data-panel="staffPayments"],
+    [data-panel="parentPayments"],
+    [data-panel="userManagement"],
+    [data-panel="featureControls"]
+  ) .card{padding:15px}
+  #appView .panel:is(
+    [data-panel="library"],
+    [data-panel="myAttendance"],
+    [data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],
+    [data-panel="staffAttendance"],
+    [data-panel="staffLinks"],
+    [data-panel="staffMessages"],
+    [data-panel="leadershipNotifications"],
+    [data-panel="teachers"],
+    [data-panel="parents"],
+    [data-panel="students"],
+    [data-panel="debtors"],
+    [data-panel="calendar"],
+    [data-panel="announcements"],
+    [data-panel="chat"],
+    [data-panel="bursarFinance"],
+    [data-panel="staffPayments"],
+    [data-panel="parentPayments"],
+    [data-panel="userManagement"],
+    [data-panel="featureControls"]
+  ) .row{align-items:stretch}
+  #appView .panel:is(
+    [data-panel="library"],
+    [data-panel="myAttendance"],
+    [data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],
+    [data-panel="staffAttendance"],
+    [data-panel="staffLinks"],
+    [data-panel="staffMessages"],
+    [data-panel="leadershipNotifications"],
+    [data-panel="teachers"],
+    [data-panel="parents"],
+    [data-panel="students"],
+    [data-panel="debtors"],
+    [data-panel="calendar"],
+    [data-panel="announcements"],
+    [data-panel="chat"],
+    [data-panel="bursarFinance"],
+    [data-panel="staffPayments"],
+    [data-panel="parentPayments"],
+    [data-panel="userManagement"],
+    [data-panel="featureControls"]
+  ) .row>button{max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  #loginView *,#appView .panel:is(
+    [data-panel="library"],
+    [data-panel="myAttendance"],
+    [data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],
+    [data-panel="staffAttendance"],
+    [data-panel="staffLinks"],
+    [data-panel="staffMessages"],
+    [data-panel="leadershipNotifications"],
+    [data-panel="teachers"],
+    [data-panel="parents"],
+    [data-panel="students"],
+    [data-panel="debtors"],
+    [data-panel="calendar"],
+    [data-panel="announcements"],
+    [data-panel="chat"],
+    [data-panel="bursarFinance"],
+    [data-panel="staffPayments"],
+    [data-panel="parentPayments"],
+    [data-panel="userManagement"],
+    [data-panel="featureControls"]
+  ) *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
