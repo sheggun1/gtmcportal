@@ -169,6 +169,10 @@ function route(action, p) {
     }
     const isLeadershipAccount = roleList_(sessionUser).some(function(r) { return ['principal','vice_principal','vice_principal_admin','vice_principal_academic'].indexOf(r) !== -1; });
     const isBursarAccount = hasRole_(sessionUser, 'bursar');
+    if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && isBursarAccount &&
+        ['me','leadershipGetDashboard','getClasses','getStudents','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+      throw new Error('Combined Principal/Bursar accounts are limited to leadership summaries and financial functions.');
+    }
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && !isBursarAccount &&
         ['me','leadershipGetDashboard','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Leadership accounts are restricted to aggregate academic summaries and notifications.');
