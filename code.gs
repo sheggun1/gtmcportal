@@ -4343,25 +4343,152 @@ function parentGetFeeStatement(p, token) {
 }
 
 function leadershipGetDashboard(p, token) {
-  const user=gtmcRequireLeadership_(token); const term=String(p.term||'Term1');
-  if(TERMS.indexOf(term)<0) throw new Error('Invalid term.');
-  const classes=p.className?[String(p.className)]:CLASSES; const classSummaries=[], subjectTotals={}; let allTotal=0,allCount=0;
-  classes.forEach(function(cn){
-    if(CLASSES.indexOf(cn)<0) throw new Error('Invalid class: '+cn);
-    const sh=getSheet(cn), last=sh.getLastRow(), subjects=subjectsForClass(cn), students=last>=4?sh.getRange(4,1,last-3,2).getValues():[];
-    const scoreStart=3+TERMS.indexOf(term)*subjects.length*FIELDS.length; const count=students.filter(function(r){return r[0]&&r[1];}).length;
-    const scoreRows=count?sh.getRange(4,scoreStart,count,subjects.length*FIELDS.length).getValues():[]; const subjectSummary=[]; let classTotal=0,classCells=0;
-    subjects.forEach(function(subj,si){let total=0,n=0; scoreRows.forEach(function(row){const base=si*FIELDS.length; const vals=row.slice(base,base+FIELDS.length); if(vals.some(function(v){return v!==''&&v!==null;})){const sum=vals.reduce(function(a,v){return a+(v===''||v===null?0:Number(v)||0);},0);total+=sum;n++;}});
-      const avg=n?Math.round(total/n*100)/100:0; subjectSummary.push({subject:subj,average:avg,studentsWithScores:n}); if(n){subjectTotals[subj]=subjectTotals[subj]||{total:0,count:0};subjectTotals[subj].total+=total;subjectTotals[subj].count+=n;classTotal+=total;classCells+=n;}
+  const user = gtmcRequireLeadership_(token);
+  const term = String(p.term || 'Term1');
+  const assessment = String(p.assessment || 'total');
+  if (TERMS.indexOf(term) < 0) throw new Error('Invalid term.');
+  if (['total','T1','T2','T3','Exam'].indexOf(assessment) < 0) throw new Error('Invalid assessment.');
+
+  const classes = p.className ? [String(p.className)] : CLASSES.slice();
+  const classSummaries = [];
+  const schoolSubjects = {};
+  let schoolSum = 0, schoolCount = 0, schoolEntered = 0, schoolExpected = 0;
+
+  classes.forEach(function(className) {
+    if (CLASSES.indexOf(className) < 0) throw new Error('Invalid class: ' + className);
+    const sh = getSheet(className);
+    const last = sh.getLastRow();
+    const subjects = subjectsForClass(className);
+    const studentRows = last >= 4 ? sh.getRange(4, 1, last - 3, 2).getValues() : [];
+    const scoreStart = 3 + TERMS.indexOf(term) * subjects.length * FIELDS.length;
+    const scoreRows = studentRows.length
+      ? sh.getRange(4, scoreStart, studentRows.length, subjects.length * FIELDS.length).getValues()
+      : [];
+
+    const subjectPerformance = [];
+    let classSum = 0, classCount = 0, enteredTotals = 0;
+    const studentCount = studentRows.filter(function(row) { return row[0] && row[1]; }).length;
+    schoolExpected += studentCount * subjects.length;
+
+    subjects.forEach(function(subject, subjectIndex) {
+      let sum = 0, count = 0, high = null, low = null;
+      studentRows.forEach(function(student, rowIndex) {
+        if (!student[0] || !student[1]) return;
+        const row = scoreRows[rowIndex] || [];
+        const base = subjectIndex * FIELDS.length;
+        const values = row.slice(base, base + FIELDS.length);
+        let raw = null, maximum = null;
+
+        if (assessment === 'total') {
+          const complete = values.length === FIELDS.length && values.every(function(v) {
+            return v !== '' && v !== null && v !== undefined && isFinite(Number(v));
+          });
+          if (complete) {
+            raw = values.reduce(function(total, value) { return total + Number(value); }, 0);
+            maximum = 100;
+          }
+        } else {
+          const fieldIndex = FIELDS.indexOf(assessment);
+          const value = values[fieldIndex];
+          if (value !== '' && value !== null && value !== undefined && isFinite(Number(value))) {
+            raw = Number(value);
+            maximum = assessment === 'Exam' ? 70 : 10;
+          }
+        }
+
+        if (raw === null || maximum === null) return;
+        const percentage = raw / maximum * 100;
+        sum += percentage;
+        count++;
+        high = high === null ? percentage : Math.max(high, percentage);
+        low = low === null ? percentage : Math.min(low, percentage);
+      });
+
+      const average = count ? Math.round(sum / count * 100) / 100 : null;
+      subjectPerformance.push({
+        subject: subject,
+        average: average,
+        highest: high === null ? null : Math.round(high * 100) / 100,
+        lowest: low === null ? null : Math.round(low * 100) / 100,
+        scoresEntered: count
+      });
+      classSum += sum;
+      classCount += count;
+      if (assessment === 'total') enteredTotals += count;
+
+      if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null };
+      if (count) {
+        const bucket = schoolSubjects[subject];
+        bucket.sum += sum;
+        bucket.count += count;
+        bucket.high = bucket.high === null ? high : Math.max(bucket.high, high);
+        bucket.low = bucket.low === null ? low : Math.min(bucket.low, low);
+      }
     });
-    const average=classCells?Math.round(classTotal/classCells*100)/100:0; allTotal+=classTotal;allCount+=classCells;
-    const subs=sheetToObjects(getSheet('Submissions')).filter(function(r){return String(r.class)===cn&&String(r.term)===term;});
-    const expected=subjects.length*FIELDS.length, submitted= new Set(subs.filter(function(r){return String(r.status).toLowerCase()==='submitted'||String(r.status).toLowerCase()==='locked';}).map(function(r){return String(r.subject)+'|'+String(r.assessment||'');})).size;
-    classSummaries.push({className:cn,studentCount:count,average:average,performance:average>=70?'Strong':average>=50?'Satisfactory':average>0?'Needs Attention':'No Scores',subjectPerformance:subjectSummary,submissionRecords:subs.length,submissionCoverage:expected?Math.min(100,Math.round(submitted/expected*100)):0});
+
+    const average = classCount ? Math.round(classSum / classCount * 100) / 100 : null;
+    schoolSum += classSum;
+    schoolCount += classCount;
+    schoolEntered += enteredTotals;
+    const submissions = sheetToObjects(getSheet('Submissions')).filter(function(row) {
+      return String(row.class) === className && String(row.term) === term;
+    });
+    const expectedSubmissions = subjects.length * (assessment === 'total' ? FIELDS.length : 1);
+    const submittedSubjects = new Set(submissions.filter(function(row) {
+      const status = String(row.status || '').toLowerCase();
+      return (status === 'submitted' || status === 'locked') &&
+        (assessment === 'total' || String(row.assessment || '') === assessment);
+    }).map(function(row) { return String(row.subject) + '|' + String(row.assessment || ''); })).size;
+
+    classSummaries.push({
+      className: className,
+      studentCount: studentCount,
+      average: average,
+      performance: average === null ? 'No Scores' : average < 50 ? 'Needs Attention' : average < 60 ? 'Satisfactory' : 'Strong',
+      coverage: studentCount && subjects.length ? Math.round((assessment === 'total' ? enteredTotals : classCount) / (studentCount * subjects.length) * 10000) / 100 : 0,
+      submissionCoverage: expectedSubmissions ? Math.min(100, Math.round(submittedSubjects / expectedSubmissions * 10000) / 100) : 0,
+      subjectPerformance: subjectPerformance
+    });
   });
-  classSummaries.sort(function(a,b){return a.average-b.average;});
-  const weakSubjects=Object.keys(subjectTotals).map(function(k){const x=subjectTotals[k];return {subject:k,average:Math.round(x.total/x.count*100)/100};}).sort(function(a,b){return a.average-b.average;});
-  return {generatedAt:new Date().toISOString(),generatedFor:user.email,term:term,classes:classSummaries,weakestClasses:classSummaries.filter(function(x){return x.average>0;}).slice(0,5),subjectPerformance:weakSubjects,overallAverage:allCount?Math.round(allTotal/allCount*100)/100:0,note:'Aggregate academic indicators only. No student names, IDs or individual marks are returned.'};
+
+  classSummaries.sort(function(a, b) {
+    if (a.average === null) return b.average === null ? a.className.localeCompare(b.className) : -1;
+    if (b.average === null) return 1;
+    return a.average - b.average;
+  });
+
+  const subjectPerformance = Object.keys(schoolSubjects).map(function(subject) {
+    const bucket = schoolSubjects[subject];
+    return {
+      subject: subject,
+      average: bucket.count ? Math.round(bucket.sum / bucket.count * 100) / 100 : null,
+      highest: bucket.high === null ? null : Math.round(bucket.high * 100) / 100,
+      lowest: bucket.low === null ? null : Math.round(bucket.low * 100) / 100,
+      scoresEntered: bucket.count
+    };
+  }).sort(function(a, b) {
+    if (a.average === null) return 1;
+    if (b.average === null) return -1;
+    return a.average - b.average;
+  });
+
+  const validClasses = classSummaries.filter(function(row) { return row.average !== null; });
+  const overallAverage = validClasses.length
+    ? Math.round(validClasses.reduce(function(total, row) { return total + row.average; }, 0) / validClasses.length * 100) / 100
+    : null;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    generatedFor: user.email,
+    term: term,
+    assessment: assessment,
+    classes: classSummaries,
+    weakestClasses: classSummaries.filter(function(row) { return row.average !== null; }).slice(0, 5),
+    subjectPerformance: subjectPerformance,
+    overallAverage: overallAverage,
+    scoreCoverage: schoolExpected ? Math.round(schoolEntered / schoolExpected * 10000) / 100 : 0,
+    note: 'Aggregate academic indicators only. No student names, IDs or individual marks are returned.'
+  };
 }
 
 function adminCreateRoleAccount(p, token) {
