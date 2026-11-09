@@ -1866,7 +1866,7 @@ function adminCreateParent(p, token) {
 function adminGetParentAccounts(p, token) {
   requireRole(token, ['admin']);
   const accounts = sheetToObjects(getSheet('ParentAccounts')).map(function (a) {
-    return { email: a.email, name: a.name, password: a.password, active: a.active === true };
+    return { email: a.email, name: a.name, active: a.active === true || String(a.active).toLowerCase()==='true' };
   });
   const links = sheetToObjects(getSheet('ParentLinks')).filter(function (x) { return x.active === true; });
   return accounts.map(function (a) {
@@ -4282,7 +4282,7 @@ function adminGetStudentFeeStatement(p, token) {
   const sid=String(p.studentId||'').trim(), cn=String(p.className||'').trim(), year=String(p.academicYear||'').trim(), term=String(p.term||'').trim();
   if(!sid||!cn) throw new Error('Student and class are required.'); gtmcValidatePeriod_(year,term);
   const student=gtmcStudent_(sid,cn), statement=gtmcFinancialRows_(sid,cn,year,term);
-  return {student:student,academicYear:year,term:term,lines:statement.lines,totalDue:statement.totalDue,totalPaid:statement.totalPaid,balance:statement.balance,payments:statement.payments};
+  return {student:student,academicYear:year,term:term,lines:statement.lines,charges:sheetToObjects(getSheet('StudentCharges')).filter(function(x){return String(x.student_id)===sid&&String(x.class)===cn&&String(x.academic_year)===year&&String(x.term)===term&&gtmcActive_(x);}),totalDue:statement.totalDue,totalPaid:statement.totalPaid,balance:statement.balance,payments:statement.payments};
 }
 function adminRecordFeePayment(p, token) {
   const user=gtmcRequireBursar_(token); gtmcEnsureModuleSheets_();
@@ -4479,9 +4479,7 @@ function leadershipGetDashboard(p, token) {
   });
 
   const validClasses = classSummaries.filter(function(row) { return row.average !== null; });
-  const overallAverage = validClasses.length
-    ? Math.round(validClasses.reduce(function(total, row) { return total + row.average; }, 0) / validClasses.length * 100) / 100
-    : null;
+  const overallAverage = schoolCount ? Math.round(schoolSum / schoolCount * 100) / 100 : null;
 
   return {
     generatedAt: new Date().toISOString(),
