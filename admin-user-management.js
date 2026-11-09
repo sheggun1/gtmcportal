@@ -85,8 +85,37 @@
   };
   var prev=window.renderAdmin;
   if(typeof prev==='function')window.renderAdmin=async function(){await prev.apply(this,arguments);install();};
+
+  function renderRegistrarPortal(){
+    if(!q('main')||!q('sidebar'))return;
+    q('roleTag').textContent='Registrar Portal';
+    q('sidebar').innerHTML='<div class="group"><div class="group-title">Student Records</div><div class="nav-item active" data-tab="registrarStudents" onclick="setNav(\'registrarStudents\')"><span class="dot"></span><span>Student Register</span></div></div>';
+    q('main').innerHTML='<div class="page-head"><h1>Registrar Dashboard</h1><p>Manage student admission and class directory records. Academic marks and finance remain restricted.</p></div><div class="panel active" data-panel="registrarStudents"><div class="card"><h2>Student Register</h2><div class="grid cols-3"><div><label>Class</label><select id="regClass"></select></div><div><label>Student name</label><input id="regStudentName" placeholder="Full name"></div><div><label>Student ID (optional)</label><input id="regStudentId" placeholder="Leave blank for automatic ID"></div></div><div class="row" style="margin-top:12px"><button class="ok" onclick="gtmcRegistrarAddStudent()">Add Student</button><button class="sec" onclick="gtmcRegistrarLoadStudents()">Refresh Register</button></div><div id="regStatus" class="portal-note"></div></div><div class="card"><div class="row" style="justify-content:space-between"><h2>Students in selected class</h2><input id="regSearch" placeholder="Search student" style="max-width:240px" oninput="gtmcRegistrarFilter(this.value)"></div><div id="regRows"><div class="empty">Loading student register…</div></div></div></div>';
+    window.gtmcRegistrarLoadStudents=async function(){
+      var box=q('regRows');if(!box)return;box.innerHTML='<div class="empty">Loading…</div>';
+      try{var cls=q('regClass').value,rows=await api('getStudents',{className:cls});window.__gtmcRegistrarRows=rows||[];
+        if(!rows.length){box.innerHTML='<div class="empty">No students are listed in this class.</div>';return;}
+        box.innerHTML='<div class="table-wrap"><table><thead><tr><th>Student ID</th><th>Student Name</th></tr></thead><tbody>'+rows.map(function(s){return '<tr><td>'+esc(s.student_id)+'</td><td><strong>'+esc(s.name)+'</strong></td></tr>';}).join('')+'</tbody></table></div>';
+        gtmcRegistrarFilter(q('regSearch').value);
+      }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
+    };
+    window.gtmcRegistrarFilter=function(v){var n=String(v||'').toLowerCase();document.querySelectorAll('#regRows tbody tr').forEach(function(r){r.style.display=!n||r.textContent.toLowerCase().indexOf(n)>=0?'':'none';});};
+    window.gtmcRegistrarAddStudent=async function(){
+      var name=q('regStudentName').value.trim(),studentId=q('regStudentId').value.trim(),className=q('regClass').value;
+      if(!name||!className)return toast('Select a class and enter the student name.','err');
+      try{await api('addStudent',{className:className,name:name,student_id:studentId});q('regStudentName').value='';q('regStudentId').value='';q('regStatus').textContent='Student added successfully.';toast('Student added.','ok');await gtmcRegistrarLoadStudents();}
+      catch(e){q('regStatus').textContent=e.message;toast(e.message,'err');}
+    };
+    loadClasses().then(function(cs){q('regClass').innerHTML=(cs||[]).map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join('');return gtmcRegistrarLoadStudents();}).catch(function(e){q('regStatus').textContent=e.message;});
+  }
+
   var prevBoot=window.boot;
-  if(typeof prevBoot==='function')window.boot=async function(){ return prevBoot.apply(this,arguments); };
+  if(typeof prevBoot==='function')window.boot=async function(){
+    if(S&&S.user&&hasRole('registrar')&&!hasRole('admin')&&!hasRole('principal')&&!hasRole('vice_principal')&&!hasRole('vice_principal_admin')&&!hasRole('vice_principal_academic')&&!hasRole('bursar')&&!hasRole('class_teacher')&&!hasRole('subject_teacher')&&!hasRole('student')&&!hasRole('parent')){
+      q('loginView').style.display='none';q('appView').style.display='flex';q('userLabel').textContent=S.user.name||S.user.email;q('userRole').textContent='Registrar';if(typeof applyLogoFallback==='function')applyLogoFallback();renderRegistrarPortal();return;
+    }
+    return prevBoot.apply(this,arguments);
+  };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){if(S.user&&hasRole('admin'))install();});
   else if(S.user&&hasRole('admin'))install();
 })();
