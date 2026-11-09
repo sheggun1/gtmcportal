@@ -95,6 +95,7 @@
     try{await api('staffReplyPaymentNotification',{id:id,status:status,reply:reply});toast('Parent response saved.','ok');await loadStaffPaymentNotifications();}
     catch(e){toast(e.message,'err');}
   };
+  window.GTMC_INSTALL_STAFF_PAYMENT_NOTIFICATIONS=installStaff;
   function installBursar(){
     q('roleTag').textContent='Bursar Portal · Jesus, Our Teacher';
     q('sidebar').innerHTML='<div class="group"><div class="group-title">Finance</div><div class="nav-item active" data-tab="staffPayments" onclick="setNav(\'staffPayments\')"><span class="dot"></span><span>Payment Notifications</span></div></div>';
