@@ -48,7 +48,7 @@ function gtmcFeatureActionMap_(action) {
     staffGetPaymentNotifications:'staffPayments',
     staffReplyPaymentNotification:'staffPayments',
     adminListUsers:'userManagement',adminCreateUser:'userManagement',
-    adminUpdateUser:'userManagement',adminSetUserStatus:'userManagement',
+    adminUpdateUser:'userManagement',adminSetUserStatus:'userManagement',adminSetUserActive:'userManagement',
     adminResetUserPassword:'userManagement'
   };
   return map[String(action||'')]||'';

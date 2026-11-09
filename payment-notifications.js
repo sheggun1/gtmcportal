@@ -15,7 +15,7 @@
       '<div><label>Student / Ward</label><select id="payWard"></select></div>'+
       '<div><label>Academic Year</label><input id="payYear" value="2026/2027"></div>'+
       '<div><label>Term</label><select id="payTerm"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>'+
-      '<div><label>Fee Category</label><select id="payCategory"><option>School Fees</option><option>Boarding</option><option>Transport</option><option>Other</option></select></div>'+
+      '<div><label>Fee Category</label><select id="payCategory"><option>School Fees</option><option>Boarding Fees</option><option>Bus Fees</option><option>Other</option></select></div>'+
       '<div><label>Payment Date</label><input id="payDate" type="date"></div>'+
       '<div><label>Payment Time</label><input id="payTime" type="time"></div>'+
       '<div><label>Amount Paid (₦)</label><input id="payAmount" type="number" min="1" step="0.01" placeholder="e.g. 50000"></div>'+
@@ -84,7 +84,7 @@
         '<div class="grid cols-4" style="margin:12px 0"><div><small class="sub">Amount</small><strong>₦'+Number(r.amount||0).toLocaleString()+'</strong></div><div><small class="sub">Fee category</small><strong>'+h(r.feeCategory)+'</strong></div><div><small class="sub">Payment date/time</small><strong>'+h(r.paymentDate)+' '+h(r.paymentTime)+'</strong></div><div><small class="sub">Sender name</small><strong>'+h(r.senderName)+'</strong></div><div><small class="sub">Academic period</small><strong>'+h(r.term)+' · '+h(r.academicYear)+'</strong></div><div><small class="sub">Transaction reference</small><strong>'+h(r.reference||'Not supplied')+'</strong></div><div><small class="sub">Parent note</small><strong>'+h(r.note||'—')+'</strong></div><div><small class="sub">Notification ID</small><strong>'+id+'</strong></div></div>'+
         (r.reply?'<div class="portal-note"><strong>Previous reply:</strong> '+h(r.reply)+'</div>':'')+
         (r.status==='Confirmed / Cleared'?'':'<div class="grid cols-2"><div><label>Response</label><select id="pstat_'+id+'"><option>Confirmed / Cleared</option><option>Rejected / Not Found</option><option>More Information Required</option></select></div><div><label>Reply to parent (required)</label><textarea id="preply_'+id+'" rows="2">'+h(r.reply||'')+'</textarea></div></div><div class="row" style="margin-top:12px"><button class="ok" onclick="replyStaffPaymentNotification(\''+id+'\')">Save Reply / Process</button></div>')+
-        '<p class="sub" style="margin-top:8px">A payment is added to the ledger and the outstanding debt is reduced only when Confirmed / Cleared is saved.</p></div>';
+        '<p class="sub" style="margin-top:8px">A verified payment is posted to the Bursar finance ledger and a receipt is generated only when Confirmed / Cleared is saved.</p></div>';
       }).join('');
     }catch(e){box.innerHTML='<div class="empty">'+h(e.message)+'</div>';}
   };
@@ -95,6 +95,7 @@
     try{await api('staffReplyPaymentNotification',{id:id,status:status,reply:reply});toast('Parent response saved.','ok');await loadStaffPaymentNotifications();}
     catch(e){toast(e.message,'err');}
   };
+  window.GTMC_INSTALL_STAFF_PAYMENT_NOTIFICATIONS=installStaff;
   function installBursar(){
     q('roleTag').textContent='Bursar Portal · Jesus, Our Teacher';
     q('sidebar').innerHTML='<div class="group"><div class="group-title">Finance</div><div class="nav-item active" data-tab="staffPayments" onclick="setNav(\'staffPayments\')"><span class="dot"></span><span>Payment Notifications</span></div></div>';
@@ -106,19 +107,6 @@
   var prevAdmin=window.renderAdmin;
   if(typeof prevAdmin==='function')window.renderAdmin=function(){prevAdmin.apply(this,arguments);installStaff();};
   var prevBoot=window.boot;
-  if(typeof prevBoot==='function')window.boot=async function(){
-    if(typeof hasRole==='function'&&hasRole('bursar')){
-      if(!S.token||!S.user)return logout();
-      q('loginView').style.display='none';q('appView').style.display='flex';
-      q('userLabel').textContent=S.user.name||S.user.email;q('userRole').textContent='Bursar';
-      if(typeof applyLogoFallback==='function')applyLogoFallback();
-      installBursar();return;
-    }
-    return prevBoot.apply(this,arguments);
-  };
-  if(S.token && S.user && typeof hasRole==='function') setTimeout(function(){
-    if(hasRole('bursar')) installBursar();
-    else if(hasRole('parent')) installParent();
-    else if(hasRole('admin')) installStaff();
-  },700);
+  if(typeof prevBoot==='function')window.boot=async function(){var result=await prevBoot.apply(this,arguments);if(typeof hasRole==='function'&&hasRole('bursar'))installStaff();return result;};
+  if(S.token && S.user && typeof hasRole==='function') setTimeout(function(){if(hasRole('parent'))installParent();else if(hasRole('admin')||hasRole('bursar'))installStaff();},700);
 })();

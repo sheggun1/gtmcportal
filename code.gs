@@ -137,7 +137,9 @@ const META_SCHEMA = {
   StudentCharges: { headers: ['charge_id','student_id','student_name','class','academic_year','term','category','amount','note','active','created_at','created_by'] },
   FeePayments: { headers: ['payment_id','receipt_no','student_id','student_name','class','academic_year','term','amount','allocated_category','payment_method','reference','note','status','recorded_at','recorded_by','reversed_at','reversed_by','reversal_reason'] },
   FeeReceipts: { headers: ['receipt_no','payment_id','student_id','student_name','class','academic_year','term','amount','allocated_category','payment_method','reference','issued_at','issued_by','status'] },
-  FinancialSettings: { headers: ['key','value','updated_at','updated_by'] }
+  FinancialSettings: { headers: ['key','value','updated_at','updated_by'] },
+  PaymentNotifications: { headers: ['id','parent_email','parent_name','student_id','student_name','class','academic_year','term','fee_category','payment_date','payment_time','amount','sender_name','reference','note','status','reply','replied_by','replied_at','created_at','updated_at','ledger_payment_id'] },
+  LibraryResources: { headers: ['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by'] }
 };
 
 /* ============ ROUTER ============ */
@@ -163,26 +165,26 @@ function route(action, p) {
     if (hasRole_(sessionUser, 'parent') && [
       'me','parentGetWards','parentGetResult','parentAskResultAI','parentGetDebts',
       'parentGetAnnouncements','parentGetTestBreakdown','getDomainSettings',
-      'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','getMyNotifications','markNotificationRead'
+      'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','parentSubmitPaymentNotification','parentGetPaymentNotifications','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'
     ].indexOf(action) === -1) {
       throw new Error('Permission denied for parent account.');
     }
     const isLeadershipAccount = roleList_(sessionUser).some(function(r) { return ['principal','vice_principal','vice_principal_admin','vice_principal_academic'].indexOf(r) !== -1; });
     const isBursarAccount = hasRole_(sessionUser, 'bursar');
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && isBursarAccount &&
-        ['me','leadershipGetDashboard','getClasses','getStudents','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','leadershipGetDashboard','getClasses','getStudents','libraryList','getFeatureFlags','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Combined Principal/Bursar accounts are limited to leadership summaries and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && !isBursarAccount &&
-        ['me','leadershipGetDashboard','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','leadershipGetDashboard','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Leadership accounts are restricted to aggregate academic summaries and notifications.');
     }
     if (!hasRole_(sessionUser, 'admin') && isBursarAccount && !isLeadershipAccount &&
-        ['me','getClasses','getStudents','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','getClasses','getStudents','libraryList','getFeatureFlags','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Bursar accounts are restricted to student directory and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && hasRole_(sessionUser, 'registrar') &&
-        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Registrar accounts are restricted to student admission, registration and directory functions.');
     }
   }
@@ -224,6 +226,16 @@ function route(action, p) {
     case 'adminCreateUser':     return adminCreateUser(p, p.token);
     case 'adminUpdateUser':     return adminUpdateUser(p, p.token);
     case 'adminSetUserActive':  return adminSetUserActive(p, p.token);
+    case 'adminSetUserStatus': return adminSetUserActive(p,p.token);
+    case 'getFeatureFlags': return gtmcGetFeatureFlags_(p,p.token);
+    case 'adminSaveFeatureFlags': return gtmcSaveFeatureFlags_(p,p.token);
+    case 'libraryList': return libraryList_(p,p.token);
+    case 'librarySave': return librarySave_(p,p.token);
+    case 'libraryDelete': return libraryDelete_(p,p.token);
+    case 'parentSubmitPaymentNotification': return parentSubmitPaymentNotification_(p,p.token);
+    case 'parentGetPaymentNotifications': return parentGetPaymentNotifications_(p,p.token);
+    case 'staffGetPaymentNotifications': return staffGetPaymentNotifications_(p,p.token);
+    case 'staffReplyPaymentNotification': return staffReplyPaymentNotification_(p,p.token);
     case 'adminResetUserPassword': return adminResetUserPassword(p, p.token);
     case 'adminUpdateTeacherClass': return adminUpdateTeacherClass(p, p.token);
     case 'exportAll':           return exportAll(p.token);
@@ -316,6 +328,24 @@ function out(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+
+const GTMC_FEATURE_DEFAULTS_={dashboard:true,teachers:true,parents:true,submissions:true,publish:true,broadsheet:true,performance:true,domains:true,remarks:true,teacherRemarks:true,calendar:true,announcements:true,debtors:true,staffPayments:true,parentPayments:true,reportcards:true,template:true,students:true,scores:true,entry:true,history:true,results:true,report:true,testPerformance:true,chat:true,library:true,myAttendance:true,attendanceSummary:true,staffAttendance:true,staffLinks:true,messageAdmin:true,staffMessages:true,userManagement:true};
+function gtmcGetFeatureFlags_(p,t){requireRole(t,['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','parent']);let saved={};try{saved=JSON.parse(PropertiesService.getScriptProperties().getProperty('GTMC_FEATURE_FLAGS')||'{}')||{};}catch(e){}const out={};Object.keys(GTMC_FEATURE_DEFAULTS_).forEach(k=>out[k]=Object.prototype.hasOwnProperty.call(saved,k)?saved[k]!==false:true);return out;}
+function gtmcSaveFeatureFlags_(p,t){const u=requireRole(t,['admin']),v=p.features||{},old=gtmcGetFeatureFlags_({},t),next={};Object.keys(GTMC_FEATURE_DEFAULTS_).forEach(k=>next[k]=Object.prototype.hasOwnProperty.call(v,k)?v[k]===true:old[k]);PropertiesService.getScriptProperties().setProperty('GTMC_FEATURE_FLAGS',JSON.stringify(next));logAudit(u.email,'adminSaveFeatureFlags',next);return next;}
+function libraryList_(p,t){gtmcEnsureModuleSheets_();requireRole(t,['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','parent']);return sheetToObjects(getSheet('LibraryResources')).filter(r=>r.active===''||r.active===undefined||r.active===true||String(r.active).toLowerCase()==='true').map(r=>({id:String(r.id||''),title:String(r.title||''),author:String(r.author||''),subject:String(r.subject||''),class:String(r.class||'ALL'),category:String(r.category||'Other'),url:String(r.url||''),description:String(r.description||'')}));}
+function librarySave_(p,t){gtmcEnsureModuleSheets_();const u=requireRole(t,['admin']),title=String(p.title||'').trim(),url=String(p.url||'').trim();if(!title||!/^https?:\/\//i.test(url))throw new Error('Enter a title and valid URL.');const sh=getSheet('LibraryResources'),rows=sheetToObjects(sh),id=String(p.id||'').trim()||Utilities.getUuid(),now=new Date(),v=[id,title,String(p.author||''),String(p.subject||''),String(p.className||'ALL'),String(p.category||'Other'),url,String(p.description||''),true,now,u.email,now,u.email],at=rows.findIndex(r=>String(r.id)===id);if(at>=0)sh.getRange(at+2,1,1,v.length).setValues([v]);else sh.appendRow(v);logAudit(u.email,'librarySave',{id:id});return {success:true,id:id};}
+function libraryDelete_(p,t){gtmcEnsureModuleSheets_();const u=requireRole(t,['admin']),id=String(p.id||''),sh=getSheet('LibraryResources'),d=sh.getDataRange().getValues(),h=d[0].map(String),ii=h.indexOf('id'),ai=h.indexOf('active');for(let i=1;i<d.length;i++)if(String(d[i][ii])===id){sh.getRange(i+1,ai+1).setValue(false);logAudit(u.email,'libraryDelete',{id:id});return {success:true};}throw new Error('Library resource not found.');}
+function paymentNotificationRows_(){gtmcEnsureModuleSheets_();return sheetToObjects(getSheet('PaymentNotifications'));}
+function paymentNotificationView_(r){return {id:String(r.id||''),studentId:String(r.student_id||''),studentName:String(r.student_name||''),className:String(r.class||''),academicYear:String(r.academic_year||''),term:String(r.term||''),feeCategory:String(r.fee_category||''),paymentDate:String(r.payment_date||''),paymentTime:String(r.payment_time||''),amount:Number(r.amount||0),senderName:String(r.sender_name||''),reference:String(r.reference||''),note:String(r.note||''),status:String(r.status||'Pending Verification'),reply:String(r.reply||''),repliedBy:String(r.replied_by||''),repliedAt:r.replied_at||'',createdAt:r.created_at||''};}
+function paymentNotificationFind_(id){gtmcEnsureModuleSheets_();const sh=getSheet('PaymentNotifications'),d=sh.getDataRange().getValues(),h=d[0].map(String),ix=h.indexOf('id');for(let i=1;i<d.length;i++)if(String(d[i][ix])===String(id))return {sheet:sh,row:i+1,headers:h,values:d[i]};return null;}
+function parentSubmitPaymentNotification_(p,t){gtmcEnsureModuleSheets_();const u=requireRole(t,['parent']),sid=String(p.studentId||''),cn=String(p.className||''),yr=String(p.academicYear||''),term=String(p.term||'');if(!sid||!cn||!yr||TERMS.indexOf(term)<0)throw new Error('Student, class, academic year and term are required.');portalAssertLinkedParent_(u,cn,sid);const st=gtmcStudent_(sid,cn),cat=String(p.feeCategory||''),date=String(p.paymentDate||''),time=String(p.paymentTime||''),sender=String(p.senderName||'').trim(),amount=Number(p.amount);if(gtmcCategories_().indexOf(cat)<0||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(time)||!sender||!isFinite(amount)||amount<=0)throw new Error('Enter valid category, date, time, amount and sender.');const ref=String(p.reference||'').trim(),note=String(p.note||'').trim().slice(0,500),sh=getSheet('PaymentNotifications'),lock=LockService.getScriptLock();lock.waitLock(10000);try{if(ref&&paymentNotificationRows_().some(r=>String(r.reference||'').toLowerCase()===ref.toLowerCase()))throw new Error('This payment reference was already submitted.');const id='PAYN'+Date.now()+Utilities.getUuid().slice(0,6),now=new Date();sh.appendRow([id,u.email,u.name||'',sid,st.name,cn,yr,term,cat,date,time,amount,sender,ref,note,'Pending Verification','','','',now,now,'']);logAudit(u.email,'parentSubmitPaymentNotification',{id:id,amount:amount});return {id:id,status:'Pending Verification'};}finally{lock.releaseLock();}}
+function parentGetPaymentNotifications_(p,t){const u=requireRole(t,['parent']),sid=String(p.studentId||''),cn=String(p.className||'');portalAssertLinkedParent_(u,cn,sid);return paymentNotificationRows_().filter(r=>String(r.parent_email).toLowerCase()===String(u.email).toLowerCase()&&String(r.student_id)===sid&&String(r.class)===cn).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0)).map(paymentNotificationView_);}
+function staffGetPaymentNotifications_(p,t){requireRole(t,['admin','bursar']);let rows=paymentNotificationRows_();if(p.status)rows=rows.filter(r=>String(r.status)===String(p.status));if(p.className)rows=rows.filter(r=>String(r.class)===String(p.className));return rows.sort((a,b)=>(a.status==='Pending Verification'?-1:1)-(b.status==='Pending Verification'?-1:1)||new Date(b.created_at||0)-new Date(a.created_at||0)).map(r=>Object.assign(paymentNotificationView_(r),{parentName:String(r.parent_name||''),parentEmail:String(r.parent_email||'')}));}
+function staffReplyPaymentNotification_(p,t){const u=requireRole(t,['admin','bursar']),id=String(p.id||''),status=String(p.status||''),reply=String(p.reply||'').trim();if(!id||!reply||['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status)<0)throw new Error('Payment, status and reply are required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const f=paymentNotificationFind_(id);if(!f)throw new Error('Payment notification not found.');const x={};f.headers.forEach((h,i)=>x[h]=i);if(String(f.values[x.status])==='Confirmed / Cleared')throw new Error('Payment already cleared.');let pid=String(f.values[x.ledger_payment_id]||'');if(status==='Confirmed / Cleared'&&!pid){const r=adminRecordFeePayment({studentId:f.values[x.student_id],className:f.values[x.class],academicYear:f.values[x.academic_year],term:f.values[x.term],category:f.values[x.fee_category],amount:f.values[x.amount],paymentMethod:'Bank Transfer',reference:f.values[x.reference],note:'Parent payment notification '+id},t);pid=r.paymentId;f.sheet.getRange(f.row,x.ledger_payment_id+1).setValue(pid);}const now=new Date();[['status',status],['reply',reply],['replied_by',u.name||u.email],['replied_at',now],['updated_at',now]].forEach(a=>f.sheet.getRange(f.row,x[a[0]]+1).setValue(a[1]));logAudit(u.email,'staffReplyPaymentNotification',{id:id,status:status,ledgerPaymentId:pid});return {success:true,id:id,status:status,ledgerPaymentId:pid};}finally{lock.releaseLock();}}
+
+function gtmcPasswordHash_(password,salt){salt=salt||Utilities.getUuid();return 'sha256$'+salt+'$'+Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(salt)+'|'+String(password),Utilities.Charset.UTF_8));}
+function gtmcPasswordMatches_(password,stored){const s=String(stored==null?'':stored);if(s.indexOf('sha256$')===0){const p=s.split('$');return p.length===3&&gtmcPasswordHash_(password,p[1])===s;}return s===String(password);}
+function gtmcStorePassword_(sheetName,keyName,keyValue,passwordName,password){const sh=getSheet(sheetName),d=sh.getDataRange().getValues(),h=d[0].map(x=>String(x).toLowerCase()),ki=h.indexOf(keyName),pi=h.indexOf(passwordName);if(ki<0||pi<0)throw new Error('Password columns are missing.');for(let i=1;i<d.length;i++)if(String(d[i][ki]).toLowerCase()===String(keyValue).toLowerCase()){sh.getRange(i+1,pi+1).setValue(gtmcPasswordHash_(password));return true;}return false;}
 /* ============ SHEET HELPERS ============ */
 function openSS() { return SpreadsheetApp.openById(SHEET_ID); }
 
@@ -631,12 +661,9 @@ function assertClassTeacherOwnClass_(user, className, message) {
 function login(email, password) {
   if (!email || !password) throw new Error('Email and password required');
   const users = sheetToObjects(getSheet('Users'));
-  const u = users.find(function (x) {
-    return String(x.email).toLowerCase() === String(email).toLowerCase() &&
-           String(x.password) === String(password) &&
-           x.active !== false;
-  });
+  const u = users.find(function (x) { return String(x.email).toLowerCase() === String(email).toLowerCase() && gtmcPasswordMatches_(password,x.password) && x.active !== false && String(x.active).toLowerCase() !== 'false'; });
   if (!u) throw new Error('Invalid credentials');
+  if (String(u.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('Users','email',u.email,'password',password);
 
   const token = Utilities.getUuid();
   CacheService.getScriptCache().put('sess_' + token, JSON.stringify({
@@ -1223,7 +1250,7 @@ function createTeacher(p, token) {
 
   sheet.appendRow([
     p.email, p.name, roles.join(','),
-    p.class || '', p.subjects || '', p.password, true, p.class_teacher_class || ''
+    p.class || '', p.subjects || '', gtmcPasswordHash_(p.password), true, p.class_teacher_class || ''
   ]);
   logAudit(admin.email, 'createTeacher', { email: p.email, roles: roles, class_teacher_class: p.class_teacher_class || '' });
   return { success: true };
@@ -1834,9 +1861,8 @@ function parentLogin(email, password) {
       break;
     }
   }
-  if (!account || account.password !== String(password)) {
-    throw new Error('Invalid parent login details.');
-  }
+  if (!account || !gtmcPasswordMatches_(password,account.password)) throw new Error('Invalid parent login details.');
+  if (String(account.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('ParentAccounts','email',account.email,'password',password);
   const token = Utilities.getUuid();
   const session = { email: account.email, name: account.name, role: 'parent' };
   CacheService.getScriptCache().put('sess_' + token, JSON.stringify(session), SESSION_SECONDS);
@@ -1858,7 +1884,7 @@ function adminCreateParent(p, token) {
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).toLowerCase() === email) throw new Error('A parent account with this email already exists.');
   }
-  sh.appendRow([email, name, password, true, new Date(), admin.email]);
+  sh.appendRow([email, name, gtmcPasswordHash_(password), true, new Date(), admin.email]);
   logAudit(admin.email, 'adminCreateParent', { parentEmail: email });
   return { success: true, email: email, message: 'Parent account created. Link the student/ward before sharing login details.' };
 }
@@ -1866,7 +1892,7 @@ function adminCreateParent(p, token) {
 function adminGetParentAccounts(p, token) {
   requireRole(token, ['admin']);
   const accounts = sheetToObjects(getSheet('ParentAccounts')).map(function (a) {
-    return { email: a.email, name: a.name, password: a.password, active: a.active === true };
+    return { email: a.email, name: a.name, active: a.active === true || String(a.active).toLowerCase()==='true' };
   });
   const links = sheetToObjects(getSheet('ParentLinks')).filter(function (x) { return x.active === true; });
   return accounts.map(function (a) {
@@ -4174,7 +4200,9 @@ function gtmcEnsureModuleSheets_() {
     StudentCharges: ['charge_id','student_id','student_name','class','academic_year','term','category','amount','note','active','created_at','created_by'],
     FeePayments: ['payment_id','receipt_no','student_id','student_name','class','academic_year','term','amount','allocated_category','payment_method','reference','note','status','recorded_at','recorded_by','reversed_at','reversed_by','reversal_reason'],
     FeeReceipts: ['receipt_no','payment_id','student_id','student_name','class','academic_year','term','amount','allocated_category','payment_method','reference','issued_at','issued_by','status'],
-    FinancialSettings: ['key','value','updated_at','updated_by']
+    FinancialSettings: ['key','value','updated_at','updated_by'],
+    PaymentNotifications: ['id','parent_email','parent_name','student_id','student_name','class','academic_year','term','fee_category','payment_date','payment_time','amount','sender_name','reference','note','status','reply','replied_by','replied_at','created_at','updated_at','ledger_payment_id'],
+    LibraryResources: ['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by']
   };
   Object.keys(schemas).forEach(function(name) {
     let sh = ss.getSheetByName(name);
@@ -4282,7 +4310,7 @@ function adminGetStudentFeeStatement(p, token) {
   const sid=String(p.studentId||'').trim(), cn=String(p.className||'').trim(), year=String(p.academicYear||'').trim(), term=String(p.term||'').trim();
   if(!sid||!cn) throw new Error('Student and class are required.'); gtmcValidatePeriod_(year,term);
   const student=gtmcStudent_(sid,cn), statement=gtmcFinancialRows_(sid,cn,year,term);
-  return {student:student,academicYear:year,term:term,lines:statement.lines,totalDue:statement.totalDue,totalPaid:statement.totalPaid,balance:statement.balance,payments:statement.payments};
+  return {student:student,academicYear:year,term:term,lines:statement.lines,charges:sheetToObjects(getSheet('StudentCharges')).filter(function(x){return String(x.student_id)===sid&&String(x.class)===cn&&String(x.academic_year)===year&&String(x.term)===term&&gtmcActive_(x);}),totalDue:statement.totalDue,totalPaid:statement.totalPaid,balance:statement.balance,payments:statement.payments};
 }
 function adminRecordFeePayment(p, token) {
   const user=gtmcRequireBursar_(token); gtmcEnsureModuleSheets_();
@@ -4479,9 +4507,7 @@ function leadershipGetDashboard(p, token) {
   });
 
   const validClasses = classSummaries.filter(function(row) { return row.average !== null; });
-  const overallAverage = validClasses.length
-    ? Math.round(validClasses.reduce(function(total, row) { return total + row.average; }, 0) / validClasses.length * 100) / 100
-    : null;
+  const overallAverage = schoolCount ? Math.round(schoolSum / schoolCount * 100) / 100 : null;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -4504,7 +4530,7 @@ function adminCreateRoleAccount(p, token) {
   if(!p.email||!p.name||!p.password||!roles.length) throw new Error('Name, email, password and role are required.');
   roles.forEach(function(r){if(allowed.indexOf(r)<0) throw new Error('Invalid leadership/finance role: '+r);});
   const sh=getSheet('Users'), rows=sheetToObjects(sh); if(rows.some(function(r){return String(r.email).toLowerCase()===String(p.email).toLowerCase();})) throw new Error('Email already exists.');
-  sh.appendRow([String(p.email).trim(),String(p.name).trim(),roles.join(','),'','',String(p.password),true,'']);
+  sh.appendRow([String(p.email).trim(),String(p.name).trim(),roles.join(','),'','',gtmcPasswordHash_(String(p.password)),true,'']);
   logAudit(admin.email,'adminCreateRoleAccount',{email:p.email,roles:roles}); return {success:true};
 }
 
@@ -4556,7 +4582,7 @@ function adminCreateUser(p, token) {
   const info = adminUserSheetInfo_();
   if (adminUserRow_(info, email)) throw new Error('An account with this email already exists.');
   const sh = info.sheet;
-  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: password, active: true, class_teacher_class: String(p.class_teacher_class || '').trim() };
+  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: gtmcPasswordHash_(password), active: true, class_teacher_class: String(p.class_teacher_class || '').trim() };
   const row = info.headers.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ''; });
   sh.appendRow(row);
   logAudit(admin.email, 'adminCreateUser', { email: email, roles: roles });
@@ -4612,7 +4638,7 @@ function adminResetUserPassword(p, token) {
   const info = adminUserSheetInfo_();
   const row = adminUserRow_(info, email);
   if (!row) throw new Error('User account not found.');
-  info.sheet.getRange(row, info.headers.indexOf('password') + 1).setValue(password);
+  info.sheet.getRange(row, info.headers.indexOf('password') + 1).setValue(gtmcPasswordHash_(password));
   logAudit(admin.email, 'adminResetUserPassword', { email: email });
   return { success: true, email: email, message: 'Password reset successfully.' };
 }

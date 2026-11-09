@@ -1,232 +1,63 @@
 /**
- * GTMC PAYMENT NOTIFICATIONS ADD-ON
- * Add this file to the existing GTMC Apps Script project alongside Code.gs.
- * Run setupSheets() once, then redeploy the existing web app as a new version.
- * Existing score sheets and Debtors rows are preserved.
+ * GTMC INTEGRATED PAYMENT NOTIFICATIONS + E-LIBRARY ADD-ON
+ * Add beside Code.gs, run setupSheets() once, then deploy a new web-app version.
+ * Uses the current FeePayments / FeeReceipts schema; legacy ledger rows are preserved and migrated.
  */
-var __gtmcPaymentOriginalSetupSheets = setupSheets;
-setupSheets = function() {
-  META_SCHEMA.PaymentNotifications = {
-  headers: [
-    'id','parent_email','parent_name','student_id','student_name','class',
-    'academic_year','term','fee_category','payment_date','payment_time',
-    'amount','sender_name','reference','note','status','reply',
-    'replied_by','replied_at','created_at','updated_at','ledger_payment_id'
-  ]
-  };
-  META_SCHEMA.FeePayments = {
-  headers: [
-    'id','notification_id','student_id','student_name','class','academic_year',
-    'term','fee_category','amount','payment_date','payment_time','sender_name',
-    'reference','recorded_by','recorded_at','voided','void_reason'
-  ]
-  };
-  return __gtmcPaymentOriginalSetupSheets();
+var __gtmcIntegratedSetupOriginal=setupSheets;
+setupSheets=function(){
+ META_SCHEMA.PaymentNotifications={headers:['id','parent_email','parent_name','student_id','student_name','class','academic_year','term','fee_category','payment_date','payment_time','amount','sender_name','reference','note','status','reply','replied_by','replied_at','created_at','updated_at','ledger_payment_id']};
+ META_SCHEMA.LibraryResources={headers:['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by']};
+ var ss=openSS(),legacy=null,legacyName='',old=ss.getSheetByName('FeePayments');
+ if(old){var h=old.getRange(1,1,1,old.getLastColumn()).getValues()[0].map(String);if(h.indexOf('notification_id')>=0&&h.indexOf('payment_id')<0){legacy=old.getDataRange().getValues();legacyName='FeePayments_Legacy';var n=1;while(ss.getSheetByName(legacyName))legacyName='FeePayments_Legacy_'+n++;old.setName(legacyName);}}
+ var result=__gtmcIntegratedSetupOriginal();
+ if(legacy&&legacy.length>1){
+  var sh=getSheet('FeePayments'),rc=getSheet('FeeReceipts'),lh=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String),rh=rc.getRange(1,1,1,rc.getLastColumn()).getValues()[0].map(String),li={},ri={},seen=sh.getDataRange().getValues(),seenR=rc.getDataRange().getValues(),count=0;
+  lh.forEach(function(k,i){li[k]=i;});rh.forEach(function(k,i){ri[k]=i;});
+  for(var i=1;i<legacy.length;i++){var x=legacy[i];if(!x[0]||!x[2])continue;var id=String(x[0]),no='GTMC-LEGACY-'+id.replace(/[^A-Za-z0-9]/g,'').slice(-18),cat=String(x[7]||'Other');if(cat==='Boarding')cat='Boarding Fees';if(cat==='Transport')cat='Bus Fees';var rev=x[15]===true||String(x[15]).toLowerCase()==='true',v=new Array(lh.length).fill('');
+   v[li.payment_id]=id;v[li.receipt_no]=no;v[li.student_id]=x[2];v[li.student_name]=x[3];v[li.class]=x[4];v[li.academic_year]=x[5];v[li.term]=x[6];v[li.amount]=Number(x[8]||0);v[li.allocated_category]=cat;v[li.payment_method]='Bank Transfer';v[li.reference]=x[12]||'';v[li.note]='Migrated legacy ledger record; notification '+String(x[1]||'');v[li.status]=rev?'reversed':'posted';v[li.recorded_at]=x[14]||new Date();v[li.recorded_by]=x[13]||'legacy-migration';v[li.reversed_at]=rev?(x[14]||new Date()):'';v[li.reversed_by]=rev?'legacy-migration':'';v[li.reversal_reason]=rev?(x[16]||'Legacy voided payment'):'';
+   if(!seen.slice(1).some(function(z){return String(z[li.payment_id])===id;}))sh.appendRow(v);
+   var rv=new Array(rh.length).fill('');rv[ri.receipt_no]=no;rv[ri.payment_id]=id;rv[ri.student_id]=x[2];rv[ri.student_name]=x[3];rv[ri.class]=x[4];rv[ri.academic_year]=x[5];rv[ri.term]=x[6];rv[ri.amount]=Number(x[8]||0);rv[ri.allocated_category]=cat;rv[ri.payment_method]='Bank Transfer';rv[ri.reference]=x[12]||'';rv[ri.issued_at]=x[14]||new Date();rv[ri.issued_by]=x[13]||'legacy-migration';rv[ri.status]=rev?'reversed':'issued';if(!seenR.slice(1).some(function(z){return String(z[ri.payment_id])===id;}))rc.appendRow(rv);count++;
+  }
+  logAudit('system','migrateLegacyFeePayments',{source:legacyName,migrated:count});
+ }
+ return result;
 };
-
-var __gtmcPaymentOriginalRoute = route;
-route = function(action, p) {
-  p = p || {};
-  switch (action) {
-    case 'parentSubmitPaymentNotification': return parentSubmitPaymentNotification_(p, p.token);
-    case 'parentGetPaymentNotifications': return parentGetPaymentNotifications_(p, p.token);
-    case 'staffGetPaymentNotifications': return staffGetPaymentNotifications_(p, p.token);
-    case 'staffReplyPaymentNotification': return staffReplyPaymentNotification_(p, p.token);
-    default: return __gtmcPaymentOriginalRoute(action, p);
+function gtmcAddonFeatureEnabled_(k){var raw=PropertiesService.getScriptProperties().getProperty('GTMC_FEATURE_FLAGS'),o={};if(raw)try{o=JSON.parse(raw)||{};}catch(e){}return !Object.prototype.hasOwnProperty.call(o,k)||o[k]!==false;}
+function gtmcPayRows_(){return sheetToObjects(getSheet('PaymentNotifications'));}
+function gtmcPayPublic_(r){return {id:String(r.id||''),studentId:String(r.student_id||''),studentName:String(r.student_name||''),className:String(r.class||''),academicYear:String(r.academic_year||''),term:String(r.term||''),feeCategory:String(r.fee_category||''),paymentDate:String(r.payment_date||''),paymentTime:String(r.payment_time||''),amount:Number(r.amount||0),senderName:String(r.sender_name||''),reference:String(r.reference||''),note:String(r.note||''),status:String(r.status||'Pending Verification'),reply:String(r.reply||''),repliedBy:String(r.replied_by||''),repliedAt:r.replied_at||'',createdAt:r.created_at||''};}
+function gtmcPayFind_(id){var s=getSheet('PaymentNotifications'),d=s.getDataRange().getValues(),h=d[0].map(String),ix=h.indexOf('id');for(var i=1;i<d.length;i++)if(String(d[i][ix])===String(id))return {sheet:s,row:i+1,headers:h,values:d[i]};return null;}
+function gtmcFeeCategory_(v){var s=String(v||'').trim();return ({Boarding:'Boarding Fees',Transport:'Bus Fees'})[s]||s;}
+function gtmcParentSubmitPay_(p,t){
+ if(!gtmcAddonFeatureEnabled_('parentPayments'))throw new Error('Parent payment notifications are disabled.');
+ var u=requireRole(t,['parent']),sid=String(p.studentId||'').trim(),cn=String(p.className||'').trim(),year=String(p.academicYear||'').trim(),term=String(p.term||'').trim();
+ if(!sid||!cn||!year||TERMS.indexOf(term)<0)throw new Error('Student, class, academic year and valid term are required.');
+ portalAssertLinkedParent_(u,cn,sid);var st=gtmcStudent_(sid,cn),cat=gtmcFeeCategory_(p.feeCategory);
+ if(['School Fees','Boarding Fees','Bus Fees','Other'].indexOf(cat)<0)throw new Error('Select a valid fee category.');
+ var date=String(p.paymentDate||''),time=String(p.paymentTime||''),sender=String(p.senderName||'').trim(),amount=Number(p.amount);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||! /^\d{2}:\d{2}$/.test(time)||!sender||!isFinite(amount)||amount<=0)throw new Error('Enter a valid date, time, amount and sender name.');
+ var ref=String(p.reference||'').trim().slice(0,120),note=String(p.note||'').trim().slice(0,500),lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{if(ref&&gtmcPayRows_().some(function(x){return String(x.reference||'').toLowerCase()===ref.toLowerCase();}))throw new Error('This payment reference has already been submitted.');
+  if(ref&&sheetToObjects(getSheet('FeePayments')).some(function(x){return String(x.reference||'').toLowerCase()===ref.toLowerCase()&&String(x.status||'posted')==='posted';}))throw new Error('This reference already appears in the school payment ledger. Contact the Bursar.');
+  var id='PAYN'+Date.now()+Utilities.getUuid().slice(0,6).toUpperCase(),now=new Date();getSheet('PaymentNotifications').appendRow([id,u.email,u.name||'',sid,st.name,cn,year,term,cat,date,time,amount,sender,ref,note,'Pending Verification','','','',now,now,'']);logAudit(u.email,'parentSubmitPaymentNotification',{id:id,studentId:sid,amount:amount});return {id:id,status:'Pending Verification',createdAt:now};
+ }finally{lock.releaseLock();}
+}
+function gtmcParentGetPay_(p,t){if(!gtmcAddonFeatureEnabled_('parentPayments'))throw new Error('Parent payment notifications are disabled.');var u=requireRole(t,['parent']),sid=String(p.studentId||'').trim(),cn=String(p.className||'').trim();if(!sid||!cn)throw new Error('Student and class required.');portalAssertLinkedParent_(u,cn,sid);return gtmcPayRows_().filter(function(r){return String(r.parent_email).toLowerCase()===String(u.email).toLowerCase()&&String(r.student_id)===sid&&String(r.class)===cn;}).sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);}).map(gtmcPayPublic_);}
+function gtmcStaffGetPay_(p,t){if(!gtmcAddonFeatureEnabled_('staffPayments'))throw new Error('Staff payment notifications are disabled.');requireRole(t,['admin','bursar']);var rows=gtmcPayRows_();if(p.status)rows=rows.filter(function(r){return String(r.status)===String(p.status);});if(p.className)rows=rows.filter(function(r){return String(r.class)===String(p.className);});return rows.sort(function(a,b){return (String(a.status)==='Pending Verification'?-1:1)-(String(b.status)==='Pending Verification'?-1:1)||new Date(b.created_at||0)-new Date(a.created_at||0);}).map(function(r){var x=gtmcPayPublic_(r);x.parentName=String(r.parent_name||'');x.parentEmail=String(r.parent_email||'');return x;});}
+function gtmcStaffReplyPay_(p,t){
+ if(!gtmcAddonFeatureEnabled_('staffPayments'))throw new Error('Staff payment notifications are disabled.');
+ var u=requireRole(t,['admin','bursar']),id=String(p.id||'').trim(),status=String(p.status||''),reply=String(p.reply||'').trim().slice(0,1000);if(!id||!reply||['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status)<0)throw new Error('Notification, valid status and reply are required.');
+ var lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{var f=gtmcPayFind_(id);if(!f)throw new Error('Payment notification not found.');var ix={};f.headers.forEach(function(h,i){ix[h]=i;});if(String(f.values[ix.status])==='Confirmed / Cleared')throw new Error('This payment has already been cleared.');
+  var ledgerId=String(f.values[ix.ledger_payment_id]||'');
+  if(status==='Confirmed / Cleared'&&!ledgerId){var ref=String(f.values[ix.reference]||'').trim(),existing=null;if(ref)existing=sheetToObjects(getSheet('FeePayments')).find(function(x){return String(x.reference||'').trim().toLowerCase()===ref.toLowerCase()&&String(x.student_id)===String(f.values[ix.student_id])&&String(x.class)===String(f.values[ix.class])&&Number(x.amount)===Number(f.values[ix.amount])&&String(x.status||'posted')==='posted';});
+   if(existing)ledgerId=String(existing.payment_id);else{var r=adminRecordFeePayment({studentId:f.values[ix.student_id],className:f.values[ix.class],academicYear:f.values[ix.academic_year],term:f.values[ix.term],category:gtmcFeeCategory_(f.values[ix.fee_category]),amount:f.values[ix.amount],paymentMethod:'Bank Transfer',reference:ref,note:'Parent payment notification '+id+' · '+String(f.values[ix.note]||'')},t);ledgerId=r.paymentId;}
+   f.sheet.getRange(f.row,ix.ledger_payment_id+1).setValue(ledgerId);
   }
-};
-
-function paymentBool_(v) {
-  return v === true || String(v).toLowerCase() === 'true';
+  var now=new Date();f.sheet.getRange(f.row,ix.status+1).setValue(status);f.sheet.getRange(f.row,ix.reply+1).setValue(reply);f.sheet.getRange(f.row,ix.replied_by+1).setValue(u.name||u.email);f.sheet.getRange(f.row,ix.replied_at+1).setValue(now);f.sheet.getRange(f.row,ix.updated_at+1).setValue(now);logAudit(u.email,'staffReplyPaymentNotification',{id:id,status:status,ledgerPaymentId:ledgerId});return {success:true,id:id,status:status,ledgerPaymentId:ledgerId};
+ }finally{lock.releaseLock();}
 }
-function paymentText_(v, max, label) {
-  var s = String(v == null ? '' : v).trim();
-  if (!s) throw new Error(label + ' is required.');
-  if (s.length > max) throw new Error(label + ' is too long.');
-  return s;
-}
-function paymentNotificationRows_() {
-  return sheetToObjects(getSheet('PaymentNotifications'));
-}
-function paymentNotificationRow_(id) {
-  var sh = getSheet('PaymentNotifications');
-  var data = sh.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(id)) return { sheet: sh, row: i + 1, values: data[i] };
-  }
-  return null;
-}
-function paymentNotificationPublic_(r) {
-  return {
-    id: String(r.id || ''),
-    studentId: String(r.student_id || ''),
-    studentName: String(r.student_name || ''),
-    className: String(r.class || ''),
-    academicYear: String(r.academic_year || ''),
-    term: String(r.term || ''),
-    feeCategory: String(r.fee_category || ''),
-    paymentDate: String(r.payment_date || ''),
-    paymentTime: String(r.payment_time || ''),
-    amount: Number(r.amount || 0),
-    senderName: String(r.sender_name || ''),
-    reference: String(r.reference || ''),
-    note: String(r.note || ''),
-    status: String(r.status || 'Pending Verification'),
-    reply: String(r.reply || ''),
-    repliedBy: String(r.replied_by || ''),
-    repliedAt: r.replied_at || '',
-    createdAt: r.created_at || '',
-    updatedAt: r.updated_at || ''
-  };
-}
-function paymentFindWard_(className, studentId) {
-  if (CLASSES.indexOf(className) < 0) throw new Error('Invalid class.');
-  var sh = getSheet(className), last = sh.getLastRow();
-  if (last < 4) throw new Error('Student not found in the selected class.');
-  var rows = sh.getRange(4, 1, last - 3, 2).getValues();
-  for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][0]) === studentId) return String(rows[i][1] || '');
-  }
-  throw new Error('Student not found in the selected class.');
-}
-function parentSubmitPaymentNotification_(p, token) {
-  var parent = requireRole(token, ['parent']);
-  var studentId = paymentText_(p.studentId, 100, 'Student');
-  var className = paymentText_(p.className, 30, 'Class');
-  portalAssertLinkedParent_(parent, className, studentId);
-  var studentName = paymentFindWard_(className, studentId);
-  var academicYear = paymentText_(p.academicYear, 20, 'Academic year');
-  var term = paymentText_(p.term, 20, 'Term');
-  if (TERMS.indexOf(term) < 0) throw new Error('Select a valid term.');
-  var category = paymentText_(p.feeCategory, 40, 'Fee category');
-  if (['School Fees','Boarding','Transport','Other'].indexOf(category) < 0) throw new Error('Invalid fee category.');
-  var paymentDate = paymentText_(p.paymentDate, 20, 'Payment date');
-  var paymentTime = paymentText_(p.paymentTime, 20, 'Payment time');
-  var amount = Number(p.amount);
-  if (!isFinite(amount) || amount <= 0 || amount > 100000000) throw new Error('Enter a valid payment amount.');
-  var senderName = paymentText_(p.senderName, 120, 'Sender name');
-  var reference = String(p.reference || '').trim().slice(0, 120);
-  var note = String(p.note || '').trim().slice(0, 500);
-
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var existing = paymentNotificationRows_();
-    if (reference && existing.some(function(r) {
-      return String(r.reference || '').toLowerCase() === reference.toLowerCase();
-    })) throw new Error('This payment reference has already been submitted.');
-    var id = 'PAYN' + Date.now() + Utilities.getUuid().slice(0, 6).toUpperCase();
-    var now = new Date();
-    getSheet('PaymentNotifications').appendRow([
-      id, parent.email, parent.name || '', studentId, studentName, className,
-      academicYear, term, category, paymentDate, paymentTime, amount,
-      senderName, reference, note, 'Pending Verification', '', '', '',
-      now, now, ''
-    ]);
-    logAudit(parent.email, 'parentSubmitPaymentNotification', {
-      id: id, studentId: studentId, className: className, amount: amount, category: category
-    });
-    return { id: id, status: 'Pending Verification', createdAt: now };
-  } finally {
-    lock.releaseLock();
-  }
-}
-function parentGetPaymentNotifications_(p, token) {
-  var parent = requireRole(token, ['parent']);
-  var className = paymentText_(p.className, 30, 'Class');
-  var studentId = paymentText_(p.studentId, 100, 'Student');
-  portalAssertLinkedParent_(parent, className, studentId);
-  return paymentNotificationRows_()
-    .filter(function(r) {
-      return String(r.parent_email).toLowerCase() === String(parent.email).toLowerCase() &&
-        String(r.student_id) === studentId && String(r.class) === className;
-    })
-    .sort(function(a,b) { return new Date(b.created_at || 0) - new Date(a.created_at || 0); })
-    .map(paymentNotificationPublic_);
-}
-function staffGetPaymentNotifications_(p, token) {
-  var staff = requireRole(token, ['admin','bursar']);
-  var rows = paymentNotificationRows_();
-  if (p.status) rows = rows.filter(function(r) { return String(r.status) === String(p.status); });
-  if (p.className) rows = rows.filter(function(r) { return String(r.class) === String(p.className); });
-  rows.sort(function(a,b) {
-    var ap = String(a.status) === 'Pending Verification' ? 0 : 1;
-    var bp = String(b.status) === 'Pending Verification' ? 0 : 1;
-    return ap - bp || new Date(b.created_at || 0) - new Date(a.created_at || 0);
-  });
-  return rows.map(function(r) {
-    var x = paymentNotificationPublic_(r);
-    x.parentName = String(r.parent_name || '');
-    x.parentEmail = String(r.parent_email || '');
-    return x;
-  });
-}
-function staffReplyPaymentNotification_(p, token) {
-  var staff = requireRole(token, ['admin','bursar']);
-  var id = paymentText_(p.id, 100, 'Notification ID');
-  var status = paymentText_(p.status, 50, 'Status');
-  if (['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status) < 0) {
-    throw new Error('Choose a valid response status.');
-  }
-  var reply = String(p.reply || '').trim().slice(0, 1000);
-  if (!reply) throw new Error('Enter a reply for the parent.');
-  var lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    var found = paymentNotificationRow_(id);
-    if (!found) throw new Error('Payment notification not found.');
-    var r = found.values;
-    var headers = found.sheet.getRange(1, 1, 1, found.sheet.getLastColumn()).getValues()[0];
-    var ix = {}; headers.forEach(function(h,i) { ix[String(h)] = i; });
-    var current = String(r[ix.status] || '');
-    if (current === 'Confirmed / Cleared') throw new Error('This payment has already been cleared and cannot be processed again.');
-    if (status === 'Confirmed / Cleared') {
-      var ledger = sheetToObjects(getSheet('FeePayments'));
-      var priorLedgerEntry = ledger.find(function(x) { return String(x.notification_id || '') === id; });
-      var paymentId = priorLedgerEntry ? String(priorLedgerEntry.id) : '';
-      if (!priorLedgerEntry) {
-        var ref = String(r[ix.reference] || '').trim().toLowerCase();
-        if (ref && ledger.some(function(x) { return String(x.reference || '').trim().toLowerCase() === ref; })) {
-          throw new Error('This payment reference already exists in the payment ledger.');
-        }
-        var amount = Number(r[ix.amount] || 0);
-        if (!isFinite(amount) || amount <= 0) throw new Error('Invalid payment amount on this notification.');
-        paymentId = 'RCPT' + Date.now() + Utilities.getUuid().slice(0, 6).toUpperCase();
-        var recordedAt = new Date();
-        getSheet('FeePayments').appendRow([
-          paymentId, id, r[ix.student_id], r[ix.student_name], r[ix.class],
-          r[ix.academic_year], r[ix.term], r[ix.fee_category], amount,
-          r[ix.payment_date], r[ix.payment_time], r[ix.sender_name], r[ix.reference],
-          staff.email, recordedAt, false, ''
-        ]);
-        // Debtors.amount is the legacy aggregate outstanding balance. Reduce it once,
-        // never below zero. Fee category remains recorded in the separate ledger.
-        var debtSheet = getSheet('Debtors');
-        var debts = debtSheet.getDataRange().getValues();
-        var debtRow = -1;
-        for (var i = 1; i < debts.length; i++) {
-          if (String(debts[i][0]) === String(r[ix.student_id]) &&
-              String(debts[i][1]) === String(r[ix.class]) &&
-              String(debts[i][2]) === String(r[ix.academic_year]) &&
-              String(debts[i][3]) === String(r[ix.term])) { debtRow = i + 1; break; }
-        }
-        if (debtRow > 0) {
-          var outstanding = Number(debts[debtRow - 1][4] || 0);
-          debtSheet.getRange(debtRow, 5).setValue(Math.max(0, outstanding - amount));
-          debtSheet.getRange(debtRow, 7).setValue(recordedAt);
-          debtSheet.getRange(debtRow, 8).setValue(staff.email);
-        }
-      }
-      found.sheet.getRange(found.row, ix.ledger_payment_id + 1).setValue(paymentId);
-    }
-    found.sheet.getRange(found.row, ix.status + 1).setValue(status);
-    found.sheet.getRange(found.row, ix.reply + 1).setValue(reply);
-    found.sheet.getRange(found.row, ix.replied_by + 1).setValue(staff.name || staff.email);
-    found.sheet.getRange(found.row, ix.replied_at + 1).setValue(new Date());
-    found.sheet.getRange(found.row, ix.updated_at + 1).setValue(new Date());
-    logAudit(staff.email, 'staffReplyPaymentNotification', { id: id, status: status });
-    return { success: true, id: id, status: status };
-  } finally {
-    lock.releaseLock();
-  }
-}
+function gtmcLibraryList_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');requireRole(t,['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','parent']);return sheetToObjects(getSheet('LibraryResources')).filter(function(r){return r.active===''||r.active===undefined||r.active===true||String(r.active).toLowerCase()==='true';}).map(function(r){return {id:String(r.id||''),title:String(r.title||''),author:String(r.author||''),subject:String(r.subject||''),class:String(r.class||'ALL'),category:String(r.category||'Other'),url:String(r.url||''),description:String(r.description||'')};});}
+function gtmcLibrarySave_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');var u=requireRole(t,['admin']),title=String(p.title||'').trim(),url=String(p.url||'').trim();if(!title||!/^https?:\/\//i.test(url))throw new Error('Enter a title and valid http/https URL.');var sh=getSheet('LibraryResources'),rows=sheetToObjects(sh),id=String(p.id||'').trim()||Utilities.getUuid(),now=new Date(),v=[id,title,String(p.author||''),String(p.subject||''),String(p.className||'ALL'),String(p.category||'Other'),url,String(p.description||''),true,now,u.email,now,u.email],i=rows.findIndex(function(r){return String(r.id)===id;});if(i>=0)sh.getRange(i+2,1,1,v.length).setValues([v]);else sh.appendRow(v);logAudit(u.email,'librarySave',{id:id});return {success:true,id:id,message:'Resource saved.'};}
+function gtmcLibraryDelete_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');var u=requireRole(t,['admin']),id=String(p.id||'').trim(),sh=getSheet('LibraryResources'),d=sh.getDataRange().getValues(),h=d[0].map(String),ii=h.indexOf('id'),ai=h.indexOf('active');if(!id)throw new Error('Resource ID required.');for(var i=1;i<d.length;i++)if(String(d[i][ii])===id){sh.getRange(i+1,ai+1).setValue(false);logAudit(u.email,'libraryDelete',{id:id});return {success:true};}throw new Error('Library resource not found.');}
+var __gtmcIntegratedRouteOriginal=route;
+route=function(action,p){p=p||{};switch(action){case 'parentSubmitPaymentNotification':return gtmcParentSubmitPay_(p,p.token);case 'parentGetPaymentNotifications':return gtmcParentGetPay_(p,p.token);case 'staffGetPaymentNotifications':return gtmcStaffGetPay_(p,p.token);case 'staffReplyPaymentNotification':return gtmcStaffReplyPay_(p,p.token);case 'libraryList':return gtmcLibraryList_(p,p.token);case 'librarySave':return gtmcLibrarySave_(p,p.token);case 'libraryDelete':return gtmcLibraryDelete_(p,p.token);case 'adminSetUserStatus':if(!gtmcAddonFeatureEnabled_('userManagement'))throw new Error('User management is disabled.');return adminSetUserActive(p,p.token);default:return __gtmcIntegratedRouteOriginal(action,p);}};
