@@ -16,9 +16,8 @@
 /* Shared sign-in screen */
 #loginView{
   background:
-    radial-gradient(circle at 12% 15%,rgba(217,173,67,.16),transparent 32%),
-    radial-gradient(circle at 90% 85%,rgba(7,86,168,.24),transparent 38%),
-    linear-gradient(135deg,#062b50 0%,#0756a8 54%,#021d3d 100%);
+    linear-gradient(135deg,rgba(6,43,80,.72),rgba(7,86,168,.58),rgba(2,29,61,.78)),
+    var(--login-bg-image, none) center/cover no-repeat;
 }
 #loginView .login-card{
   max-width:460px;
