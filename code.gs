@@ -343,6 +343,9 @@ function parentGetPaymentNotifications_(p,t){const u=requireRole(t,['parent']),s
 function staffGetPaymentNotifications_(p,t){requireRole(t,['admin','bursar']);let rows=paymentNotificationRows_();if(p.status)rows=rows.filter(r=>String(r.status)===String(p.status));if(p.className)rows=rows.filter(r=>String(r.class)===String(p.className));return rows.sort((a,b)=>(a.status==='Pending Verification'?-1:1)-(b.status==='Pending Verification'?-1:1)||new Date(b.created_at||0)-new Date(a.created_at||0)).map(r=>Object.assign(paymentNotificationView_(r),{parentName:String(r.parent_name||''),parentEmail:String(r.parent_email||'')}));}
 function staffReplyPaymentNotification_(p,t){const u=requireRole(t,['admin','bursar']),id=String(p.id||''),status=String(p.status||''),reply=String(p.reply||'').trim();if(!id||!reply||['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status)<0)throw new Error('Payment, status and reply are required.');const lock=LockService.getScriptLock();lock.waitLock(10000);try{const f=paymentNotificationFind_(id);if(!f)throw new Error('Payment notification not found.');const x={};f.headers.forEach((h,i)=>x[h]=i);if(String(f.values[x.status])==='Confirmed / Cleared')throw new Error('Payment already cleared.');let pid=String(f.values[x.ledger_payment_id]||'');if(status==='Confirmed / Cleared'&&!pid){const r=adminRecordFeePayment({studentId:f.values[x.student_id],className:f.values[x.class],academicYear:f.values[x.academic_year],term:f.values[x.term],category:f.values[x.fee_category],amount:f.values[x.amount],paymentMethod:'Bank Transfer',reference:f.values[x.reference],note:'Parent payment notification '+id},t);pid=r.paymentId;f.sheet.getRange(f.row,x.ledger_payment_id+1).setValue(pid);}const now=new Date();[['status',status],['reply',reply],['replied_by',u.name||u.email],['replied_at',now],['updated_at',now]].forEach(a=>f.sheet.getRange(f.row,x[a[0]]+1).setValue(a[1]));logAudit(u.email,'staffReplyPaymentNotification',{id:id,status:status,ledgerPaymentId:pid});return {success:true,id:id,status:status,ledgerPaymentId:pid};}finally{lock.releaseLock();}}
 
+function gtmcPasswordHash_(password,salt){salt=salt||Utilities.getUuid();return 'sha256$'+salt+'$'+Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(salt)+'|'+String(password),Utilities.Charset.UTF_8));}
+function gtmcPasswordMatches_(password,stored){const s=String(stored==null?'':stored);if(s.indexOf('sha256$')===0){const p=s.split('$');return p.length===3&&gtmcPasswordHash_(password,p[1])===s;}return s===String(password);}
+function gtmcStorePassword_(sheetName,keyName,keyValue,passwordName,password){const sh=getSheet(sheetName),d=sh.getDataRange().getValues(),h=d[0].map(x=>String(x).toLowerCase()),ki=h.indexOf(keyName),pi=h.indexOf(passwordName);if(ki<0||pi<0)throw new Error('Password columns are missing.');for(let i=1;i<d.length;i++)if(String(d[i][ki]).toLowerCase()===String(keyValue).toLowerCase()){sh.getRange(i+1,pi+1).setValue(gtmcPasswordHash_(password));return true;}return false;}
 /* ============ SHEET HELPERS ============ */
 function openSS() { return SpreadsheetApp.openById(SHEET_ID); }
 
@@ -658,12 +661,9 @@ function assertClassTeacherOwnClass_(user, className, message) {
 function login(email, password) {
   if (!email || !password) throw new Error('Email and password required');
   const users = sheetToObjects(getSheet('Users'));
-  const u = users.find(function (x) {
-    return String(x.email).toLowerCase() === String(email).toLowerCase() &&
-           String(x.password) === String(password) &&
-           x.active !== false;
-  });
+  const u = users.find(function (x) { return String(x.email).toLowerCase() === String(email).toLowerCase() && gtmcPasswordMatches_(password,x.password) && x.active !== false && String(x.active).toLowerCase() !== 'false'; });
   if (!u) throw new Error('Invalid credentials');
+  if (String(u.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('Users','email',u.email,'password',password);
 
   const token = Utilities.getUuid();
   CacheService.getScriptCache().put('sess_' + token, JSON.stringify({
@@ -1250,7 +1250,7 @@ function createTeacher(p, token) {
 
   sheet.appendRow([
     p.email, p.name, roles.join(','),
-    p.class || '', p.subjects || '', p.password, true, p.class_teacher_class || ''
+    p.class || '', p.subjects || '', gtmcPasswordHash_(p.password), true, p.class_teacher_class || ''
   ]);
   logAudit(admin.email, 'createTeacher', { email: p.email, roles: roles, class_teacher_class: p.class_teacher_class || '' });
   return { success: true };
@@ -1861,9 +1861,8 @@ function parentLogin(email, password) {
       break;
     }
   }
-  if (!account || account.password !== String(password)) {
-    throw new Error('Invalid parent login details.');
-  }
+  if (!account || !gtmcPasswordMatches_(password,account.password)) throw new Error('Invalid parent login details.');
+  if (String(account.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('ParentAccounts','email',account.email,'password',password);
   const token = Utilities.getUuid();
   const session = { email: account.email, name: account.name, role: 'parent' };
   CacheService.getScriptCache().put('sess_' + token, JSON.stringify(session), SESSION_SECONDS);
@@ -1885,7 +1884,7 @@ function adminCreateParent(p, token) {
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]).toLowerCase() === email) throw new Error('A parent account with this email already exists.');
   }
-  sh.appendRow([email, name, password, true, new Date(), admin.email]);
+  sh.appendRow([email, name, gtmcPasswordHash_(password), true, new Date(), admin.email]);
   logAudit(admin.email, 'adminCreateParent', { parentEmail: email });
   return { success: true, email: email, message: 'Parent account created. Link the student/ward before sharing login details.' };
 }
@@ -4529,7 +4528,7 @@ function adminCreateRoleAccount(p, token) {
   if(!p.email||!p.name||!p.password||!roles.length) throw new Error('Name, email, password and role are required.');
   roles.forEach(function(r){if(allowed.indexOf(r)<0) throw new Error('Invalid leadership/finance role: '+r);});
   const sh=getSheet('Users'), rows=sheetToObjects(sh); if(rows.some(function(r){return String(r.email).toLowerCase()===String(p.email).toLowerCase();})) throw new Error('Email already exists.');
-  sh.appendRow([String(p.email).trim(),String(p.name).trim(),roles.join(','),'','',String(p.password),true,'']);
+  sh.appendRow([String(p.email).trim(),String(p.name).trim(),roles.join(','),'','',gtmcPasswordHash_(String(p.password)),true,'']);
   logAudit(admin.email,'adminCreateRoleAccount',{email:p.email,roles:roles}); return {success:true};
 }
 
@@ -4581,7 +4580,7 @@ function adminCreateUser(p, token) {
   const info = adminUserSheetInfo_();
   if (adminUserRow_(info, email)) throw new Error('An account with this email already exists.');
   const sh = info.sheet;
-  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: password, active: true, class_teacher_class: String(p.class_teacher_class || '').trim() };
+  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: gtmcPasswordHash_(password), active: true, class_teacher_class: String(p.class_teacher_class || '').trim() };
   const row = info.headers.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ''; });
   sh.appendRow(row);
   logAudit(admin.email, 'adminCreateUser', { email: email, roles: roles });
@@ -4637,7 +4636,7 @@ function adminResetUserPassword(p, token) {
   const info = adminUserSheetInfo_();
   const row = adminUserRow_(info, email);
   if (!row) throw new Error('User account not found.');
-  info.sheet.getRange(row, info.headers.indexOf('password') + 1).setValue(password);
+  info.sheet.getRange(row, info.headers.indexOf('password') + 1).setValue(gtmcPasswordHash_(password));
   logAudit(admin.email, 'adminResetUserPassword', { email: email });
   return { success: true, email: email, message: 'Password reset successfully.' };
 }
