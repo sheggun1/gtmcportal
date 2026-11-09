@@ -2421,8 +2421,9 @@ async function loadAttendanceSummary() {
       if (workDays.indexOf(new Date(yr, mo - 1, d).getDay()) !== -1) workingDays++;
     }
 
-    /* Group clock-ins */
+    /* Seed linked staff first so staff with zero punches are counted as absent. */
     const perStaff = {};
+    (linksRes.links || []).forEach(l => { const aid=normAidClient_(l.attendanceId); if(!aid||hidden.has(String(l.attendanceId))||l.active===false||String(l.active).toLowerCase()==='false')return; const key=String(l.email||'').toLowerCase(); if(key&&!perStaff[key])perStaff[key]={name:l.name||'',email:key,days:{}}; });
     (pub.records || []).forEach(r => {
       if (r.date.slice(0, 7) !== month) return;
       if (hidden.has(String(r.id))) return;
