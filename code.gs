@@ -176,7 +176,7 @@ function route(action, p) {
       throw new Error('Combined Principal/Bursar accounts are limited to leadership summaries and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && !isBursarAccount &&
-        ['me','leadershipGetDashboard','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','leadershipGetDashboard','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Leadership accounts are restricted to aggregate academic summaries and notifications.');
     }
     if (!hasRole_(sessionUser, 'admin') && isBursarAccount && !isLeadershipAccount &&
@@ -184,7 +184,7 @@ function route(action, p) {
       throw new Error('Bursar accounts are restricted to student directory and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && hasRole_(sessionUser, 'registrar') &&
-        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Registrar accounts are restricted to student admission, registration and directory functions.');
     }
   }
