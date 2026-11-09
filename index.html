@@ -337,6 +337,65 @@
     #reportCard{width:100%!important;max-width:100%!important;zoom:.78!important;box-shadow:none!important;border:0!important}
     .compact-broadsheet{font-size:7px!important}.compact-broadsheet th,.compact-broadsheet td{padding:2px!important}
   }
+
+/* GTMC INDEX-LEVEL OPERATIONS WORKSPACE — real markup is inserted in the
+   operational panels below. Academic results panels are intentionally excluded. */
+.gtmc-module-hero{
+  position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;
+  justify-content:space-between;gap:28px;min-height:174px;margin:0 0 22px;padding:28px 32px;
+  border:1px solid rgba(255,255,255,.12);border-radius:18px;
+  color:#fff;background:linear-gradient(112deg,#062d59 0%,#0756a8 58%,#1678c9 100%);
+  box-shadow:0 12px 28px rgba(4,39,78,.16);
+}
+.gtmc-module-hero:before,.gtmc-module-hero:after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.12);border-radius:50%;pointer-events:none}
+.gtmc-module-hero:before{width:290px;height:290px;right:8%;top:-190px}
+.gtmc-module-hero:after{width:220px;height:220px;right:2%;bottom:-174px}
+.gtmc-module-copy{min-width:0;max-width:760px}
+.gtmc-module-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:13px;color:#c8e4ff;font-size:10px;font-weight:800;letter-spacing:1.8px}
+.gtmc-module-mark{display:inline-grid;place-items:center;width:27px;height:27px;border:1px solid rgba(255,255,255,.35);border-radius:8px;color:#fff;font-size:10px;letter-spacing:0}
+.gtmc-module-eyebrow-line{width:34px;height:1px;background:rgba(255,255,255,.48)}
+.gtmc-module-copy h1{margin:0;color:#fff;font-size:clamp(24px,3vw,34px);font-weight:750;line-height:1.16;letter-spacing:-.7px}
+.gtmc-module-copy p{margin:10px 0 0;max-width:620px;color:rgba(239,247,255,.84);font-size:13px;line-height:1.65}
+.gtmc-module-aside{display:flex;flex:0 0 180px;flex-direction:column;align-items:flex-end;gap:6px;padding-left:20px;border-left:1px solid rgba(255,255,255,.22);text-align:right}
+.gtmc-module-aside-mark{color:#fff;font-size:22px;font-weight:850;letter-spacing:2px}
+.gtmc-module-aside-label{color:#c8e4ff;font-size:9px;font-weight:800;letter-spacing:1.7px}
+.gtmc-module-aside-rule{width:44px;height:2px;margin:7px 0;background:#e2b94e}
+.gtmc-module-aside-caption{color:rgba(239,247,255,.78);font-size:10px}
+#main .panel[data-panel="teachers"]>.card,
+#main .panel[data-panel="parents"]>.card,
+#main .panel[data-panel="debtors"]>.card,
+#main .panel[data-panel="calendar"]>.card,
+#main .panel[data-panel="announcements"]>.card,
+#main .panel[data-panel="staffAttendance"]>.card,
+#main .panel[data-panel="staffLinks"]>.card,
+#main .panel[data-panel="staffMessages"]>.card,
+#main .panel[data-panel="attendanceSummary"]>.card,
+#main .panel[data-panel="messageAdmin"]>.card,
+#main .panel[data-panel="myAttendance"]>.card,
+#main .panel[data-panel="leadershipNotifications"]>.card,
+#main .panel[data-panel="library"]>.card{
+  border:1px solid #dce7f2;border-radius:14px;box-shadow:0 5px 18px rgba(19,52,85,.055);
+}
+#main .panel[data-panel="teachers"]>.card h2,
+#main .panel[data-panel="parents"]>.card h2,
+#main .panel[data-panel="debtors"]>.card h2,
+#main .panel[data-panel="calendar"]>.card h2,
+#main .panel[data-panel="announcements"]>.card h2,
+#main .panel[data-panel="staffAttendance"]>.card h2,
+#main .panel[data-panel="staffLinks"]>.card h2,
+#main .panel[data-panel="staffMessages"]>.card h2,
+#main .panel[data-panel="attendanceSummary"]>.card h2,
+#main .panel[data-panel="messageAdmin"]>.card h2,
+#main .panel[data-panel="myAttendance"]>.card h2,
+#main .panel[data-panel="leadershipNotifications"]>.card h2,
+#main .panel[data-panel="library"]>.card h2{font-weight:750;letter-spacing:-.2px}
+@media(max-width:700px){
+  .gtmc-module-hero{min-height:0;margin-bottom:15px;padding:22px 20px;border-radius:14px}
+  .gtmc-module-aside{display:none}
+  .gtmc-module-copy h1{font-size:25px}
+  .gtmc-module-copy p{font-size:12px}
+}
+
 </style>
 <link rel="stylesheet" href="gtmc-shell-refresh.css">
 <link rel="stylesheet" href="gtmc-nonresult-ui.css">
@@ -592,6 +651,7 @@ function buildNav(items, defaultTab) {
   const main = q('main');
   if (main && !main.querySelector('[data-panel="library"]')) main.insertAdjacentHTML('beforeend', `
     <div class="panel" data-panel="library">
+      <div class="gtmc-module-hero" data-module="library"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>LEARNING</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Learning Resource Centre</h1><p>Manage digital learning materials, curriculum resources and lesson content.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="page-head"><h1>School e-Library</h1><p>Browse learning resources shared by Greater Tomorrow Model Schools.</p></div>
       <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap"><div><h2>Learning Materials</h2><p class="sub">Books, notes, past questions, videos and other approved learning resources.</p></div><button class="sec sm" onclick="loadLibrary()">Refresh</button></div><div class="grid cols-3" style="margin:12px 0"><div><label>Search</label><input id="libSearch" placeholder="Search title, subject, author…" oninput="renderLibraryRows()"></div><div><label>Resource type</label><select id="libCategory" onchange="renderLibraryRows()"><option value="">All types</option><option>Textbook</option><option>Class Notes</option><option>Past Questions</option><option>Video</option><option>Audio</option><option>Worksheet</option><option>Other</option></select></div><div><label>Class</label><select id="libClassFilter" onchange="renderLibraryRows()"><option value="">All classes</option></select></div></div><div id="libraryRows"><div class="empty">Loading library resources…</div></div></div>
       <div class="card" id="libraryAdminCard" style="display:none"><h2>Manage Library Resources</h2><p class="sub">Add a resource by entering its shareable URL. For Google Drive files, set access so intended readers can open the file.</p><input type="hidden" id="libId"><div class="grid cols-3"><div><label>Title *</label><input id="libTitle" placeholder="Resource title"></div><div><label>Author / Teacher</label><input id="libAuthor" placeholder="Author or teacher"></div><div><label>Subject</label><input id="libSubject" placeholder="e.g. Mathematics"></div><div><label>Class</label><select id="libClass"><option value="ALL">All classes</option></select></div><div><label>Resource type</label><select id="libType"><option>Textbook</option><option>Class Notes</option><option>Past Questions</option><option>Video</option><option>Audio</option><option>Worksheet</option><option>Other</option></select></div><div><label>Resource URL *</label><input id="libUrl" type="url" placeholder="https://…"></div><div style="grid-column:1/-1"><label>Description</label><textarea id="libDescription" rows="2" placeholder="Brief description or instructions"></textarea></div></div><div class="row" style="margin-top:12px"><button class="blue" onclick="saveLibraryResource()">Save Resource</button><button class="sec" onclick="resetLibraryForm()">Clear Form</button></div><div id="libAdminStatus" class="portal-note"></div></div>
@@ -659,6 +719,7 @@ async function deleteLibraryResource(id){if(!libraryIsAdmin()||!confirm('Remove 
    ============================================================ */
 const MY_ATTENDANCE_HTML = `
 <div class="panel" data-panel="myAttendance">
+      <div class="gtmc-module-hero" data-module="myAttendance"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>MY WORK</span><span class="gtmc-module-eyebrow-line"></span></div><h1>My Attendance & Penalties</h1><p>Review your monthly clock-ins and any recorded attendance deductions.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
   <div class="card">
     <h2>My Attendance</h2>
     <div class="sub">Your clock-ins and penalties for the month.</div>
@@ -680,6 +741,7 @@ const MY_ATTENDANCE_HTML = `
 
 const ATTENDANCE_SUMMARY_HTML = `
 <div class="panel" data-panel="attendanceSummary">
+      <div class="gtmc-module-hero" data-module="attendanceSummary"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>LEADERSHIP</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Whole-School Attendance Summary</h1><p>Review monthly staff attendance summaries for leadership.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
   <div class="card">
     <h2>Attendance Summary — Whole School</h2>
     <div class="sub">Read-only monthly staff clock-in summary for Admin, Principal and Vice Principal.</div>
@@ -695,6 +757,7 @@ const ATTENDANCE_SUMMARY_HTML = `
 
 const MESSAGE_ADMIN_HTML = `
 <div class="panel" data-panel="messageAdmin">
+      <div class="gtmc-module-hero" data-module="messageAdmin"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>SUPPORT</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Contact School Administration</h1><p>Send an attendance, penalty or administrative issue to the school office.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
   <div class="card">
     <h2>Message the Admin</h2>
     <div class="sub">Report an attendance or penalty issue. The admin will reply.</div>
@@ -783,6 +846,7 @@ async function renderLeadership() {
       <div class="portal-note" id="leadGeneratedAt">Loading academic data…</div>
     </div>
     <div class="panel" data-panel="leadershipNotifications">
+      <div class="gtmc-module-hero" data-module="leadershipNotifications"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>LEADERSHIP</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Leadership Notifications</h1><p>View school notices and updates addressed to your leadership account.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Notifications</h2><p class="sub">School notifications addressed to your leadership role or account.</p></div><button class="sec sm" onclick="loadLeadershipNotifications()">Refresh</button></div><div id="leadNotifications"><div class="empty">Loading notifications…</div></div></div>
     </div>
     ${ATTENDANCE_SUMMARY_HTML}`;
@@ -959,6 +1023,7 @@ async function renderAdmin() {
 
   const staffAttendancePanel = `
     <div class="panel" data-panel="staffAttendance">
+      <div class="gtmc-module-hero" data-module="staffAttendance"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>PEOPLE</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Staff Attendance</h1><p>Review clock-in records, attendance activity and unlinked staff entries.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Staff Attendance — Full Grid</h2>
         <div class="sub">Live from the clocking machine. Read-only here; uploads happen on the attendance admin page.</div>
@@ -986,6 +1051,7 @@ async function renderAdmin() {
 
   const staffLinksPanel = `
     <div class="panel" data-panel="staffLinks">
+      <div class="gtmc-module-hero" data-module="staffLinks"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>CONFIGURATION</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Attendance ID Mapping</h1><p>Connect clocking-machine IDs to the correct staff accounts.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Staff Links — Machine ID ↔ Teacher</h2>
         <div class="sub">Map each clocking-machine ID to a teacher's email. Used for attendance + penalty generation. Edit in the StaffLinks sheet in the attendance spreadsheet.</div>
@@ -996,6 +1062,7 @@ async function renderAdmin() {
 
   const staffMessagesPanel = `
     <div class="panel" data-panel="staffMessages">
+      <div class="gtmc-module-hero" data-module="staffMessages"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>COMMUNICATION</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Staff Support Inbox</h1><p>Review attendance, penalty and other messages submitted by staff.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Staff Messages</h2>
         <div class="sub">Messages sent by teachers from the portal.</div>
@@ -1034,6 +1101,7 @@ async function renderAdmin() {
     </div>
 
     <div class="panel" data-panel="teachers">
+      <div class="gtmc-module-hero" data-module="teachers"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>PEOPLE</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Staff Management</h1><p>Create staff accounts, assign responsibilities and manage teacher records.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Create Teacher</h2>
         <div class="sub">A teacher may hold multiple roles (e.g. Class Teacher + Subject Teacher).</div>
@@ -1153,6 +1221,7 @@ async function renderAdmin() {
     </div>
 
     <div class="panel" data-panel="calendar">
+      <div class="gtmc-module-hero" data-module="calendar"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>SCHEDULE</span><span class="gtmc-module-eyebrow-line"></span></div><h1>School Calendar</h1><p>Manage academic dates, term schedules and important school events.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>School Calendar</h2>
         <div class="grid cols-3">
@@ -1198,6 +1267,7 @@ async function renderAdmin() {
     </div>
 
     <div class="panel" data-panel="parents">
+      <div class="gtmc-module-hero" data-module="parents"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>COMMUNITY</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Parent & Guardian Management</h1><p>Create parent accounts, connect wards and manage family access.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Create Parent Account</h2>
         <div class="grid cols-3">
@@ -1225,6 +1295,7 @@ async function renderAdmin() {
     </div>
 
     <div class="panel" data-panel="debtors">
+      <div class="gtmc-module-hero" data-module="debtors"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>FINANCE</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Fee & Debtor Management</h1><p>Review outstanding balances and maintain student debt records.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Debtors</h2>
         <div class="sub">Enter amounts owed per student. Clearing amount to 0 removes the debt.</div>
@@ -1239,6 +1310,7 @@ async function renderAdmin() {
     </div>
 
     <div class="panel" data-panel="announcements">
+      <div class="gtmc-module-hero" data-module="announcements"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>COMMUNICATION</span><span class="gtmc-module-eyebrow-line"></span></div><h1>School Announcements</h1><p>Prepare and publish updates for parents, students and the school community.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>New Announcement</h2>
         <div class="sub">Visible to all parents whose ward is in the selected class(es).</div>
@@ -3239,6 +3311,7 @@ async function renderParent() {
     </div>
 
     <div class="panel" data-panel="announcements">
+      <div class="gtmc-module-hero" data-module="announcements"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>COMMUNICATION</span><span class="gtmc-module-eyebrow-line"></span></div><h1>School Announcements</h1><p>Prepare and publish updates for parents, students and the school community.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
       <div class="card">
         <h2>Announcements</h2>
         <div id="pAnnBox"><div class="empty">Loading…</div></div>
