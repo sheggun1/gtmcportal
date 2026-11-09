@@ -1,43 +1,31 @@
 /**
  * GTMC INTEGRATED PAYMENT NOTIFICATIONS + E-LIBRARY ADD-ON
- * Add beside Code.gs. Run setupSheets() once after adding, then deploy a new version.
- * This version preserves the current FeePayments / FeeReceipts schema.
+ * Add beside Code.gs, run setupSheets() once, then deploy a new web-app version.
+ * Uses the current FeePayments / FeeReceipts schema; legacy ledger rows are preserved and migrated.
  */
 var __gtmcIntegratedSetupOriginal=setupSheets;
 setupSheets=function(){
  META_SCHEMA.PaymentNotifications={headers:['id','parent_email','parent_name','student_id','student_name','class','academic_year','term','fee_category','payment_date','payment_time','amount','sender_name','reference','note','status','reply','replied_by','replied_at','created_at','updated_at','ledger_payment_id']};
  META_SCHEMA.LibraryResources={headers:['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by']};
- var ss=openSS(),legacyRows=null,legacyName='',old=ss.getSheetByName('FeePayments');
- if(old){var hd=old.getRange(1,1,1,old.getLastColumn()).getValues()[0].map(String);
-  if(hd.indexOf('notification_id')>=0&&hd.indexOf('payment_id')<0){
-   legacyRows=old.getDataRange().getValues();legacyName='FeePayments_Legacy';var n=1;
-   while(ss.getSheetByName(legacyName))legacyName='FeePayments_Legacy_'+n++;
-   old.setName(legacyName);
-  }
- }
+ var ss=openSS(),legacy=null,legacyName='',old=ss.getSheetByName('FeePayments');
+ if(old){var h=old.getRange(1,1,1,old.getLastColumn()).getValues()[0].map(String);if(h.indexOf('notification_id')>=0&&h.indexOf('payment_id')<0){legacy=old.getDataRange().getValues();legacyName='FeePayments_Legacy';var n=1;while(ss.getSheetByName(legacyName))legacyName='FeePayments_Legacy_'+n++;old.setName(legacyName);}}
  var result=__gtmcIntegratedSetupOriginal();
- if(legacyRows&&legacyRows.length>1){
-  var ledger=getSheet('FeePayments'),receipts=getSheet('FeeReceipts'),lh=ledger.getRange(1,1,1,ledger.getLastColumn()).getValues()[0].map(String),rh=receipts.getRange(1,1,1,receipts.getLastColumn()).getValues()[0].map(String),l={},r={};
-  lh.forEach(function(k,i){l[k]=i;});rh.forEach(function(k,i){r[k]=i;});
-  var existing=ledger.getDataRange().getValues(),existingReceipts=receipts.getDataRange().getValues(),migrated=0;
-  for(var i=1;i<legacyRows.length;i++){
-   var x=legacyRows[i];if(!x[0]||!x[2])continue;
-   var pid=String(x[0]),receipt='GTMC-LEGACY-'+pid.replace(/[^A-Za-z0-9]/g,'').slice(-18),cat=String(x[7]||'Other');
-   if(cat==='Boarding')cat='Boarding Fees';if(cat==='Transport')cat='Bus Fees';
-   var reversed=x[15]===true||String(x[15]).toLowerCase()==='true',row=new Array(lh.length).fill('');
-   row[l.payment_id]=pid;row[l.receipt_no]=receipt;row[l.student_id]=x[2];row[l.student_name]=x[3];row[l.class]=x[4];row[l.academic_year]=x[5];row[l.term]=x[6];row[l.amount]=Number(x[8]||0);row[l.allocated_category]=cat;row[l.payment_method]='Bank Transfer';row[l.reference]=x[12]||'';row[l.note]='Migrated legacy ledger record; notification '+String(x[1]||'');row[l.status]=reversed?'reversed':'posted';row[l.recorded_at]=x[14]||new Date();row[l.recorded_by]=x[13]||'legacy-migration';row[l.reversed_at]=reversed?(x[14]||new Date()):'';row[l.reversed_by]=reversed?'legacy-migration':'';row[l.reversal_reason]=reversed?(x[16]||'Legacy voided payment'):'';
-   if(!existing.slice(1).some(function(z){return String(z[l.payment_id])===pid;}))ledger.appendRow(row);
-   var rr=new Array(rh.length).fill('');rr[r.receipt_no]=receipt;rr[r.payment_id]=pid;rr[r.student_id]=x[2];rr[r.student_name]=x[3];rr[r.class]=x[4];rr[r.academic_year]=x[5];rr[r.term]=x[6];rr[r.amount]=Number(x[8]||0);rr[r.allocated_category]=cat;rr[r.payment_method]='Bank Transfer';rr[r.reference]=x[12]||'';rr[r.issued_at]=x[14]||new Date();rr[r.issued_by]=x[13]||'legacy-migration';rr[r.status]=reversed?'reversed':'issued';
-   if(!existingReceipts.slice(1).some(function(z){return String(z[r.payment_id])===pid;}))receipts.appendRow(rr);migrated++;
+ if(legacy&&legacy.length>1){
+  var sh=getSheet('FeePayments'),rc=getSheet('FeeReceipts'),lh=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(String),rh=rc.getRange(1,1,1,rc.getLastColumn()).getValues()[0].map(String),li={},ri={},seen=sh.getDataRange().getValues(),seenR=rc.getDataRange().getValues(),count=0;
+  lh.forEach(function(k,i){li[k]=i;});rh.forEach(function(k,i){ri[k]=i;});
+  for(var i=1;i<legacy.length;i++){var x=legacy[i];if(!x[0]||!x[2])continue;var id=String(x[0]),no='GTMC-LEGACY-'+id.replace(/[^A-Za-z0-9]/g,'').slice(-18),cat=String(x[7]||'Other');if(cat==='Boarding')cat='Boarding Fees';if(cat==='Transport')cat='Bus Fees';var rev=x[15]===true||String(x[15]).toLowerCase()==='true',v=new Array(lh.length).fill('');
+   v[li.payment_id]=id;v[li.receipt_no]=no;v[li.student_id]=x[2];v[li.student_name]=x[3];v[li.class]=x[4];v[li.academic_year]=x[5];v[li.term]=x[6];v[li.amount]=Number(x[8]||0);v[li.allocated_category]=cat;v[li.payment_method]='Bank Transfer';v[li.reference]=x[12]||'';v[li.note]='Migrated legacy ledger record; notification '+String(x[1]||'');v[li.status]=rev?'reversed':'posted';v[li.recorded_at]=x[14]||new Date();v[li.recorded_by]=x[13]||'legacy-migration';v[li.reversed_at]=rev?(x[14]||new Date()):'';v[li.reversed_by]=rev?'legacy-migration':'';v[li.reversal_reason]=rev?(x[16]||'Legacy voided payment'):'';
+   if(!seen.slice(1).some(function(z){return String(z[li.payment_id])===id;}))sh.appendRow(v);
+   var rv=new Array(rh.length).fill('');rv[ri.receipt_no]=no;rv[ri.payment_id]=id;rv[ri.student_id]=x[2];rv[ri.student_name]=x[3];rv[ri.class]=x[4];rv[ri.academic_year]=x[5];rv[ri.term]=x[6];rv[ri.amount]=Number(x[8]||0);rv[ri.allocated_category]=cat;rv[ri.payment_method]='Bank Transfer';rv[ri.reference]=x[12]||'';rv[ri.issued_at]=x[14]||new Date();rv[ri.issued_by]=x[13]||'legacy-migration';rv[ri.status]=rev?'reversed':'issued';if(!seenR.slice(1).some(function(z){return String(z[ri.payment_id])===id;}))rc.appendRow(rv);count++;
   }
-  logAudit('system','migrateLegacyFeePayments',{source:legacyName,migrated:migrated});
+  logAudit('system','migrateLegacyFeePayments',{source:legacyName,migrated:count});
  }
  return result;
 };
 function gtmcAddonFeatureEnabled_(k){var raw=PropertiesService.getScriptProperties().getProperty('GTMC_FEATURE_FLAGS'),o={};if(raw)try{o=JSON.parse(raw)||{};}catch(e){}return !Object.prototype.hasOwnProperty.call(o,k)||o[k]!==false;}
 function gtmcPayRows_(){return sheetToObjects(getSheet('PaymentNotifications'));}
 function gtmcPayPublic_(r){return {id:String(r.id||''),studentId:String(r.student_id||''),studentName:String(r.student_name||''),className:String(r.class||''),academicYear:String(r.academic_year||''),term:String(r.term||''),feeCategory:String(r.fee_category||''),paymentDate:String(r.payment_date||''),paymentTime:String(r.payment_time||''),amount:Number(r.amount||0),senderName:String(r.sender_name||''),reference:String(r.reference||''),note:String(r.note||''),status:String(r.status||'Pending Verification'),reply:String(r.reply||''),repliedBy:String(r.replied_by||''),repliedAt:r.replied_at||'',createdAt:r.created_at||''};}
-function gtmcPayFind_(id){var sh=getSheet('PaymentNotifications'),d=sh.getDataRange().getValues(),h=d[0].map(String),ix=h.indexOf('id');for(var i=1;i<d.length;i++)if(String(d[i][ix])===String(id))return {sheet:sh,row:i+1,headers:h,values:d[i]};return null;}
+function gtmcPayFind_(id){var s=getSheet('PaymentNotifications'),d=s.getDataRange().getValues(),h=d[0].map(String),ix=h.indexOf('id');for(var i=1;i<d.length;i++)if(String(d[i][ix])===String(id))return {sheet:s,row:i+1,headers:h,values:d[i]};return null;}
 function gtmcFeeCategory_(v){var s=String(v||'').trim();return ({Boarding:'Boarding Fees',Transport:'Bus Fees'})[s]||s;}
 function gtmcParentSubmitPay_(p,t){
  if(!gtmcAddonFeatureEnabled_('parentPayments'))throw new Error('Parent payment notifications are disabled.');
@@ -48,74 +36,28 @@ function gtmcParentSubmitPay_(p,t){
  var date=String(p.paymentDate||''),time=String(p.paymentTime||''),sender=String(p.senderName||'').trim(),amount=Number(p.amount);
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||! /^\d{2}:\d{2}$/.test(time)||!sender||!isFinite(amount)||amount<=0)throw new Error('Enter a valid date, time, amount and sender name.');
  var ref=String(p.reference||'').trim().slice(0,120),note=String(p.note||'').trim().slice(0,500),lock=LockService.getScriptLock();lock.waitLock(10000);
- try{
-  if(ref&&gtmcPayRows_().some(function(x){return String(x.reference||'').toLowerCase()===ref.toLowerCase();}))throw new Error('This payment reference has already been submitted.');
+ try{if(ref&&gtmcPayRows_().some(function(x){return String(x.reference||'').toLowerCase()===ref.toLowerCase();}))throw new Error('This payment reference has already been submitted.');
   if(ref&&sheetToObjects(getSheet('FeePayments')).some(function(x){return String(x.reference||'').toLowerCase()===ref.toLowerCase()&&String(x.status||'posted')==='posted';}))throw new Error('This reference already appears in the school payment ledger. Contact the Bursar.');
-  var id='PAYN'+Date.now()+Utilities.getUuid().slice(0,6).toUpperCase(),now=new Date();
-  getSheet('PaymentNotifications').appendRow([id,u.email,u.name||'',sid,st.name,cn,year,term,cat,date,time,amount,sender,ref,note,'Pending Verification','','','',now,now,'']);
-  logAudit(u.email,'parentSubmitPaymentNotification',{id:id,studentId:sid,amount:amount});return {id:id,status:'Pending Verification',createdAt:now};
+  var id='PAYN'+Date.now()+Utilities.getUuid().slice(0,6).toUpperCase(),now=new Date();getSheet('PaymentNotifications').appendRow([id,u.email,u.name||'',sid,st.name,cn,year,term,cat,date,time,amount,sender,ref,note,'Pending Verification','','','',now,now,'']);logAudit(u.email,'parentSubmitPaymentNotification',{id:id,studentId:sid,amount:amount});return {id:id,status:'Pending Verification',createdAt:now};
  }finally{lock.releaseLock();}
 }
-function gtmcParentGetPay_(p,t){
- if(!gtmcAddonFeatureEnabled_('parentPayments'))throw new Error('Parent payment notifications are disabled.');
- var u=requireRole(t,['parent']),sid=String(p.studentId||'').trim(),cn=String(p.className||'').trim();if(!sid||!cn)throw new Error('Student and class required.');
- portalAssertLinkedParent_(u,cn,sid);
- return gtmcPayRows_().filter(function(r){return String(r.parent_email).toLowerCase()===String(u.email).toLowerCase()&&String(r.student_id)===sid&&String(r.class)===cn;}).sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);}).map(gtmcPayPublic_);
-}
-function gtmcStaffGetPay_(p,t){
- if(!gtmcAddonFeatureEnabled_('staffPayments'))throw new Error('Staff payment notifications are disabled.');
- requireRole(t,['admin','bursar']);var rows=gtmcPayRows_();if(p.status)rows=rows.filter(function(r){return String(r.status)===String(p.status);});if(p.className)rows=rows.filter(function(r){return String(r.class)===String(p.className);});
- return rows.sort(function(a,b){return (String(a.status)==='Pending Verification'?-1:1)-(String(b.status)==='Pending Verification'?-1:1)||new Date(b.created_at||0)-new Date(a.created_at||0);}).map(function(r){var x=gtmcPayPublic_(r);x.parentName=String(r.parent_name||'');x.parentEmail=String(r.parent_email||'');return x;});
-}
+function gtmcParentGetPay_(p,t){if(!gtmcAddonFeatureEnabled_('parentPayments'))throw new Error('Parent payment notifications are disabled.');var u=requireRole(t,['parent']),sid=String(p.studentId||'').trim(),cn=String(p.className||'').trim();if(!sid||!cn)throw new Error('Student and class required.');portalAssertLinkedParent_(u,cn,sid);return gtmcPayRows_().filter(function(r){return String(r.parent_email).toLowerCase()===String(u.email).toLowerCase()&&String(r.student_id)===sid&&String(r.class)===cn;}).sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);}).map(gtmcPayPublic_);}
+function gtmcStaffGetPay_(p,t){if(!gtmcAddonFeatureEnabled_('staffPayments'))throw new Error('Staff payment notifications are disabled.');requireRole(t,['admin','bursar']);var rows=gtmcPayRows_();if(p.status)rows=rows.filter(function(r){return String(r.status)===String(p.status);});if(p.className)rows=rows.filter(function(r){return String(r.class)===String(p.className);});return rows.sort(function(a,b){return (String(a.status)==='Pending Verification'?-1:1)-(String(b.status)==='Pending Verification'?-1:1)||new Date(b.created_at||0)-new Date(a.created_at||0);}).map(function(r){var x=gtmcPayPublic_(r);x.parentName=String(r.parent_name||'');x.parentEmail=String(r.parent_email||'');return x;});}
 function gtmcStaffReplyPay_(p,t){
  if(!gtmcAddonFeatureEnabled_('staffPayments'))throw new Error('Staff payment notifications are disabled.');
- var u=requireRole(t,['admin','bursar']),id=String(p.id||'').trim(),status=String(p.status||''),reply=String(p.reply||'').trim().slice(0,1000);
- if(!id||!reply||['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status)<0)throw new Error('Notification, valid status and reply are required.');
+ var u=requireRole(t,['admin','bursar']),id=String(p.id||'').trim(),status=String(p.status||''),reply=String(p.reply||'').trim().slice(0,1000);if(!id||!reply||['Confirmed / Cleared','Rejected / Not Found','More Information Required'].indexOf(status)<0)throw new Error('Notification, valid status and reply are required.');
  var lock=LockService.getScriptLock();lock.waitLock(10000);
- try{
-  var f=gtmcPayFind_(id);if(!f)throw new Error('Payment notification not found.');
-  var ix={};f.headers.forEach(function(h,i){ix[h]=i;});
-  if(String(f.values[ix.status])==='Confirmed / Cleared')throw new Error('This payment has already been cleared.');
+ try{var f=gtmcPayFind_(id);if(!f)throw new Error('Payment notification not found.');var ix={};f.headers.forEach(function(h,i){ix[h]=i;});if(String(f.values[ix.status])==='Confirmed / Cleared')throw new Error('This payment has already been cleared.');
   var ledgerId=String(f.values[ix.ledger_payment_id]||'');
-  if(status==='Confirmed / Cleared'&&!ledgerId){
-   var ref=String(f.values[ix.reference]||'').trim(),existing=null;
-   if(ref)existing=sheetToObjects(getSheet('FeePayments')).find(function(x){return String(x.reference||'').trim().toLowerCase()===ref.toLowerCase()&&String(x.student_id)===String(f.values[ix.student_id])&&String(x.class)===String(f.values[ix.class])&&Number(x.amount)===Number(f.values[ix.amount])&&String(x.status||'posted')==='posted';});
-   if(existing)ledgerId=String(existing.payment_id);
-   else{var result=adminRecordFeePayment({studentId:f.values[ix.student_id],className:f.values[ix.class],academicYear:f.values[ix.academic_year],term:f.values[ix.term],category:gtmcFeeCategory_(f.values[ix.fee_category]),amount:f.values[ix.amount],paymentMethod:'Bank Transfer',reference:ref,note:'Parent payment notification '+id+' · '+String(f.values[ix.note]||'')},t);ledgerId=result.paymentId;}
+  if(status==='Confirmed / Cleared'&&!ledgerId){var ref=String(f.values[ix.reference]||'').trim(),existing=null;if(ref)existing=sheetToObjects(getSheet('FeePayments')).find(function(x){return String(x.reference||'').trim().toLowerCase()===ref.toLowerCase()&&String(x.student_id)===String(f.values[ix.student_id])&&String(x.class)===String(f.values[ix.class])&&Number(x.amount)===Number(f.values[ix.amount])&&String(x.status||'posted')==='posted';});
+   if(existing)ledgerId=String(existing.payment_id);else{var r=adminRecordFeePayment({studentId:f.values[ix.student_id],className:f.values[ix.class],academicYear:f.values[ix.academic_year],term:f.values[ix.term],category:gtmcFeeCategory_(f.values[ix.fee_category]),amount:f.values[ix.amount],paymentMethod:'Bank Transfer',reference:ref,note:'Parent payment notification '+id+' · '+String(f.values[ix.note]||'')},t);ledgerId=r.paymentId;}
    f.sheet.getRange(f.row,ix.ledger_payment_id+1).setValue(ledgerId);
   }
-  var now=new Date();f.sheet.getRange(f.row,ix.status+1).setValue(status);f.sheet.getRange(f.row,ix.reply+1).setValue(reply);f.sheet.getRange(f.row,ix.replied_by+1).setValue(u.name||u.email);f.sheet.getRange(f.row,ix.replied_at+1).setValue(now);f.sheet.getRange(f.row,ix.updated_at+1).setValue(now);
-  logAudit(u.email,'staffReplyPaymentNotification',{id:id,status:status,ledgerPaymentId:ledgerId});return {success:true,id:id,status:status,ledgerPaymentId:ledgerId};
+  var now=new Date();f.sheet.getRange(f.row,ix.status+1).setValue(status);f.sheet.getRange(f.row,ix.reply+1).setValue(reply);f.sheet.getRange(f.row,ix.replied_by+1).setValue(u.name||u.email);f.sheet.getRange(f.row,ix.replied_at+1).setValue(now);f.sheet.getRange(f.row,ix.updated_at+1).setValue(now);logAudit(u.email,'staffReplyPaymentNotification',{id:id,status:status,ledgerPaymentId:ledgerId});return {success:true,id:id,status:status,ledgerPaymentId:ledgerId};
  }finally{lock.releaseLock();}
 }
-function gtmcLibraryList_(p,t){
- if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');
- requireRole(t,['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','parent']);
- return sheetToObjects(getSheet('LibraryResources')).filter(function(r){return r.active===''||r.active===undefined||r.active===true||String(r.active).toLowerCase()==='true';}).map(function(r){return {id:String(r.id||''),title:String(r.title||''),author:String(r.author||''),subject:String(r.subject||''),class:String(r.class||'ALL'),category:String(r.category||'Other'),url:String(r.url||''),description:String(r.description||'')};});
-}
-function gtmcLibrarySave_(p,t){
- if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');
- var u=requireRole(t,['admin']),title=String(p.title||'').trim(),url=String(p.url||'').trim();if(!title||!/^https?:\/\//i.test(url))throw new Error('Enter a title and valid http/https URL.');
- var sh=getSheet('LibraryResources'),rows=sheetToObjects(sh),id=String(p.id||'').trim()||Utilities.getUuid(),now=new Date(),v=[id,title,String(p.author||''),String(p.subject||''),String(p.className||'ALL'),String(p.category||'Other'),url,String(p.description||''),true,now,u.email,now,u.email],i=rows.findIndex(function(r){return String(r.id)===id;});
- if(i>=0)sh.getRange(i+2,1,1,v.length).setValues([v]);else sh.appendRow(v);logAudit(u.email,'librarySave',{id:id});return {success:true,id:id,message:'Resource saved.'};
-}
-function gtmcLibraryDelete_(p,t){
- if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');
- var u=requireRole(t,['admin']),id=String(p.id||'').trim(),sh=getSheet('LibraryResources'),d=sh.getDataRange().getValues(),h=d[0].map(String),ii=h.indexOf('id'),ai=h.indexOf('active');if(!id)throw new Error('Resource ID required.');
- for(var i=1;i<d.length;i++)if(String(d[i][ii])===id){sh.getRange(i+1,ai+1).setValue(false);logAudit(u.email,'libraryDelete',{id:id});return {success:true};}throw new Error('Library resource not found.');
-}
+function gtmcLibraryList_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');requireRole(t,['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','parent']);return sheetToObjects(getSheet('LibraryResources')).filter(function(r){return r.active===''||r.active===undefined||r.active===true||String(r.active).toLowerCase()==='true';}).map(function(r){return {id:String(r.id||''),title:String(r.title||''),author:String(r.author||''),subject:String(r.subject||''),class:String(r.class||'ALL'),category:String(r.category||'Other'),url:String(r.url||''),description:String(r.description||'')};});}
+function gtmcLibrarySave_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');var u=requireRole(t,['admin']),title=String(p.title||'').trim(),url=String(p.url||'').trim();if(!title||!/^https?:\/\//i.test(url))throw new Error('Enter a title and valid http/https URL.');var sh=getSheet('LibraryResources'),rows=sheetToObjects(sh),id=String(p.id||'').trim()||Utilities.getUuid(),now=new Date(),v=[id,title,String(p.author||''),String(p.subject||''),String(p.className||'ALL'),String(p.category||'Other'),url,String(p.description||''),true,now,u.email,now,u.email],i=rows.findIndex(function(r){return String(r.id)===id;});if(i>=0)sh.getRange(i+2,1,1,v.length).setValues([v]);else sh.appendRow(v);logAudit(u.email,'librarySave',{id:id});return {success:true,id:id,message:'Resource saved.'};}
+function gtmcLibraryDelete_(p,t){if(!gtmcAddonFeatureEnabled_('library'))throw new Error('The e-Library is disabled.');var u=requireRole(t,['admin']),id=String(p.id||'').trim(),sh=getSheet('LibraryResources'),d=sh.getDataRange().getValues(),h=d[0].map(String),ii=h.indexOf('id'),ai=h.indexOf('active');if(!id)throw new Error('Resource ID required.');for(var i=1;i<d.length;i++)if(String(d[i][ii])===id){sh.getRange(i+1,ai+1).setValue(false);logAudit(u.email,'libraryDelete',{id:id});return {success:true};}throw new Error('Library resource not found.');}
 var __gtmcIntegratedRouteOriginal=route;
-route=function(action,p){
- p=p||{};
- switch(action){
-  case 'parentSubmitPaymentNotification':return gtmcParentSubmitPay_(p,p.token);
-  case 'parentGetPaymentNotifications':return gtmcParentGetPay_(p,p.token);
-  case 'staffGetPaymentNotifications':return gtmcStaffGetPay_(p,p.token);
-  case 'staffReplyPaymentNotification':return gtmcStaffReplyPay_(p,p.token);
-  case 'libraryList':return gtmcLibraryList_(p,p.token);
-  case 'librarySave':return gtmcLibrarySave_(p,p.token);
-  case 'libraryDelete':return gtmcLibraryDelete_(p,p.token);
-  case 'adminSetUserStatus':return adminSetUserActive(p,p.token);
-  default:return __gtmcIntegratedRouteOriginal(action,p);
- }
-};
+route=function(action,p){p=p||{};switch(action){case 'parentSubmitPaymentNotification':return gtmcParentSubmitPay_(p,p.token);case 'parentGetPaymentNotifications':return gtmcParentGetPay_(p,p.token);case 'staffGetPaymentNotifications':return gtmcStaffGetPay_(p,p.token);case 'staffReplyPaymentNotification':return gtmcStaffReplyPay_(p,p.token);case 'libraryList':return gtmcLibraryList_(p,p.token);case 'librarySave':return gtmcLibrarySave_(p,p.token);case 'libraryDelete':return gtmcLibraryDelete_(p,p.token);case 'adminSetUserStatus':return adminSetUserActive(p,p.token);default:return __gtmcIntegratedRouteOriginal(action,p);}};
