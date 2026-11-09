@@ -71,7 +71,7 @@
   };
   window.gtmcToggleManagedUser=async function(email,active){
     if(!confirm((active?'Enable':'Disable')+' this account?'))return;
-    try{await api('adminSetUserStatus',{email:email,active:active});toast('Account status updated.','ok');await gtmcLoadManagedUsers();}
+    try{await api('adminSetUserActive',{email:email,active:active});toast('Account status updated.','ok');await gtmcLoadManagedUsers();}
     catch(e){toast(e.message,'err');}
   };
   window.gtmcResetManagedPassword=async function(email){
@@ -86,19 +86,7 @@
   var prev=window.renderAdmin;
   if(typeof prev==='function')window.renderAdmin=async function(){await prev.apply(this,arguments);install();};
   var prevBoot=window.boot;
-  if(typeof prevBoot==='function')window.boot=async function(){
-    if(S.user && (hasRole('principal')||hasRole('vice_principal')||hasRole('registrar')) && !hasRole('bursar')){
-      q('loginView').style.display='none';q('appView').style.display='flex';
-      q('userLabel').textContent=S.user.name||S.user.email;
-      q('userRole').textContent=hasRole('principal')?'Principal':hasRole('vice_principal')?'Vice Principal':'Registrar';
-      if(typeof applyLogoFallback==='function')applyLogoFallback();
-      q('main').innerHTML='<div class="page-head"><h1>School Overview</h1><p>Read-only leadership overview. Student marks and financial records are not exposed here.</p></div><div class="grid cols-4" id="leadershipStats"><div class="card">Loading overview…</div></div>';
-      try{var d=await api('staffGetLeadershipOverview');q('leadershipStats').innerHTML=[['Active accounts',d.activeStaff],['Teachers',d.teachers],['Classes',d.classes],['Score submissions',d.scoreSubmissions]].map(function(x){return '<div class="card stat-card"><div class="sub">'+x[0]+'</div><div class="stat-number">'+x[1]+'</div></div>';}).join('');}
-      catch(e){q('leadershipStats').innerHTML='<div class="card">'+esc(e.message)+'</div>';}
-      return;
-    }
-    return prevBoot.apply(this,arguments);
-  };
+  if(typeof prevBoot==='function')window.boot=async function(){ return prevBoot.apply(this,arguments); };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){if(S.user&&hasRole('admin'))install();});
   else if(S.user&&hasRole('admin'))install();
 })();
