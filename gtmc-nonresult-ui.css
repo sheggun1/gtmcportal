@@ -820,3 +820,699 @@
     [data-panel="featureControls"]
   ) *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+
+/* ============================================================
+   GTMC OPERATIONS REDESIGN — NON-RESULT SCREENS ONLY
+   This layer is intentionally gated by the active operational
+   panel. Academic/result screens retain their existing chrome.
+   No layout, score, report-card, broadsheet or print selectors.
+   ============================================================ */
+
+#appView:has(.panel.active:is(
+  [data-panel="library"],
+  [data-panel="myAttendance"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="students"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="chat"],
+  [data-panel="bursarFinance"],
+  [data-panel="staffPayments"],
+  [data-panel="parentPayments"],
+  [data-panel="userManagement"],
+  [data-panel="featureControls"],
+  [data-panel="registrarStudents"]
+]){
+  --gtmc-ops-ink:#102b46;
+  --gtmc-ops-muted:#60758b;
+  --gtmc-ops-line:#dce7f2;
+  --gtmc-ops-blue:#0756a8;
+  --gtmc-ops-navy:#062b50;
+  --gtmc-ops-gold:#e2b84f;
+  --gtmc-ops-canvas:#f2f6fb;
+  background:var(--gtmc-ops-canvas);
+}
+
+/* A more deliberate application frame, limited to operational screens. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .topbar{
+  min-height:72px;
+  height:auto;
+  padding:10px clamp(16px,2.5vw,34px);
+  border:0;
+  border-bottom:1px solid #d9e5f1;
+  background:linear-gradient(110deg,#fff 0%,#f8fbff 72%,#edf5ff 100%);
+  box-shadow:0 5px 22px rgba(6,43,80,.07);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .topbar .brand-logo{
+  width:46px;height:46px;flex:0 0 46px;
+  border:2px solid var(--gtmc-ops-gold);
+  box-shadow:0 5px 13px rgba(7,86,168,.18);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .topbar .brand-text .name{
+  color:var(--gtmc-ops-navy);
+  font-size:13px;
+  font-weight:850;
+  letter-spacing:.045em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .topbar .user .who .uname{color:#163b5d;font-weight:800}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .topbar .user button{border-radius:9px;min-height:36px}
+
+/* Sidebar: stronger hierarchy, clearer active state and calmer spacing. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .body-layout{grid-template-columns:258px minmax(0,1fr);background:var(--gtmc-ops-canvas)}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .sidebar{
+  padding:22px 14px;
+  background:#fff;
+  border-right:1px solid #dfe8f2;
+  box-shadow:5px 0 22px rgba(16,43,70,.025);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .sidebar .group{margin-bottom:24px}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .sidebar .group-title{
+  padding:0 12px 10px;
+  color:#8294a8;
+  font-size:9.5px;
+  letter-spacing:.16em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .nav-item{
+  min-height:43px;
+  margin:3px 0;
+  padding:10px 12px;
+  gap:11px;
+  border-radius:10px;
+  color:#405a73;
+  font-size:13px;
+  font-weight:650;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .nav-item:hover{background:#f2f7fd;color:#0756a8}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .nav-item.active{
+  color:#fff;
+  border-color:#0756a8;
+  background:linear-gradient(110deg,#0756a8,#064783);
+  box-shadow:0 5px 13px rgba(7,86,168,.18);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .nav-item.active .dot{background:#f2cc69}
+
+/* Operational page content gains a clear title band and a consistent rhythm. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) main.content{padding:clamp(18px,2.4vw,34px);min-width:0}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active{max-width:1500px;margin:0 auto}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .page-head{
+  position:relative;
+  overflow:hidden;
+  margin:0 0 22px;
+  padding:25px 28px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:17px;
+  color:#fff;
+  background:linear-gradient(112deg,#062b50 0%,#0756a8 64%,#1475c7 100%);
+  box-shadow:0 12px 28px rgba(6,43,80,.14);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .page-head:after{
+  content:"";
+  position:absolute;
+  width:230px;height:230px;
+  right:-78px;top:-125px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:50%;
+  box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.025);
+  pointer-events:none;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .page-head h1{
+  position:relative;z-index:1;
+  margin:0 0 6px;
+  color:#fff;
+  font-size:clamp(21px,2.1vw,29px);
+  line-height:1.2;
+  letter-spacing:-.025em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .page-head p{
+  position:relative;z-index:1;
+  max-width:760px;
+  margin:0;
+  color:rgba(255,255,255,.82);
+  font-size:13px;
+  line-height:1.65;
+}
+
+/* Cards: clearer separation between actions, summaries and data. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .card{
+  padding:clamp(17px,2vw,25px);
+  margin:0 0 18px;
+  border:1px solid #dce7f2;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 5px 18px rgba(16,43,70,.045);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .card h2{
+  margin-bottom:7px;
+  color:#0a3e70;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:-.012em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active > .card .sub{
+  color:var(--gtmc-ops-muted);
+  font-size:12.5px;
+  line-height:1.65;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .stat-card{
+  position:relative;
+  overflow:hidden;
+  min-height:112px;
+  padding:20px 21px;
+  border:1px solid #dce8f4;
+  border-top:0;
+  border-left:4px solid #0756a8;
+  border-radius:13px;
+  background:linear-gradient(145deg,#fff 0%,#f6faff 100%);
+  box-shadow:0 5px 16px rgba(7,86,168,.055);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .stat-number{
+  color:#073f78;
+  font-size:clamp(25px,2.2vw,34px);
+  font-weight:850;
+  letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .grid{gap:15px}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .portal-note{
+  border:1px solid #cfe0f2;
+  border-radius:10px;
+  padding:13px 15px;
+  background:#f2f8ff;
+  color:#234f78;
+}
+
+/* Form controls and action buttons are easier to scan and operate. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active label{
+  color:#526d87;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.075em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active select,
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active textarea{
+  min-height:41px;
+  border:1px solid #cbd9e8;
+  border-radius:9px;
+  background:#fff;
+  box-shadow:inset 0 1px 2px rgba(16,43,70,.025);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active input:focus,
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active select:focus,
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active textarea:focus{
+  border-color:#0756a8;
+  outline:0;
+  box-shadow:0 0 0 3px rgba(7,86,168,.12);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active button{
+  min-height:37px;
+  padding:9px 14px;
+  border-radius:9px;
+  font-weight:750;
+  box-shadow:0 2px 5px rgba(7,86,168,.08);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active button.sec{
+  background:#fff;
+  color:#0756a8;
+  border-color:#c9d9ea;
+  box-shadow:none;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active button:focus-visible,
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active a:focus-visible{
+  outline:3px solid rgba(7,86,168,.24);
+  outline-offset:2px;
+}
+
+/* Tables, library resource tiles, announcements and empty states. */
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .table-wrap{
+  overflow:auto;
+  border:1px solid #dce7f2;
+  border-radius:11px;
+  background:#fff;
+  -webkit-overflow-scrolling:touch;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active table{min-width:620px;font-variant-numeric:tabular-nums}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active th{
+  position:sticky;top:0;z-index:1;
+  padding:12px 13px;
+  background:#edf4fb;
+  color:#244f78;
+  font-size:10px;
+  letter-spacing:.07em;
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active td{padding:11px 13px;border-bottom:1px solid #edf1f6}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active tbody tr:nth-child(even) td{background:#f8fbfe}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active tbody tr:hover td{background:#edf5fd}
+#appView:has(.panel.active[data-panel="library"]) .panel.active #libraryRows .grid.cols-2 > .card{
+  position:relative;
+  padding:21px;
+  border:1px solid #dce7f2!important;
+  border-radius:13px;
+  background:linear-gradient(145deg,#fff,#f8fbff);
+  box-shadow:0 5px 15px rgba(16,43,70,.045);
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+#appView:has(.panel.active[data-panel="library"]) .panel.active #libraryRows .grid.cols-2 > .card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(16,43,70,.09);
+}
+#appView:has(.panel.active[data-panel="announcements"]) .panel.active .ann-card{
+  padding:16px 18px;
+  border:1px solid #e7d9ad;
+  border-left:4px solid #d7a934;
+  border-radius:11px;
+  background:#fffdf7;
+  box-shadow:0 3px 10px rgba(80,60,10,.035);
+}
+#appView:has(.panel.active:is(
+  [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+  [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+  [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+  [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+  [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+  [data-panel="featureControls"],[data-panel="registrarStudents"]
+]) .panel.active .empty{
+  padding:34px 20px;
+  border:1px dashed #d5e1ed;
+  border-radius:11px;
+  background:#f8fbfe;
+  color:#71869a;
+  font-style:normal;
+}
+
+/* Mobile: retain the existing horizontal navigation, with less crowding. */
+@media(max-width:900px){
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) .body-layout{grid-template-columns:minmax(0,1fr)}
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) .sidebar{max-height:82px;padding:10px 12px;background:#fff}
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) .nav-item{min-height:38px;padding:8px 12px;border-radius:999px}
+}
+@media(max-width:640px){
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) main.content{padding:13px}
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) .panel.active > .page-head{padding:20px 19px;border-radius:13px;margin-bottom:15px}
+  #appView:has(.panel.active:is(
+    [data-panel="library"],[data-panel="myAttendance"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="staffAttendance"],[data-panel="staffLinks"],
+    [data-panel="staffMessages"],[data-panel="teachers"],[data-panel="parents"],
+    [data-panel="students"],[data-panel="debtors"],[data-panel="calendar"],
+    [data-panel="announcements"],[data-panel="chat"],[data-panel="bursarFinance"],
+    [data-panel="staffPayments"],[data-panel="parentPayments"],[data-panel="userManagement"],
+    [data-panel="featureControls"],[data-panel="registrarStudents"]
+  ]) .panel.active > .card{padding:16px;margin-bottom:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  #appView:has(.panel.active[data-panel="library"]) #libraryRows .card{transition:none}
+  #appView:has(.panel.active[data-panel="library"]) #libraryRows .card:hover{transform:none}
+}
