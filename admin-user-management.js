@@ -2,7 +2,7 @@
 (function(){
   function q(id){return document.getElementById(id);}
   function esc(v){return typeof window.esc==='function'?window.esc(v==null?'':String(v)):String(v==null?'':v);}
-  var roles=['admin','principal','vice_principal','bursar','registrar','class_teacher','subject_teacher','student'];
+  var roles=['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student'];
   function roleLabel(r){return ({admin:'Administrator',principal:'Principal',vice_principal:'Vice Principal',bursar:'Bursar',registrar:'Registrar',class_teacher:'Class Teacher',subject_teacher:'Subject Teacher',student:'Student'})[r]||r;}
   function addNav(){
     var side=q('sidebar'); if(!side||side.querySelector('[data-tab="userManagement"]'))return;
@@ -20,7 +20,7 @@
             <div><label>Full name</label><input id="umName" autocomplete="name"></div>
             <div><label>Email</label><input id="umEmail" type="email" autocomplete="email"></div>
             <div><label>Temporary password</label><input id="umPassword" type="password" autocomplete="new-password" minlength="8"></div>
-            <div><label>Account role</label><select id="umRole" multiple size="4">${roles.map(r=>'<option value="'+r+'">'+roleLabel(r)+'</option>').join('')}</select></div>
+            <div><label>Account roles (select multiple)</label><select id="umRole" multiple size="4">${roles.map(r=>'<option value="'+r+'">'+roleLabel(r)+'</option>').join('')}</select><small class="sub">Select more than one role for combined duties, such as Principal + Bursar.</small></div>
             <div><label>Default class (optional)</label><select id="umClass"><option value="">— None —</option>${(window.__gtmcClasses||[]).map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')}</select></div>
             <div><label>Class teacher class (optional)</label><select id="umCTClass"><option value="">— None —</option>${(window.__gtmcClasses||[]).map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('')}</select></div>
             <div style="grid-column:span 2"><label>Subjects (comma-separated, for subject teachers)</label><input id="umSubjects" placeholder="e.g. Mathematics, Physics"></div>
