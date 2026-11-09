@@ -1516,3 +1516,142 @@
   #appView:has(.panel.active[data-panel="library"]) #libraryRows .card{transition:none}
   #appView:has(.panel.active[data-panel="library"]) #libraryRows .card:hover{transform:none}
 }
+
+
+/* ============================================================
+   GTMC OPERATIONS V2 — VISIBLE PAGE HIERARCHY
+   Adds a real page-heading band to operational panels whose
+   existing markup has no page-head element. Content and form
+   controls remain in place; no application logic is changed.
+   Result, report-card, score-entry and broadsheet panels are
+   deliberately excluded.
+   ============================================================ */
+
+#appView .panel.active:is(
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="myAttendance"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="registrarStudents"]
+):not(:has(> .page-head)){
+  display:block;
+  min-width:0;
+}
+
+#appView .panel.active:is(
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="myAttendance"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="registrarStudents"]
+):not(:has(> .page-head))::before{
+  display:block;
+  margin:0 0 18px;
+  padding:24px 27px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  color:#fff;
+  background:
+    radial-gradient(circle at 92% 10%,rgba(255,255,255,.15),transparent 25%),
+    linear-gradient(112deg,#062b50 0%,#0756a8 68%,#1680cc 100%);
+  box-shadow:0 12px 26px rgba(6,43,80,.13);
+  font-size:clamp(20px,2vw,26px);
+  font-weight:850;
+  line-height:1.2;
+  letter-spacing:-.025em;
+  white-space:pre-line;
+  content:"";
+}
+
+#appView .panel.active[data-panel="teachers"]:not(:has(> .page-head))::before{content:"Staff Management";}
+#appView .panel.active[data-panel="parents"]:not(:has(> .page-head))::before{content:"Parent & Guardian Management";}
+#appView .panel.active[data-panel="debtors"]:not(:has(> .page-head))::before{content:"Fee Debtors";}
+#appView .panel.active[data-panel="calendar"]:not(:has(> .page-head))::before{content:"School Calendar";}
+#appView .panel.active[data-panel="announcements"]:not(:has(> .page-head))::before{content:"School Announcements";}
+#appView .panel.active[data-panel="staffAttendance"]:not(:has(> .page-head))::before{content:"Staff Attendance";}
+#appView .panel.active[data-panel="staffLinks"]:not(:has(> .page-head))::before{content:"Staff Attendance Links";}
+#appView .panel.active[data-panel="staffMessages"]:not(:has(> .page-head))::before{content:"Staff Messages & Support";}
+#appView .panel.active[data-panel="attendanceSummary"]:not(:has(> .page-head))::before{content:"Whole-School Attendance Summary";}
+#appView .panel.active[data-panel="messageAdmin"]:not(:has(> .page-head))::before{content:"Contact School Administration";}
+#appView .panel.active[data-panel="myAttendance"]:not(:has(> .page-head))::before{content:"My Staff Attendance";}
+#appView .panel.active[data-panel="leadershipNotifications"]:not(:has(> .page-head))::before{content:"Leadership Notifications";}
+#appView .panel.active[data-panel="registrarStudents"]:not(:has(> .page-head))::before{content:"Student Register";}
+
+#appView .panel.active:is(
+  [data-panel="teachers"],
+  [data-panel="parents"],
+  [data-panel="debtors"],
+  [data-panel="calendar"],
+  [data-panel="announcements"],
+  [data-panel="staffAttendance"],
+  [data-panel="staffLinks"],
+  [data-panel="staffMessages"],
+  [data-panel="attendanceSummary"],
+  [data-panel="messageAdmin"],
+  [data-panel="myAttendance"],
+  [data-panel="leadershipNotifications"],
+  [data-panel="registrarStudents"]
+):not(:has(> .page-head))::after{
+  display:block;
+  margin:-31px 0 20px;
+  padding:0 27px 20px;
+  color:rgba(255,255,255,.82);
+  font-size:12px;
+  line-height:1.5;
+  pointer-events:none;
+  content:"";
+}
+#appView .panel.active[data-panel="teachers"]:not(:has(> .page-head))::after{content:"Create accounts, assign staff roles and manage teaching responsibilities.";}
+#appView .panel.active[data-panel="parents"]:not(:has(> .page-head))::after{content:"Create parent accounts, link wards and maintain family access.";}
+#appView .panel.active[data-panel="debtors"]:not(:has(> .page-head))::after{content:"Review and maintain outstanding school-fee balances.";}
+#appView .panel.active[data-panel="calendar"]:not(:has(> .page-head))::after{content:"Maintain key school dates, term information and academic events.";}
+#appView .panel.active[data-panel="announcements"]:not(:has(> .page-head))::after{content:"Publish clear updates to parents and students.";}
+#appView .panel.active[data-panel="staffAttendance"]:not(:has(> .page-head))::after{content:"Review staff clock-in records and attendance summaries.";}
+#appView .panel.active[data-panel="staffLinks"]:not(:has(> .page-head))::after{content:"Manage the link between clocking-machine IDs and staff accounts.";}
+#appView .panel.active[data-panel="staffMessages"]:not(:has(> .page-head))::after{content:"Review staff concerns and respond to submitted messages.";}
+#appView .panel.active[data-panel="attendanceSummary"]:not(:has(> .page-head))::after{content:"Read-only monthly overview for authorised school leaders.";}
+#appView .panel.active[data-panel="messageAdmin"]:not(:has(> .page-head))::after{content:"Send an attendance or administration query to the school office.";}
+#appView .panel.active[data-panel="myAttendance"]:not(:has(> .page-head))::after{content:"View your clock-ins and attendance deductions by month.";}
+#appView .panel.active[data-panel="leadershipNotifications"]:not(:has(> .page-head))::after{content:"Important school notices addressed to your leadership account.";}
+#appView .panel.active[data-panel="registrarStudents"]:not(:has(> .page-head))::after{content:"Search, review and maintain the student register.";}
+
+@media(max-width:640px){
+  #appView .panel.active:is(
+    [data-panel="teachers"],[data-panel="parents"],[data-panel="debtors"],
+    [data-panel="calendar"],[data-panel="announcements"],[data-panel="staffAttendance"],
+    [data-panel="staffLinks"],[data-panel="staffMessages"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="myAttendance"],
+    [data-panel="leadershipNotifications"],[data-panel="registrarStudents"]
+  ):not(:has(> .page-head))::before{
+    padding:20px 18px;
+    border-radius:13px;
+    font-size:20px;
+  }
+  #appView .panel.active:is(
+    [data-panel="teachers"],[data-panel="parents"],[data-panel="debtors"],
+    [data-panel="calendar"],[data-panel="announcements"],[data-panel="staffAttendance"],
+    [data-panel="staffLinks"],[data-panel="staffMessages"],[data-panel="attendanceSummary"],
+    [data-panel="messageAdmin"],[data-panel="myAttendance"],
+    [data-panel="leadershipNotifications"],[data-panel="registrarStudents"]
+  ):not(:has(> .page-head))::after{
+    margin:-29px 0 18px;
+    padding:0 18px 18px;
+    font-size:11px;
+  }
+}
