@@ -4414,7 +4414,7 @@ function leadershipGetDashboard(p, token) {
       });
       classSum += sum;
       classCount += count;
-      if (assessment === 'total') enteredTotals += count;
+      enteredTotals += count;
 
       if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null };
       if (count) {
