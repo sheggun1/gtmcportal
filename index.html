@@ -680,7 +680,7 @@ const ATTENDANCE_SUMMARY_HTML = `
 <div class="panel" data-panel="attendanceSummary">
   <div class="card">
     <h2>Attendance Summary — Whole School</h2>
-    <div class="sub">Read-only monthly summary. Visible to officers and admin only.</div>
+    <div class="sub">Read-only monthly staff clock-in summary for Admin, Principal and Vice Principal.</div>
     <div class="grid cols-3">
       <div><label>Month</label><input id="sumMonth" type="month"></div>
       <div style="display:flex;align-items:flex-end">
@@ -745,6 +745,7 @@ async function renderLeadership() {
       <div class="group-title">Leadership</div>
       <div class="nav-item active" data-tab="leadershipDashboard" onclick="setNav('leadershipDashboard')"><span class="dot"></span><span>Academic Overview</span></div>
       <div class="nav-item" data-tab="leadershipNotifications" onclick="setNav('leadershipNotifications')"><span class="dot"></span><span>Notifications</span></div>
+      <div class="nav-item" data-tab="attendanceSummary" onclick="setNav('attendanceSummary')"><span class="dot"></span><span>Staff Attendance Summary</span></div>
     </div>`;
   q('main').innerHTML = `
     <div class="page-head"><h1>${esc(roleName)} Dashboard</h1><p>Monitor school, class and subject performance by term and assessment. Aggregate academic information only.</p></div>
@@ -781,8 +782,11 @@ async function renderLeadership() {
     </div>
     <div class="panel" data-panel="leadershipNotifications">
       <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Notifications</h2><p class="sub">School notifications addressed to your leadership role or account.</p></div><button class="sec sm" onclick="loadLeadershipNotifications()">Refresh</button></div><div id="leadNotifications"><div class="empty">Loading notifications…</div></div></div>
-    </div>`;
+    </div>
+    ${ATTENDANCE_SUMMARY_HTML}`;
   LEADERSHIP_AGGREGATES = null;
+  if (q('sumMonth') && !q('sumMonth').value) q('sumMonth').value = new Date().toISOString().slice(0,7);
+  assignNavOnload('attendanceSummary', 'loadAttendanceSummary');
   await Promise.all([loadLeadershipDashboard(), loadLeadershipNotifications()]);
 }
 
@@ -812,133 +816,123 @@ async function loadLeadershipDashboard() {
   const classBox = q('leadClasses');
   if (!classBox) return;
   const loadId = ++LEADERSHIP_LOAD_ID;
-  const term = q('leadershipTerm')?.value || 'Term1';
-  const assessment = q('leadershipAssessment')?.value || 'total';
+  const term = q('leadershipTerm') ? q('leadershipTerm').value : 'Term1';
+  const assessment = q('leadershipAssessment') ? q('leadershipAssessment').value : 'total';
   const assessmentLabel = ({total:'Overall Total /100',T1:'CA 1 /10',T2:'CA 2 /10',T3:'CA 3 /10',Exam:'Examination /70'})[assessment] || assessment;
-  classBox.innerHTML = '<div class="empty">Loading class and subject performance…</div>';
-  if (q('leadClassDetail')) q('leadClassDetail').innerHTML = '';
-  if (q('leadSubjectDetail')) q('leadSubjectDetail').innerHTML = '<div class="empty">Select a subject to view its class-by-class performance.</div>';
+  classBox.innerHTML = '<div class="empty">Loading secure school-wide academic aggregates…</div>';
   try {
-    if (!LEADERSHIP_AGGREGATES || LEADERSHIP_AGGREGATES.term !== term) {
-      const classNames = await loadClasses();
-      const results = [];
-      // Keep requests controlled: three classes are processed at a time.
-      for (let i=0; i<classNames.length; i+=3) {
-        const batch = await Promise.all(classNames.slice(i,i+3).map(async className => {
-          const [students,subjects,scoreMap] = await Promise.all([
-            api('getStudents',{className}),
-            loadSubjects(className),
-            api('getClassScores',{className,term})
-          ]);
-          const subjectRows = {};
-          const classBuckets = {total:leadershipBucket_(),T1:leadershipBucket_(),T2:leadershipBucket_(),T3:leadershipBucket_(),Exam:leadershipBucket_()};
-          const totalCells = students.length * subjects.length;
-          let entered = 0;
-          subjects.forEach(subject => {
-            const bucketByAssessment = {total:leadershipBucket_(),T1:leadershipBucket_(),T2:leadershipBucket_(),T3:leadershipBucket_(),Exam:leadershipBucket_()};
-            students.forEach(student => {
-              const row = (scoreMap && scoreMap[student.student_id] && scoreMap[student.student_id][subject]) || {};
-              ['T1','T2','T3','Exam','total'].forEach(key => {
-                const score = leadershipScore_(row,key);
-                if (score) {
-                  leadershipAdd_(bucketByAssessment[key],score.percent);
-                  leadershipAdd_(classBuckets[key],score.percent);
-                  if (key === 'total') entered++;
-                }
-              });
-            });
-            subjectRows[subject] = bucketByAssessment;
-          });
-          return {className,studentCount:students.length,subjectCount:subjects.length,totalCells,entered,subjectRows,classBuckets};
-        }));
-        results.push(...batch);
-      }
-      LEADERSHIP_AGGREGATES = {term,classes:results};
-    }
+    const data = await api('leadershipGetDashboard', {term:term, assessment:assessment});
     if (loadId !== LEADERSHIP_LOAD_ID) return;
-    const classes = LEADERSHIP_AGGREGATES.classes;
-    const schoolBucket = leadershipBucket_();
-    const subjectBuckets = {};
-    const classSummaries = classes.map(c => {
-      const bucket = c.classBuckets[assessment];
-      if (bucket) {
-        leadershipAdd_(schoolBucket, leadershipAverage_(bucket));
-      }
-      Object.entries(c.subjectRows).forEach(([subject,byAssessment]) => {
-        const b = byAssessment[assessment];
-        if (!subjectBuckets[subject]) subjectBuckets[subject] = leadershipBucket_();
-        if (b && b.count) {
-          // Weight the school subject average by actual entered score cells.
-          subjectBuckets[subject].sum += b.sum;
-          subjectBuckets[subject].count += b.count;
-          subjectBuckets[subject].high = subjectBuckets[subject].high === null ? b.high : Math.max(subjectBuckets[subject].high,b.high);
-          subjectBuckets[subject].low = subjectBuckets[subject].low === null ? b.low : Math.min(subjectBuckets[subject].low,b.low);
-        }
-      });
-      const average = leadershipAverage_(bucket);
-      const coverage = c.totalCells ? (c.entered/c.totalCells)*100 : 0;
-      return {...c,average,coverage,status:average===null?'No Scores':average<50?'Needs Attention':average<60?'Satisfactory':'Strong'};
-    });
-    const validClassAverages = classSummaries.filter(c=>c.average!==null);
-    const schoolAverage = validClassAverages.length ? validClassAverages.reduce((sum,c)=>sum+c.average,0)/validClassAverages.length : null;
+    LEADERSHIP_AGGREGATES = data;
+    const classes = Array.isArray(data.classes) ? data.classes : [];
+    const subjects = Array.isArray(data.subjectPerformance) ? data.subjectPerformance : [];
+    const attention = classes.filter(function(c) { return c.performance === 'Needs Attention' || c.performance === 'No Scores'; }).length;
     if (q('leadClassCount')) q('leadClassCount').textContent = classes.length;
-    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = schoolAverage===null?'—':schoolAverage.toFixed(2)+'%';
-    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = classSummaries.filter(c=>c.status==='Needs Attention'||c.status==='No Scores').length;
+    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = data.overallAverage === null || data.overallAverage === undefined ? '—' : Number(data.overallAverage).toFixed(2) + '%';
+    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = attention;
+
     const classSelect = q('leadershipClass');
     if (classSelect) {
       const selected = classSelect.value;
-      classSelect.innerHTML = '<option value="">All classes</option>'+classSummaries.map(c=>'<option value="'+esc(c.className)+'">'+esc(c.className)+'</option>').join('');
-      if (classSummaries.some(c=>c.className===selected)) classSelect.value=selected;
+      classSelect.innerHTML = '<option value="">All classes</option>' + classes.map(function(c) {
+        return '<option value="' + esc(c.className) + '">' + esc(c.className) + '</option>';
+      }).join('');
+      if (classes.some(function(c) { return c.className === selected; })) classSelect.value = selected;
     }
     const subjectSelect = q('leadershipSubject');
     if (subjectSelect) {
-      const selected = subjectSelect.value;
-      const names = Object.keys(subjectBuckets).sort((a,b)=>a.localeCompare(b));
-      subjectSelect.innerHTML = '<option value="">Select a subject</option>'+names.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
-      if (names.includes(selected)) subjectSelect.value=selected;
-      else if (names.length) subjectSelect.value=names[0];
+      const selectedSubject = subjectSelect.value;
+      subjectSelect.innerHTML = '<option value="">Select a subject</option>' + subjects.map(function(x) {
+        return '<option value="' + esc(x.subject) + '">' + esc(x.subject) + '</option>';
+      }).join('');
+      if (subjects.some(function(x) { return x.subject === selectedSubject; })) subjectSelect.value = selectedSubject;
+      else if (subjects.length) subjectSelect.value = subjects[0].subject;
     }
-    const statusClass = c => c.status==='Strong'?'ok':c.status==='Satisfactory'?'info':'warn';
-    classBox.innerHTML = classSummaries.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Score coverage</th></tr></thead><tbody>'+classSummaries.map(c=>'<tr><td><strong>'+esc(c.className)+'</strong></td><td>'+c.studentCount+'</td><td>'+(c.average===null?'—':c.average.toFixed(2)+'%')+'</td><td><span class="badge '+statusClass(c)+'">'+c.status+'</span></td><td>'+c.coverage.toFixed(1)+'%</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes were returned.</div>';
-    const weak = classSummaries.filter(c=>c.status==='Needs Attention'||c.status==='No Scores').sort((a,b)=>(a.average??-1)-(b.average??-1));
-    if (q('leadWeakClasses')) q('leadWeakClasses').innerHTML = weak.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Status</th></tr></thead><tbody>'+weak.map(c=>'<tr><td>'+esc(c.className)+'</td><td>'+(c.average===null?'—':c.average.toFixed(2)+'%')+'</td><td>'+c.status+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes are currently below the attention threshold.</div>';
-    const subjectList = Object.entries(subjectBuckets).map(([subject,b])=>({subject,average:leadershipAverage_(b),count:b.count})).sort((a,b)=>(a.average??-1)-(b.average??-1));
-    if (q('leadSubjects')) q('leadSubjects').innerHTML = subjectList.length ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Scores</th></tr></thead><tbody>'+subjectList.map(x=>'<tr><td>'+esc(x.subject)+'</td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+x.count+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">Subject averages will appear when scores are available.</div>';
+
+    const statusClass = function(c) {
+      return c.performance === 'Strong' ? 'ok' : c.performance === 'Satisfactory' ? 'info' : 'warn';
+    };
+    classBox.innerHTML = classes.length
+      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Score coverage</th><th>Submission coverage</th></tr></thead><tbody>' +
+        classes.map(function(c) {
+          return '<tr><td><strong>' + esc(c.className) + '</strong></td><td>' + Number(c.studentCount || 0) + '</td><td>' +
+            (c.average === null || c.average === undefined ? '—' : Number(c.average).toFixed(2) + '%') +
+            '</td><td><span class="badge ' + statusClass(c) + '">' + esc(c.performance || 'No Scores') +
+            '</span></td><td>' + Number(c.coverage || 0).toFixed(1) + '%</td><td>' + Number(c.submissionCoverage || 0).toFixed(1) + '%</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty">No class data is available for this selection.</div>';
+
+    const weak = classes.filter(function(c) { return c.performance === 'Needs Attention' || c.performance === 'No Scores'; });
+    if (q('leadWeakClasses')) q('leadWeakClasses').innerHTML = weak.length
+      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Status</th></tr></thead><tbody>' +
+        weak.map(function(c) { return '<tr><td>' + esc(c.className) + '</td><td>' + (c.average == null ? '—' : Number(c.average).toFixed(2) + '%') + '</td><td>' + esc(c.performance) + '</td></tr>'; }).join('') +
+        '</tbody></table></div>'
+      : '<div class="empty">No classes are currently below the attention threshold.</div>';
+
+    if (q('leadSubjects')) q('leadSubjects').innerHTML = subjects.length
+      ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Scores entered</th></tr></thead><tbody>' +
+        subjects.map(function(x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') + '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>'; }).join('') +
+        '</tbody></table></div>'
+      : '<div class="empty">Subject averages will appear when scores are available.</div>';
+
     renderLeadershipDetails();
-    if (q('leadGeneratedAt')) q('leadGeneratedAt').textContent = 'Term: '+({Term1:'First Term',Term2:'Second Term',Term3:'Third Term'}[term]||term)+' · Assessment: '+assessmentLabel+'. Averages are normalized to percentages; class average is the mean of available subject-score averages. Score coverage counts entered overall-total cells. Academic year is not filtered because the existing score retrieval call does not expose a verified year parameter.';
+    if (q('leadGeneratedAt')) q('leadGeneratedAt').textContent =
+      'Term: ' + ({Term1:'First Term',Term2:'Second Term',Term3:'Third Term'}[term] || term) +
+      ' · Assessment: ' + assessmentLabel + ' · Generated: ' + (data.generatedAt ? new Date(data.generatedAt).toLocaleString() : 'just now') +
+      '. Data is aggregated on the server; individual student records and marks are not exposed to leadership accounts.';
   } catch (e) {
     if (loadId !== LEADERSHIP_LOAD_ID) return;
-    classBox.innerHTML = '<div class="empty">Academic performance could not be loaded: '+esc(e.message)+'</div>';
-    ['leadWeakClasses','leadSubjects','leadClassDetail','leadSubjectDetail'].forEach(id=>{if(q(id))q(id).innerHTML='<div class="empty">Analysis unavailable.</div>';});
-    if(q('leadOverallAverage'))q('leadOverallAverage').textContent='—';
-    if(q('leadClassCount'))q('leadClassCount').textContent='—';
-    if(q('leadAttentionCount'))q('leadAttentionCount').textContent='—';
+    classBox.innerHTML = '<div class="empty">Academic performance could not be loaded: ' + esc(e.message) + '</div>';
+    ['leadWeakClasses','leadSubjects','leadClassDetail','leadSubjectDetail'].forEach(function(id) {
+      if (q(id)) q(id).innerHTML = '<div class="empty">Analysis unavailable.</div>';
+    });
+    if (q('leadOverallAverage')) q('leadOverallAverage').textContent = '—';
+    if (q('leadClassCount')) q('leadClassCount').textContent = '—';
+    if (q('leadAttentionCount')) q('leadAttentionCount').textContent = '—';
   }
 }
 
 function renderLeadershipDetails() {
   const data = LEADERSHIP_AGGREGATES;
   if (!data) return;
-  const assessment = q('leadershipAssessment')?.value || 'total';
-  const selectedClass = q('leadershipClass')?.value || '';
-  const selectedSubject = q('leadershipSubject')?.value || '';
-  const classBox = q('leadClassDetail'), subjectBox = q('leadSubjectDetail');
-  const avg = b => leadershipAverage_(b);
+  const selectedClass = q('leadershipClass') ? q('leadershipClass').value : '';
+  const selectedSubject = q('leadershipSubject') ? q('leadershipSubject').value : '';
+  const classBox = q('leadClassDetail');
+  const subjectBox = q('leadSubjectDetail');
   if (classBox) {
     if (!selectedClass) {
       classBox.innerHTML = '<div class="portal-note">Select a class above to see its subject-level breakdown.</div>';
     } else {
-      const c = data.classes.find(x=>x.className===selectedClass);
-      const rows = c ? Object.entries(c.subjectRows).map(([subject,by])=>({subject,bucket:by[assessment],average:avg(by[assessment])})).sort((a,b)=>(a.average??-1)-(b.average??-1)) : [];
-      classBox.innerHTML = c ? '<h3>'+esc(c.className)+' — Subject Breakdown</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><strong>'+esc(x.subject)+'</strong></td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+(x.bucket?.high===null||!x.bucket?'—':x.bucket.high.toFixed(2)+'%')+'</td><td>'+(x.bucket?.low===null||!x.bucket?'—':x.bucket.low.toFixed(2)+'%')+'</td><td>'+(x.bucket?.count||0)+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">Class data is unavailable.</div>';
+      const c = (data.classes || []).find(function(x) { return x.className === selectedClass; });
+      const rows = c && Array.isArray(c.subjectPerformance) ? c.subjectPerformance : [];
+      classBox.innerHTML = c
+        ? '<h3>' + esc(c.className) + ' — Subject Breakdown</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>' +
+          rows.map(function(x) {
+            return '<tr><td><strong>' + esc(x.subject) + '</strong></td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') +
+              '</td><td>' + (x.highest == null ? '—' : Number(x.highest).toFixed(2) + '%') +
+              '</td><td>' + (x.lowest == null ? '—' : Number(x.lowest).toFixed(2) + '%') +
+              '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">Class data is unavailable.</div>';
     }
   }
   if (subjectBox) {
     if (!selectedSubject) {
       subjectBox.innerHTML = '<div class="empty">Select a subject to view its performance across classes.</div>';
     } else {
-      const rows = data.classes.filter(c=>c.subjectRows[selectedSubject]).map(c=>({className:c.className,bucket:c.subjectRows[selectedSubject][assessment]})).map(x=>({...x,average:avg(x.bucket)})).sort((a,b)=>(a.average??-1)-(b.average??-1));
-      subjectBox.innerHTML = rows.length ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>'+rows.map(x=>'<tr><td><strong>'+esc(x.className)+'</strong></td><td>'+(x.average===null?'—':x.average.toFixed(2)+'%')+'</td><td>'+(x.bucket?.high===null||!x.bucket?'—':x.bucket.high.toFixed(2)+'%')+'</td><td>'+(x.bucket?.low===null||!x.bucket?'—':x.bucket.low.toFixed(2)+'%')+'</td><td>'+(x.bucket?.count||0)+'</td></tr>').join('')+'</tbody></table></div>' : '<div class="empty">No classes offer this subject in the selected term.</div>';
+      const rows = (data.classes || []).map(function(c) {
+        const subject = (c.subjectPerformance || []).find(function(x) { return x.subject === selectedSubject; });
+        return subject ? {className:c.className,subject:subject} : null;
+      }).filter(Boolean);
+      subjectBox.innerHTML = rows.length
+        ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores entered</th></tr></thead><tbody>' +
+          rows.map(function(x) {
+            return '<tr><td><strong>' + esc(x.className) + '</strong></td><td>' + (x.subject.average == null ? '—' : Number(x.subject.average).toFixed(2) + '%') +
+              '</td><td>' + (x.subject.highest == null ? '—' : Number(x.subject.highest).toFixed(2) + '%') +
+              '</td><td>' + (x.subject.lowest == null ? '—' : Number(x.subject.lowest).toFixed(2) + '%') +
+              '</td><td>' + Number(x.subject.scoresEntered || 0) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="empty">No classes offer this subject in the selected term.</div>';
     }
   }
 }
