@@ -24,6 +24,12 @@ function add(){
  loadClasses().then(async cs=>{const list=(cs||[]).map(x=>typeof x==='string'?x:x.class||x.className).filter(Boolean);['bfClass','bfStudentClass','bfChargeClass'].forEach(id=>$(id).innerHTML=list.map(c=>'<option>'+h(c)+'</option>').join(''));await students('bfStudentClass','bfStudent');await students('bfChargeClass','bfChargeStudent');$('bfStudentClass').onchange=()=>students('bfStudentClass','bfStudent');$('bfChargeClass').onchange=()=>students('bfChargeClass','bfChargeStudent');gtmcBursarOverview();}).catch(e=>toast(e.message,'err'));
 }
 const oldBoot=window.boot;
-if(typeof oldBoot==='function')window.boot=async function(){await oldBoot.apply(this,arguments);if(S&&S.user&&hasRole('bursar'))add();};
+if(typeof oldBoot==='function')window.boot=async function(){
+ if(S&&S.user&&hasRole('bursar')&&!hasRole('admin')&&!hasRole('principal')&&!hasRole('vice_principal')&&!hasRole('vice_principal_admin')&&!hasRole('vice_principal_academic')){
+  $('loginView').style.display='none';$('appView').style.display='flex';$('userLabel').textContent=S.user.name||S.user.email;$('userRole').textContent='Bursar';if(typeof applyLogoFallback==='function')applyLogoFallback();add();if(typeof setNav==='function')setNav('bursarFinance');return;
+ }
+ await oldBoot.apply(this,arguments);
+ if(S&&S.user&&hasRole('bursar'))add();
+};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(S&&S.user&&hasRole('bursar'))setTimeout(add,600);});else if(S&&S.user&&hasRole('bursar'))setTimeout(add,600);
 })();
