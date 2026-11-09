@@ -1,6 +1,6 @@
 /* GTMC shell refresh — navigation chrome only.
    Intentionally does not style academic panels, score tables, broadsheets,
-   result cards, report templates, or print layouts. */
+   academic-result views, report templates, or print layouts. */
 #appView .topbar{
   min-height:68px;
   height:auto;
