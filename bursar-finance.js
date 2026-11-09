@@ -29,7 +29,7 @@ function add(){
 const oldBoot=window.boot;
 if(typeof oldBoot==='function')window.boot=async function(){
  if(S&&S.user&&hasRole('bursar')&&!hasRole('admin')&&!hasRole('principal')&&!hasRole('vice_principal')&&!hasRole('vice_principal_admin')&&!hasRole('vice_principal_academic')){
-  $('loginView').style.display='none';$('appView').style.display='flex';$('userLabel').textContent=S.user.name||S.user.email;$('userRole').textContent='Bursar';if(typeof applyLogoFallback==='function')applyLogoFallback();add();if(typeof setNav==='function')setNav('bursarFinance');return;
+  $('loginView').style.display='none';$('appView').style.display='flex';$('userLabel').textContent=S.user.name||S.user.email;$('userRole').textContent='Bursar';if(typeof applyLogoFallback==='function')applyLogoFallback();add();if(window.GTMC_INSTALL_STAFF_PAYMENT_NOTIFICATIONS)window.GTMC_INSTALL_STAFF_PAYMENT_NOTIFICATIONS();if(typeof setNav==='function')setNav('bursarFinance');return;
  }
  await oldBoot.apply(this,arguments);
  if(S&&S.user&&hasRole('bursar'))add();
