@@ -167,11 +167,13 @@ function route(action, p) {
     ].indexOf(action) === -1) {
       throw new Error('Permission denied for parent account.');
     }
-    if (!hasRole_(sessionUser, 'admin') && roleList_(sessionUser).some(function(r) { return ['principal','vice_principal','vice_principal_admin','vice_principal_academic'].indexOf(r) !== -1; }) &&
+    const isLeadershipAccount = roleList_(sessionUser).some(function(r) { return ['principal','vice_principal','vice_principal_admin','vice_principal_academic'].indexOf(r) !== -1; });
+    const isBursarAccount = hasRole_(sessionUser, 'bursar');
+    if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && !isBursarAccount &&
         ['me','leadershipGetDashboard','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Leadership accounts are restricted to aggregate academic summaries and notifications.');
     }
-    if (!hasRole_(sessionUser, 'admin') && hasRole_(sessionUser, 'bursar') &&
+    if (!hasRole_(sessionUser, 'admin') && isBursarAccount && !isLeadershipAccount &&
         ['me','getClasses','getStudents','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Bursar accounts are restricted to student directory and financial functions.');
     }
