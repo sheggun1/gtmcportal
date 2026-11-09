@@ -1,0 +1,147 @@
+/* GTMC shell refresh — navigation chrome only.
+   Intentionally does not style academic panels, score tables, broadsheets,
+   academic-result views, report templates, or print layouts. */
+#appView .topbar{
+  min-height:68px;
+  height:auto;
+  padding:10px clamp(14px,2.4vw,30px);
+  border-bottom:1px solid #d7e4f2;
+  box-shadow:0 3px 16px rgba(4,62,122,.06);
+  background:#fff;
+}
+#appView .topbar .brand{gap:12px;min-width:0}
+#appView .topbar .brand-logo{
+  width:44px;height:44px;flex:0 0 44px;
+  box-shadow:0 3px 10px rgba(4,62,122,.16);
+}
+#appView .topbar .brand-text .name{color:#043e7a;font-size:13px;line-height:1.25}
+#appView .topbar .brand-text .tag{color:#55718f}
+#appView .topbar .user{gap:10px}
+#appView .topbar .user .who .uname{font-weight:750}
+#appView .body-layout{
+  grid-template-columns:252px minmax(0,1fr);
+  background:#f4f8fd;
+}
+#appView .sidebar{
+  background:#fff;
+  border-right:1px solid #e0e9f3;
+  padding:20px 13px;
+  scrollbar-width:thin;
+  scrollbar-color:#c4d5e7 transparent;
+}
+#appView .sidebar .group{margin-bottom:20px}
+#appView .sidebar .group-title{
+  color:#71849a;
+  font-size:10px;
+  letter-spacing:.13em;
+  padding:0 12px 9px;
+}
+#appView .nav-item{
+  min-height:40px;
+  padding:9px 12px;
+  margin:3px 0;
+  gap:11px;
+  border:1px solid transparent;
+  border-radius:9px;
+  color:#334e68;
+  font-size:13px;
+  font-weight:650;
+  transition:background-color .16s ease,color .16s ease,border-color .16s ease;
+}
+#appView .nav-item:hover{
+  background:#f2f7fd;
+  color:#0756a8;
+  transform:none;
+}
+#appView .nav-item.active{
+  background:#eaf3fd;
+  color:#043e7a;
+  border-color:#d4e5f7;
+  box-shadow:inset 3px 0 0 #0756a8;
+}
+#appView .nav-item .dot{width:7px;height:7px;background:#b8c9da}
+#appView .nav-item.active .dot{background:#d9ad43}
+#appView .nav-item .count-badge{margin-left:auto}
+@media(max-width:900px){
+  #appView .body-layout{grid-template-columns:minmax(0,1fr)}
+  #appView .sidebar{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    max-height:76px;
+    padding:9px 12px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    border-right:0;
+    border-bottom:1px solid #e0e9f3;
+    -webkit-overflow-scrolling:touch;
+  }
+  #appView .sidebar .group{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    flex:0 0 auto;
+    margin:0;
+  }
+  #appView .sidebar .group-title{display:none}
+  #appView .nav-item{
+    flex:0 0 auto;
+    min-height:40px;
+    margin:0;
+    padding:9px 13px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  #appView .nav-item.active{
+    background:#0756a8;
+    color:#fff;
+    border-color:#0756a8;
+    box-shadow:none;
+  }
+  #appView .nav-item.active .dot{background:#fff}
+}
+@media(max-width:560px){
+  #appView .topbar{min-height:60px;padding:8px 12px}
+  #appView .topbar .brand-logo{width:38px;height:38px;flex-basis:38px}
+  #appView .topbar .brand-text .name{font-size:11px;max-width:180px}
+  #appView .topbar .brand-text .tag{font-size:9px}
+  #appView .topbar .user{gap:6px}
+  #appView .topbar .user .who .uname{font-size:11px}
+  #appView .topbar .user .who .urole{font-size:9px}
+  #appView .topbar .user button{padding:7px 9px;font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  #appView .nav-item{transition:none}
+}
+
+/* Content treatment is limited to non-academic-result panels. */
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) .card{
+  border-color:#e1eaf4;
+  border-radius:13px;
+  box-shadow:0 2px 10px rgba(4,62,122,.035);
+}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) .card h2{
+  color:#073f78;
+}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) .table-wrap{
+  overflow:auto;
+  border-color:#e0e9f3;
+  border-radius:10px;
+}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) th{
+  background:#f2f7fd;
+  color:#164b7f;
+}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) input:focus,
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) select:focus,
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) textarea:focus{
+  border-color:#0756a8;
+  box-shadow:0 0 0 3px rgba(7,86,168,.13);
+  outline:0;
+}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]) .empty{
+  border-radius:10px;
+  background:#f8fbff;
+}
