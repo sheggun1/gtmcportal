@@ -1030,6 +1030,7 @@ function getStudentScores(p, token) {
       throw new Error('Permission denied: students may only view their own scores.');
     }
     if (!academicYear) throw new Error('Academic year is required to view published results.');
+    throwIfStudentDebtor_(studentId, className, academicYear);
     const isPublished = sheetToObjects(getSheet('ResultPublication')).some(function(row) {
       return String(row.student_id || '').trim() === studentId &&
         String(row.class || '').trim() === className &&
@@ -2729,6 +2730,31 @@ function rankStudent_(studentId, className, term) {
   };
 }
 
+/* Result access is blocked while the student's recorded debtor balance for the
+   selected academic year is positive. The legacy Debtors register is the
+   source already used by the school's Debtors panel and report-card balance. */
+function studentDebtStatus_(studentId, className, academicYear) {
+  const rows = sheetToObjects(getSheet('Debtors')).filter(function (r) {
+    return String(r.student_id || '').trim() === String(studentId).trim() &&
+      String(r.class || '').trim() === String(className).trim() &&
+      String(r.academic_year || '').trim() === String(academicYear).trim();
+  });
+  const amount = Math.round(rows.reduce(function (sum, r) {
+    const value = Number(r.amount);
+    return sum + (isFinite(value) && value > 0 ? value : 0);
+  }, 0) * 100) / 100;
+  return { isDebtor: amount > 0, amount: amount };
+}
+function throwIfStudentDebtor_(studentId, className, academicYear) {
+  const debt = studentDebtStatus_(studentId, className, academicYear);
+  if (debt.isDebtor) {
+    throw new Error('DEBTOR: Outstanding balance is ₦' +
+      debt.amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+      '. Your result is withheld until the balance is cleared. Please contact the school bursar.');
+  }
+  return debt;
+}
+
 /* ============ PARENT RESULT (with ranking) ============ */
 function parentGetResult(p, token) {
   const parent = requireRole(token, ['parent']);
@@ -2739,6 +2765,7 @@ function parentGetResult(p, token) {
   if (!className || !studentId || !term || !academicYear) throw new Error('className, studentId, term and academicYear are required.');
   portalAssertLinkedParent_(parent, className, studentId);
   if (TERMS.indexOf(term) < 0) throw new Error('Invalid term.');
+  throwIfStudentDebtor_(studentId, className, academicYear);
   if (!portalIsPublished_(studentId, className, term, academicYear)) throw new Error('This result has not been published yet.');
   const student = portalFindStudent_(className, studentId);
   if (!student) throw new Error('Student not found.');
