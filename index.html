@@ -396,6 +396,15 @@
   .gtmc-module-copy p{font-size:12px}
 }
 
+
+/* Consistent click feedback and an explicit in-progress state for actions. */
+button{transition:transform .14s ease,filter .14s ease,box-shadow .14s ease}
+button:active{transform:translateY(1px) scale(.975);filter:brightness(.94)}
+button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}
+button:disabled{cursor:wait;opacity:.78}
+button.btn-loading{pointer-events:none;position:relative;padding-right:34px!important}
+button.btn-loading:after{content:"";position:absolute;right:12px;top:50%;width:13px;height:13px;margin-top:-7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gtmcBtnSpin .7s linear infinite}
+@keyframes gtmcBtnSpin{to{transform:rotate(360deg)}}
 </style>
 <link rel="stylesheet" href="gtmc-shell-refresh.css">
 <link rel="stylesheet" href="gtmc-nonresult-ui.css">
@@ -576,7 +585,7 @@ async function doLogin() {
   const btn = q('loginBtn'), err = q('loginErr');
   err.textContent = '';
   if (!email || !password) { err.textContent = 'Enter your email and password.'; return; }
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Signing in…';
   let staffErr = null;
   try {
     try {
@@ -587,7 +596,7 @@ async function doLogin() {
       const r = await api('parentLogin', { email, password });
       saveSession(r.token, r.user); boot(); return;
     } catch (e2) { err.textContent = (staffErr && staffErr.message) || e2.message; }
-  } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  } finally { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Sign In'; }
 }
 
 /* Resolve officer status from the attendance backend (cached per session) */
