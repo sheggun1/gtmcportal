@@ -823,11 +823,14 @@ async function renderLeadership() {
           <button class="blue" onclick="loadLeadershipDashboard()">Refresh</button>
         </div>
       </div>
-      <div class="grid cols-3" id="leadershipStats">
+      <div class="grid cols-5" id="leadershipStats">
         <div class="card stat-card"><div class="sub">Classes monitored</div><div class="stat-number" id="leadClassCount">—</div></div>
         <div class="card stat-card"><div class="sub">School average</div><div class="stat-number" id="leadOverallAverage">—</div></div>
+        <div class="card stat-card"><div class="sub">At / above 50%</div><div class="stat-number" id="leadPassRate">—</div></div>
+        <div class="card stat-card"><div class="sub">Score coverage</div><div class="stat-number" id="leadScoreCoverage">—</div></div>
         <div class="card stat-card"><div class="sub">Classes needing attention</div><div class="stat-number" id="leadAttentionCount">—</div></div>
       </div>
+      <div class="card"><h2>School Score Distribution</h2><p class="sub">Share of entered assessment records in each percentage band. Missing scores are excluded.</p><div id="leadDistribution"><div class="empty">Loading distribution…</div></div></div>
       <div class="card">
         <h2>Class Performance</h2><p class="sub">Select a class to inspect its overall performance and subject-by-subject results.</p>
         <div style="max-width:360px;margin:10px 0 14px"><label for="leadershipClass">Select Class</label><select id="leadershipClass" onchange="renderLeadershipDetails()"><option value="">All classes</option></select></div>
@@ -896,6 +899,14 @@ async function loadLeadershipDashboard() {
     if (q('leadClassCount')) q('leadClassCount').textContent = classes.length;
     if (q('leadOverallAverage')) q('leadOverallAverage').textContent = data.overallAverage === null || data.overallAverage === undefined ? '—' : Number(data.overallAverage).toFixed(2) + '%';
     if (q('leadAttentionCount')) q('leadAttentionCount').textContent = attention;
+    if (q('leadPassRate')) q('leadPassRate').textContent = data.passRate == null ? '—' : Number(data.passRate).toFixed(1) + '%';
+    if (q('leadScoreCoverage')) q('leadScoreCoverage').textContent = Number(data.scoreCoverage || 0).toFixed(1) + '%';
+    const bands = data.distribution || {};
+    const bandRows = [['Below 40%',Number(bands.below40||0)],['40–49%',Number(bands.from40to49||0)],['50–59%',Number(bands.from50to59||0)],['60–69%',Number(bands.from60to69||0)],['70% and above',Number(bands.from70plus||0)]];
+    const bandTotal = bandRows.reduce((sum,row)=>sum+row[1],0);
+    if(q('leadDistribution')) q('leadDistribution').innerHTML = bandTotal
+      ? '<div class="table-wrap"><table><thead><tr><th>Score band</th><th>Records</th><th>Share</th></tr></thead><tbody>' + bandRows.map(row=>'<tr><td>'+esc(row[0])+'</td><td>'+row[1]+'</td><td>'+(row[1]/bandTotal*100).toFixed(1)+'%</td></tr>').join('') + '</tbody></table></div><p class="sub">50% is an analytical benchmark, not a change to official grading rules.</p>'
+      : '<div class="empty">No entered scores are available for this selection.</div>';
 
     const classSelect = q('leadershipClass');
     if (classSelect) {
@@ -919,10 +930,11 @@ async function loadLeadershipDashboard() {
       return c.performance === 'Strong' ? 'ok' : c.performance === 'Satisfactory' ? 'info' : 'warn';
     };
     classBox.innerHTML = classes.length
-      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Score coverage</th><th>Submission coverage</th></tr></thead><tbody>' +
+      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>50%+ rate</th><th>Performance</th><th>Score coverage</th><th>Submission coverage</th></tr></thead><tbody>' +
         classes.map(function(c) {
           return '<tr><td><strong>' + esc(c.className) + '</strong></td><td>' + Number(c.studentCount || 0) + '</td><td>' +
             (c.average === null || c.average === undefined ? '—' : Number(c.average).toFixed(2) + '%') +
+            '</td><td>' + (c.passRate == null ? '—' : Number(c.passRate).toFixed(1) + '%') +
             '</td><td><span class="badge ' + statusClass(c) + '">' + esc(c.performance || 'No Scores') +
             '</span></td><td>' + Number(c.coverage || 0).toFixed(1) + '%</td><td>' + Number(c.submissionCoverage || 0).toFixed(1) + '%</td></tr>';
         }).join('') + '</tbody></table></div>'
@@ -936,8 +948,8 @@ async function loadLeadershipDashboard() {
       : '<div class="empty">No classes are currently below the attention threshold.</div>';
 
     if (q('leadSubjects')) q('leadSubjects').innerHTML = subjects.length
-      ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Scores entered</th></tr></thead><tbody>' +
-        subjects.map(function(x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') + '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>'; }).join('') +
+      ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>50%+ rate</th><th>Scores entered</th></tr></thead><tbody>' +
+        subjects.map(function(x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') + '</td><td>' + (x.passRate == null ? '—' : Number(x.passRate).toFixed(1) + '%') + '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>'; }).join('') +
         '</tbody></table></div>'
       : '<div class="empty">Subject averages will appear when scores are available.</div>';
 
