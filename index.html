@@ -4239,6 +4239,11 @@ renderClassTeacher = async function () {
   function status(p){return p===null?"Incomplete":p<40?"Critical":p<50?"Poor":p<70?"Needs improvement":"On track";}
   function badge(p){var c=p===null?"warn":p<50?"err":p<70?"warn":"ok";return '<span class="badge '+c+'">'+status(p)+'</span>';}
   function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+  function bandStats(values){
+    var bands=[{label:"Below 40%",count:0},{label:"40–49%",count:0},{label:"50–59%",count:0},{label:"60–69%",count:0},{label:"70% and above",count:0}];
+    values.forEach(function(v){if(v<40)bands[0].count++;else if(v<50)bands[1].count++;else if(v<60)bands[2].count++;else if(v<70)bands[3].count++;else bands[4].count++;});
+    return bands;
+  }
 
   var oldClass=window.loadTeacherAcademicSummary;
   if(typeof oldClass==="function")window.loadTeacherAcademicSummary=async function(){
@@ -4258,10 +4263,15 @@ renderClassTeacher = async function () {
       }).sort(function(a,b){return a.average===null?1:b.average===null?-1:b.average-a.average;});
       var ranked=rows.filter(function(r){return r.average!==null;}),top=ranked[0],low=ranked[ranked.length-1];
       var flagged=rows.filter(function(r){return r.average!==null&&r.average<50;});
+      var distribution=bandStats(ranked.map(function(r){return r.average;}));
+      var passRate=ranked.length?ranked.filter(function(r){return r.average>=50;}).length/ranked.length*100:null;
       var html='<div id="ctPerfEarlyWarning" class="card" style="border-left:4px solid #b45309;margin-bottom:14px"><h2>Class Performance Alerts</h2>'+
-        '<div class="grid cols-3" style="margin:10px 0"><div><div class="sub">Best overall student</div><strong>'+(top?safe(top.name):"—")+'</strong><div>'+(top?top.average.toFixed(1)+"%":"No complete scores")+'</div></div>'+
+        '<div class="grid cols-4" style="margin:10px 0"><div><div class="sub">Complete records</div><strong>'+ranked.length+'/'+rows.length+'</strong></div><div><div class="sub">Class pass benchmark</div><strong>'+(passRate===null?"—":passRate.toFixed(1)+"%")+'</strong></div><div><div class="sub">Best overall student</div><strong>'+(top?safe(top.name):"—")+'</strong><div>'+(top?top.average.toFixed(1)+"%":"No complete scores")+'</div></div>'+
         '<div><div class="sub">Lowest overall student</div><strong>'+(low?safe(low.name):"—")+'</strong><div>'+(low?low.average.toFixed(1)+"%":"—")+'</div></div>'+
-        '<div><div class="sub">Students needing attention</div><strong style="font-size:24px;color:#b91c1c">'+flagged.length+'</strong><div class="sub">Below 50%, complete records</div></div></div>';
+        '<div><div class="sub">Students needing attention</div><strong style="font-size:24px;color:#b91c1c">'+flagged.length+'</strong><div class="sub">Below 50%, complete records</div></div></div>'+
+        '<h3 style="margin:12px 0 6px">Class score distribution</h3><div class="table-wrap"><table><thead><tr><th>Band</th><th>Students</th><th>Share</th></tr></thead><tbody>'+
+        distribution.map(function(b){return '<tr><td>'+safe(b.label)+'</td><td>'+b.count+'</td><td>'+(ranked.length?(b.count/ranked.length*100).toFixed(1):"0.0")+'%</td></tr>';}).join('')+
+        '</tbody></table></div>';
       if(flagged.length){
         html+='<h3 style="margin:12px 0 6px">Students requiring follow-up</h3><div class="table-wrap"><table><thead><tr><th>Student</th><th>Average</th><th>Alert</th></tr></thead><tbody>';
         flagged.forEach(function(r){html+='<tr><td><strong>'+safe(r.name)+'</strong></td><td>'+r.average.toFixed(1)+'%</td><td>'+badge(r.average)+'</td></tr>';});
@@ -4300,7 +4310,8 @@ renderClassTeacher = async function () {
       if(mine.length&&mine.indexOf(sub)<0)throw new Error("This subject is not assigned to your account.");
       var rows=students.map(function(st){var score=rawScore((scoreMap[st.student_id]||{})[sub],a);return {name:st.name||st.student_id,score:score,percent:pct(score,a)};}).sort(function(x,y){return x.percent===null?1:y.percent===null?-1:y.percent-x.percent;});
       var done=rows.filter(function(r){return r.percent!==null;}),top=done[0],low=done[done.length-1],average=mean(done.map(function(r){return r.percent;})),flagged=done.filter(function(r){return r.percent<50;});
-      if(sum)sum.innerHTML='<div class="grid cols-4"><div class="card stat-card"><div class="sub">Students</div><div class="stat-number">'+students.length+'</div></div><div class="card stat-card"><div class="sub">Class average</div><div class="stat-number">'+(average===null?"—":average.toFixed(1)+"%")+'</div></div><div class="card stat-card"><div class="sub">Best student</div><strong>'+(top?safe(top.name):"—")+'</strong><div class="sub">'+(top?top.percent.toFixed(1)+"%":"")+'</div></div><div class="card stat-card"><div class="sub">Weakest student</div><strong>'+(low?safe(low.name):"—")+'</strong><div class="sub">'+(low?low.percent.toFixed(1)+"%":"")+'</div></div></div><div class="portal-note" style="margin-bottom:14px">'+flagged.length+' student(s) below 50% in '+safe(sub)+'. Missing scores are not ranked.</div>';
+      var distribution=bandStats(done.map(function(r){return r.percent;})),passRate=done.length?done.filter(function(r){return r.percent>=50;}).length/done.length*100:null;
+      if(sum)sum.innerHTML='<div class="grid cols-4"><div class="card stat-card"><div class="sub">Students</div><div class="stat-number">'+students.length+'</div></div><div class="card stat-card"><div class="sub">Class average</div><div class="stat-number">'+(average===null?"—":average.toFixed(1)+"%")+'</div></div><div class="card stat-card"><div class="sub">Best student</div><strong>'+(top?safe(top.name):"—")+'</strong><div class="sub">'+(top?top.percent.toFixed(1)+"%":"")+'</div></div><div class="card stat-card"><div class="sub">Weakest student</div><strong>'+(low?safe(low.name):"—")+'</strong><div class="sub">'+(low?low.percent.toFixed(1)+"%":"")+'</div></div></div><div class="portal-note" style="margin-bottom:14px">'+flagged.length+' student(s) below 50% in '+safe(sub)+'. Missing scores are not ranked. Pass benchmark: '+(passRate===null?"—":passRate.toFixed(1)+"%")+' of entered scores at or above 50%; coverage '+done.length+'/'+students.length+'.</div><div class="table-wrap" style="margin-bottom:14px"><table><thead><tr><th>Score band</th><th>Students</th><th>Share of entered scores</th></tr></thead><tbody>'+distribution.map(function(b){return '<tr><td>'+safe(b.label)+'</td><td>'+b.count+'</td><td>'+(done.length?(b.count/done.length*100).toFixed(1):"0.0")+'%</td></tr>';}).join('')+'</tbody></table></div>';
       var html='<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Percentage</th><th>Performance</th></tr></thead><tbody>';
       rows.forEach(function(r,i){html+='<tr><td>'+(r.percent===null?"—":i+1)+'</td><td><strong>'+safe(r.name)+'</strong></td><td>'+(r.score===null?"—":r.score.toFixed(1))+'</td><td>'+(r.percent===null?"—":r.percent.toFixed(1)+"%")+'</td><td>'+badge(r.percent)+'</td></tr>';});
       box.innerHTML=html+'</tbody></table></div><p class="sub" style="margin-top:8px">Assessment: '+safe(a)+' · '+safe(term)+' · '+safe(cls)+'. Marks are converted to percentage equivalents.</p>';
