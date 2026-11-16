@@ -2313,7 +2313,7 @@ async function exportClassPDF() {
     }
     doc.save(`${className}_${term}_${year.replace(/[^\w]/g,'_')}.pdf`);
     status.textContent = `Done — ${students.length} student page(s).`;
-    toast('PDF saved', 'ok');
+    toast(debtorCount ? `PDF saved; ${debtorCount} debtor(s) withheld.` : 'PDF saved', 'ok');
   } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
@@ -4180,11 +4180,17 @@ async function gtmcExport(each) {
   try {
     const students = await api('getStudents', { className });
     if (!students.length) { status.textContent = 'No students.'; return; }
+    const debtRows = await api('adminGetDebts', { className, academicYear: year });
+    const debtByStudent = {};
+    debtRows.forEach(d => { debtByStudent[d.studentId] = (debtByStudent[d.studentId] || 0) + (Number(d.amount) || 0); });
+    const eligibleStudents = students.filter(st => !(Number(debtByStudent[st.student_id]) > 0));
+    const debtorCount = students.length - eligibleStudents.length;
+    if (!eligibleStudents.length) { status.textContent = `No report cards generated. ${debtorCount} debtor(s) have outstanding balances.`; return; }
     const { jsPDF } = window.jspdf;
     let doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
-    for (let i = 0; i < students.length; i++) {
-      const st = students[i];
-      status.textContent = `Building ${i + 1}/${students.length} — ${st.name}`;
+    for (let i = 0; i < eligibleStudents.length; i++) {
+      const st = eligibleStudents[i];
+      status.textContent = `Building ${i + 1}/${eligibleStudents.length} — ${st.name}`;
       const r = await buildReportPayload(className, st.student_id, st.name, term, year);
       r.classSize = students.length;
       if (each) {
@@ -4197,7 +4203,7 @@ async function gtmcExport(each) {
       }
     }
     if (!each) doc.save(`${className}_${term}_${year.replace(/[^\w]/g, '_')}.pdf`);
-    status.textContent = each ? `Done — ${students.length} files downloaded.` : `Done — ${students.length} student page(s).`;
+    status.textContent = (each ? `Done — ${eligibleStudents.length} files downloaded.` : `Done — ${eligibleStudents.length} student page(s).`) + (debtorCount ? ` ${debtorCount} debtor(s) withheld.` : '');
     toast('PDF saved', 'ok');
   } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
