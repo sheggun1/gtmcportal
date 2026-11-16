@@ -705,8 +705,14 @@ function getClasses(token) {
 
 /* ============ STUDENTS ============ */
 function getStudents(className, token) {
-  verifyToken(token);
+  const user = requireRole(token, ['admin', 'class_teacher', 'subject_teacher', 'registrar', 'bursar']);
+  className = String(className || '').trim();
   if (!className) throw new Error('Class required');
+  if (CLASSES.indexOf(className) === -1) throw new Error('Unknown class.');
+
+  if (hasRole_(user, 'class_teacher') || hasRole_(user, 'subject_teacher')) {
+    assertTeacherClassSubjectAccess_(user, className, '');
+  }
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
@@ -999,10 +1005,23 @@ function getScores(p, token) {
 }
 
 function getStudentScores(p, token) {
-  verifyToken(token);
-  const className = p.className, term = p.term, studentId = p.studentId;
+  const user = requireRole(token, ['admin', 'student']);
+  const className = String(p.className || '').trim();
+  const term = String(p.term || '').trim();
+  const studentId = String(p.studentId || '').trim();
   if (!className || !term || !studentId)
     throw new Error('className, term, studentId required');
+  if (CLASSES.indexOf(className) === -1) throw new Error('Unknown class.');
+  if (TERMS.indexOf(term) === -1) throw new Error('Bad term.');
+
+  // A student may read only their own record in the class assigned to their account.
+  // Administrators retain their existing support access.
+  if (!hasRole_(user, 'admin')) {
+    if (String(user.class || '').trim() !== className ||
+        String(user.email || '').trim().toLowerCase() !== studentId.toLowerCase()) {
+      throw new Error('Permission denied: students may only view their own scores.');
+    }
+  }
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
