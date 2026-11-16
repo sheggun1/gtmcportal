@@ -71,3 +71,22 @@
 ## Release boundary
 
 All changes remain on `fix/assessment-lock-enforcement`. The branch is not merged into `main`. No Apps Script or Vercel deployment was triggered. Do not merge or deploy until the owner reviews the changes, confirms the Google Sheets backup, and explicitly approves release.
+
+
+## Additional result-access controls (development branch)
+
+- Student and parent result endpoints now check the existing `Debtors` register for the selected academic year before returning marks.
+- A positive recorded balance blocks the result response and returns a debtor notice containing the outstanding amount. The UI displays the notice without rendering scores.
+- Bulk administrator report-card PDF generation skips students with a positive debtor-register balance and reports how many were withheld.
+- The result-card summary displays overall position within the student's exact class arm (for example, JSS2A), using the existing backend rank object. Ranking calculations were not changed.
+- Visible report labels now use “Class Teacher” and “Principal”.
+- Buttons now provide press feedback; the sign-in button displays a spinner while authentication is in progress.
+
+Validation added:
+- Backend source parses successfully.
+- All four inline frontend script blocks parse successfully.
+- Isolated debtor-register tests cover accumulated balances, year/class/student matching, and non-debtor cases.
+- This is source-level validation only. It does not replace live Apps Script, browser, concurrency, or deployment testing.
+
+Important boundary:
+- The debtor restriction uses the existing `Debtors` register already used by the portal's debtor panel and parent result payload. It does not automatically reconcile that register with the separate fee-ledger sheets.
