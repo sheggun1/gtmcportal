@@ -3293,7 +3293,11 @@ async function studentLoad() {
       <div class="table-wrap"><table id="studentResultTable">
       <thead><tr><th>Subject</th><th>CA 1</th><th>CA 2</th><th>CA 3</th><th>Exam</th><th>Total</th><th>Grade</th></tr></thead>
       <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total ?? '—'}</strong></td><td>${esc(r.grade || '—')}</td></tr>`).join('')}</tbody></table></div>`;
-  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  } catch (e) {
+    window.__STUDENT_RESULT_ROWS = [];
+    const debtor = /^DEBTOR:/i.test(String(e.message || ''));
+    box.innerHTML = debtor ? `<div role="alert" style="padding:18px;border:1px solid #f2c078;background:#fff8e8;border-radius:12px;color:#7c2d12"><strong>DEBTOR — RESULT WITHHELD</strong><p style="margin-top:8px">${esc(e.message.replace(/^DEBTOR:\s*/i,''))}</p></div>` : `<div class="empty">${esc(e.message)}</div>`;
+  }
 }
 async function downloadStudentResultPDF() {
   const rows = window.__STUDENT_RESULT_ROWS || [];
@@ -3445,7 +3449,8 @@ async function parentLoad() {
     if (typeof window.gtmcRenderParentInsights === 'function') window.gtmcRenderParentInsights();
   } catch (e) {
     q('pStatus').textContent = e.message;
-    q('pReportBox').innerHTML = '';
+    const debtor = /^DEBTOR:/i.test(String(e.message || ''));
+    q('pReportBox').innerHTML = debtor ? `<div role="alert" style="padding:18px;border:1px solid #f2c078;background:#fff8e8;border-radius:12px;color:#7c2d12"><strong>DEBTOR — RESULT WITHHELD</strong><p style="margin-top:8px">${esc(e.message.replace(/^DEBTOR:\s*/i,''))}</p></div>` : '';
     toast(e.message, 'err');
   }
 }
@@ -4085,6 +4090,7 @@ function gtmcCardHTML(r, withId) {
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
+  if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className) , esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
   if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
     .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
@@ -4134,8 +4140,8 @@ function gtmcCardHTML(r, withId) {
   ${sc.length ? `<div class="rc-bar">Grade Scale</div><table class="rc-t rc-grades"><tbody><tr>${sc.map(g => `<td>${esc(g.grade)}<br><small>${Number(g.min)}&ndash;${Number(g.max)}</small></td>`).join('')}</tr></tbody></table>` : ''}
   <div class="rc-bar">Performance Summary</div>
   <table class="rc-t" style="margin-bottom:6px"><thead><tr>${sum.map(s => `<th>${s[0]}</th>`).join('')}</tr></thead><tbody><tr>${sum.map(s => `<td class="c" style="font-size:13px">${s[1]}</td>`).join('')}</tr></tbody></table>
-  ${t.showTeacherRemark !== false ? rem('Form Master/Mistress', r.teacherRemark) : ''}
-  ${t.showPrincipalRemark !== false ? rem('Head Teacher', r.principalRemark) : ''}
+  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.teacherRemark) : ''}
+  ${t.showPrincipalRemark !== false ? rem('Principal', r.principalRemark) : ''}
   ${(t.showAIComment !== false && r.aiComment) ? rem('Comment', r.aiComment) : ''}
   <div class="rc-foot">Report generated on ${rd}. Please contact the school if you notice any discrepancy.</div>
 </div>`;
