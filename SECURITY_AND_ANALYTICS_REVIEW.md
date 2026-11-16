@@ -90,3 +90,12 @@ Validation added:
 
 Important boundary:
 - The debtor restriction uses the existing `Debtors` register already used by the portal's debtor panel and parent result payload. It does not automatically reconcile that register with the separate fee-ledger sheets.
+
+
+## Apps Script release identification
+
+- Apps Script backend release identifier: **14.1.0**.
+- A plain GET to the deployed Apps Script web-app URL now returns a read-only health response containing the service name, version, and release date. API actions continue to require POST.
+- To install this backend release, open the GTMC Apps Script project, replace the contents of its existing `Code.gs` file with the repository's `code.gs` from `fix/assessment-lock-enforcement`, save, and then create a new Apps Script deployment version only after the owner approves.
+- The repository currently has no tracked `appsscript.json` manifest. Do not create or replace deployment settings as part of this code-copy step; preserve the existing Apps Script project's current manifest and deployment configuration.
+- This repository update does not itself change the live Apps Script project or deployment.
