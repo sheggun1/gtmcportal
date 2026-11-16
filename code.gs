@@ -1480,14 +1480,9 @@ const SKIP = ["Users","Submissions","Students","Scores","Subjects","Classes","Au
 function doGet(e) {
   const params = (e && e.parameter) ? e.parameter : {};
   if (params.action) {
-    const sensitiveActions = [
-      'parentLogin','parentGetWards','parentGetResult','parentAskResultAI',
-      'parentGetDebts','parentGetAnnouncements','parentGetTestBreakdown'
-    ];
-    if (sensitiveActions.indexOf(String(params.action)) !== -1) {
-      return out({ success: false, error: 'Use POST for parent portal actions.' });
-    }
-    return handle(e);
+    // All application actions must use POST. This prevents credentials, session
+    // tokens and write parameters from being placed in URLs, browser history or logs.
+    return out({ success: false, error: 'Use POST for API actions.' });
   }
 
   try {
