@@ -16,7 +16,7 @@
 const SHEET_ID = '1ijAtsR96Z3UzB9sa1c5vE9Ks6jBvaNiT1m6dH9zHX34';
 const SESSION_SECONDS = 6 * 60 * 60;
 // Release identifier shown by the Apps Script health endpoint.
-const GTMC_APP_VERSION = '14.1.0';
+const GTMC_APP_VERSION = '14.2.0';
 const ADMIN_EMAILS = ['admin@school.com'];
 
 /* ============ CLASS LIST ============ */
@@ -191,6 +191,8 @@ function route(action, p) {
     }
   }
   switch (action) {
+    case 'getLoginAppearance': return gtmcGetLoginAppearance_();
+    case 'adminSaveLoginAppearance': return gtmcSaveLoginAppearance_(p, p.token);
     case 'login':               return login(p.email, p.password);
     case 'me':                  return verifyToken(p.token);
     case 'logout':               return logoutSession_(p.token);
@@ -324,6 +326,59 @@ function route(action, p) {
 
     default: throw new Error('Unknown action: ' + action);
   }
+}
+
+
+/* ============ PUBLIC LOGIN APPEARANCE (ADMIN CONFIGURABLE) ============ */
+const GTMC_LOGIN_APPEARANCE_DEFAULTS_ = {
+  template: 'split',
+  backgroundImage: 'school.jpg',
+  logoImage: 'school-crest.png',
+  primary: '#0b1f46',
+  accent: '#d5a12a',
+  schoolName: 'Greater Tomorrow Model College',
+  motto: 'Jesus, Our Teacher',
+  headline: 'Learning. Progress. Excellence.',
+  description: 'A secure digital platform for students, parents, teachers and administrators.',
+  footer: 'Ado-Ekiti, Ekiti State'
+};
+function gtmcGetLoginAppearance_() {
+  let saved = {};
+  try { saved = JSON.parse(PropertiesService.getScriptProperties().getProperty('GTMC_LOGIN_APPEARANCE') || '{}') || {}; } catch (e) {}
+  const result = Object.assign({}, GTMC_LOGIN_APPEARANCE_DEFAULTS_);
+  Object.keys(result).forEach(function (key) {
+    if (Object.prototype.hasOwnProperty.call(saved, key)) result[key] = saved[key];
+  });
+  return result;
+}
+function gtmcSaveLoginAppearance_(p, token) {
+  const admin = requireRole(token, ['admin']);
+  const input = p.appearance || {};
+  const allowedTemplates = ['split','hero','card'];
+  const allowedImages = ['school.jpg','none'];
+  const allowedLogos = ['school-crest.png','none'];
+  const cleanText = function(value, fallback, max) {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return fallback;
+    if (text.length > max) throw new Error('Login appearance text is too long.');
+    return text;
+  };
+  const defaults = GTMC_LOGIN_APPEARANCE_DEFAULTS_;
+  const next = {
+    template: allowedTemplates.indexOf(String(input.template || '')) >= 0 ? String(input.template) : defaults.template,
+    backgroundImage: allowedImages.indexOf(String(input.backgroundImage || '')) >= 0 ? String(input.backgroundImage) : defaults.backgroundImage,
+    logoImage: allowedLogos.indexOf(String(input.logoImage || '')) >= 0 ? String(input.logoImage) : defaults.logoImage,
+    primary: /^#[0-9a-fA-F]{6}$/.test(String(input.primary || '')) ? String(input.primary) : defaults.primary,
+    accent: /^#[0-9a-fA-F]{6}$/.test(String(input.accent || '')) ? String(input.accent) : defaults.accent,
+    schoolName: cleanText(input.schoolName, defaults.schoolName, 100),
+    motto: cleanText(input.motto, defaults.motto, 100),
+    headline: cleanText(input.headline, defaults.headline, 100),
+    description: cleanText(input.description, defaults.description, 220),
+    footer: cleanText(input.footer, defaults.footer, 100)
+  };
+  PropertiesService.getScriptProperties().setProperty('GTMC_LOGIN_APPEARANCE', JSON.stringify(next));
+  logAudit(admin.email, 'adminSaveLoginAppearance', { template: next.template, backgroundImage: next.backgroundImage });
+  return next;
 }
 
 function out(obj) {
