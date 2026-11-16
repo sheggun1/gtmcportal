@@ -15,6 +15,8 @@
 
 const SHEET_ID = '1ijAtsR96Z3UzB9sa1c5vE9Ks6jBvaNiT1m6dH9zHX34';
 const SESSION_SECONDS = 6 * 60 * 60;
+// Release identifier shown by the Apps Script health endpoint.
+const GTMC_APP_VERSION = '14.2.0';
 const ADMIN_EMAILS = ['admin@school.com'];
 
 /* ============ CLASS LIST ============ */
@@ -189,8 +191,11 @@ function route(action, p) {
     }
   }
   switch (action) {
+    case 'getLoginAppearance': return gtmcGetLoginAppearance_();
+    case 'adminSaveLoginAppearance': return gtmcSaveLoginAppearance_(p, p.token);
     case 'login':               return login(p.email, p.password);
     case 'me':                  return verifyToken(p.token);
+    case 'logout':               return logoutSession_(p.token);
     case 'getClasses':          return getClasses(p.token);
     case 'getSubjectsForClass': return subjectsForClass(p.className);
     case 'getStudents':         return getStudents(p.className, p.token);
@@ -321,6 +326,59 @@ function route(action, p) {
 
     default: throw new Error('Unknown action: ' + action);
   }
+}
+
+
+/* ============ PUBLIC LOGIN APPEARANCE (ADMIN CONFIGURABLE) ============ */
+const GTMC_LOGIN_APPEARANCE_DEFAULTS_ = {
+  template: 'split',
+  backgroundImage: 'school.jpg',
+  logoImage: 'school-crest.png',
+  primary: '#0b1f46',
+  accent: '#d5a12a',
+  schoolName: 'Greater Tomorrow Model College',
+  motto: 'Jesus, Our Teacher',
+  headline: 'Learning. Progress. Excellence.',
+  description: 'A secure digital platform for students, parents, teachers and administrators.',
+  footer: 'Ado-Ekiti, Ekiti State'
+};
+function gtmcGetLoginAppearance_() {
+  let saved = {};
+  try { saved = JSON.parse(PropertiesService.getScriptProperties().getProperty('GTMC_LOGIN_APPEARANCE') || '{}') || {}; } catch (e) {}
+  const result = Object.assign({}, GTMC_LOGIN_APPEARANCE_DEFAULTS_);
+  Object.keys(result).forEach(function (key) {
+    if (Object.prototype.hasOwnProperty.call(saved, key)) result[key] = saved[key];
+  });
+  return result;
+}
+function gtmcSaveLoginAppearance_(p, token) {
+  const admin = requireRole(token, ['admin']);
+  const input = p.appearance || {};
+  const allowedTemplates = ['split','hero','card'];
+  const allowedImages = ['school.jpg','none'];
+  const allowedLogos = ['school-crest.png','none'];
+  const cleanText = function(value, fallback, max) {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return fallback;
+    if (text.length > max) throw new Error('Login appearance text is too long.');
+    return text;
+  };
+  const defaults = GTMC_LOGIN_APPEARANCE_DEFAULTS_;
+  const next = {
+    template: allowedTemplates.indexOf(String(input.template || '')) >= 0 ? String(input.template) : defaults.template,
+    backgroundImage: allowedImages.indexOf(String(input.backgroundImage || '')) >= 0 ? String(input.backgroundImage) : defaults.backgroundImage,
+    logoImage: allowedLogos.indexOf(String(input.logoImage || '')) >= 0 ? String(input.logoImage) : defaults.logoImage,
+    primary: /^#[0-9a-fA-F]{6}$/.test(String(input.primary || '')) ? String(input.primary) : defaults.primary,
+    accent: /^#[0-9a-fA-F]{6}$/.test(String(input.accent || '')) ? String(input.accent) : defaults.accent,
+    schoolName: cleanText(input.schoolName, defaults.schoolName, 100),
+    motto: cleanText(input.motto, defaults.motto, 100),
+    headline: cleanText(input.headline, defaults.headline, 100),
+    description: cleanText(input.description, defaults.description, 220),
+    footer: cleanText(input.footer, defaults.footer, 100)
+  };
+  PropertiesService.getScriptProperties().setProperty('GTMC_LOGIN_APPEARANCE', JSON.stringify(next));
+  logAudit(admin.email, 'adminSaveLoginAppearance', { template: next.template, backgroundImage: next.backgroundImage });
+  return next;
 }
 
 function out(obj) {
@@ -688,6 +746,12 @@ function verifyToken(token) {
   if (!raw) throw new Error('Session expired — please log in again');
   return JSON.parse(raw);
 }
+function logoutSession_(token) {
+  if (!token) throw new Error('No token');
+  verifyToken(token);
+  CacheService.getScriptCache().remove('sess_' + token);
+  return { success: true };
+}
 
 function requireRole(token, roles) {
   const u = verifyToken(token);
@@ -705,8 +769,14 @@ function getClasses(token) {
 
 /* ============ STUDENTS ============ */
 function getStudents(className, token) {
-  verifyToken(token);
+  const user = requireRole(token, ['admin', 'class_teacher', 'subject_teacher', 'registrar', 'bursar']);
+  className = String(className || '').trim();
   if (!className) throw new Error('Class required');
+  if (CLASSES.indexOf(className) === -1) throw new Error('Unknown class.');
+
+  if (hasRole_(user, 'class_teacher') || hasRole_(user, 'subject_teacher')) {
+    assertTeacherClassSubjectAccess_(user, className, '');
+  }
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
@@ -902,12 +972,15 @@ function normalizeAssessment_(assessment) {
   return result;
 }
 function submissionMatches_(row, map, criteria) {
-  return String(submissionValue_(row, map, 'teacher_email')) === String(criteria.teacherEmail) &&
-    String(submissionValue_(row, map, 'class')) === String(criteria.className) &&
-    String(submissionValue_(row, map, 'subject')) === String(criteria.subject) &&
-    String(submissionValue_(row, map, 'term')) === String(criteria.term) &&
-    (criteria.assessment === undefined || String(submissionValue_(row, map, 'assessment') || '') === String(criteria.assessment || '')) &&
-    (!criteria.academicYear || !submissionValue_(row, map, 'academic_year') || String(submissionValue_(row, map, 'academic_year')) === String(criteria.academicYear));
+  // teacherEmail is optional: omit it when checking the shared assessment lock.
+  // The lock key is class + subject + term + assessment (+ academic year), not teacher.
+  return (criteria.teacherEmail === undefined || criteria.teacherEmail === null ||
+      String(submissionValue_(row, map, 'teacher_email')).toLowerCase() === String(criteria.teacherEmail).toLowerCase()) &&
+    String(submissionValue_(row, map, 'class')).trim().toUpperCase() === String(criteria.className).trim().toUpperCase() &&
+    String(submissionValue_(row, map, 'subject')).trim().toLowerCase() === String(criteria.subject).trim().toLowerCase() &&
+    String(submissionValue_(row, map, 'term')).trim().toLowerCase() === String(criteria.term).trim().toLowerCase() &&
+    (criteria.assessment === undefined || normalizeAssessment_(submissionValue_(row, map, 'assessment') || '') === normalizeAssessment_(criteria.assessment || '')) &&
+    (!criteria.academicYear || !submissionValue_(row, map, 'academic_year') || String(submissionValue_(row, map, 'academic_year')).trim() === String(criteria.academicYear).trim());
 }
 function assessmentLockState_(className, subject, term, assessment, user, academicYear) {
   if (hasRole_(user, 'admin')) return { editable: true, state: 'admin' };
@@ -917,16 +990,26 @@ function assessmentLockState_(className, subject, term, assessment, user, academ
   const hm = submissionHeadersMap_(sh), map = hm.map;
   let specific = null;
   for (let i = 1; i < d.length; i++) {
-    if (!submissionMatches_(d[i], map, { teacherEmail: user.email, className: className, subject: subject, term: term, academicYear: academicYear })) continue;
-    const a = String(submissionValue_(d[i], map, 'assessment') || '').trim();
+    if (!submissionMatches_(d[i], map, { className: className, subject: subject, term: term, academicYear: academicYear })) continue;
+    const a = normalizeAssessment_(submissionValue_(d[i], map, 'assessment') || '');
     const status = String(submissionValue_(d[i], map, 'status') || '').toLowerCase();
-    if (a === assessment) specific = { rowNum: i + 1, row: d[i], status: status, deadline: submissionValue_(d[i], map, 'correction_deadline') };
+    if (a === normalizeAssessment_(assessment)) {
+      // Last matching row is the canonical/latest record, including older teacher-specific rows.
+      specific = {
+        rowNum: i + 1, row: d[i], status: status,
+        deadline: submissionValue_(d[i], map, 'correction_deadline'),
+        teacherEmail: String(submissionValue_(d[i], map, 'teacher_email') || '')
+      };
+    }
     // Legacy term-wide rows are ignored by the assessment lock model.
     // Each T1/T2/T3/Exam assessment is controlled only by its own record.
   }
   if (specific) {
     if (specific.status === 'locked') return { editable: false, state: 'locked', message: 'This assessment is locked. Ask the administrator to authorise a correction.' };
     if (specific.status === 'correction_open') {
+      if (String(specific.teacherEmail || '').toLowerCase() !== String(user.email || '').toLowerCase()) {
+        return { editable: false, state: 'correction_restricted', message: 'This correction window is authorised for another teacher. Contact the administrator.' };
+      }
       const deadline = specific.deadline ? new Date(specific.deadline).getTime() : NaN;
       if (!isFinite(deadline) || deadline <= Date.now()) return { editable: false, state: 'expired', message: 'The authorised correction window has expired.' };
       return { editable: true, state: 'correction_open', deadline: new Date(deadline).toISOString() };
@@ -986,10 +1069,34 @@ function getScores(p, token) {
 }
 
 function getStudentScores(p, token) {
-  verifyToken(token);
-  const className = p.className, term = p.term, studentId = p.studentId;
+  const user = requireRole(token, ['admin', 'student']);
+  const className = String(p.className || '').trim();
+  const term = String(p.term || '').trim();
+  const studentId = String(p.studentId || '').trim();
+  const academicYear = String(p.academicYear || '').trim();
   if (!className || !term || !studentId)
     throw new Error('className, term, studentId required');
+  if (CLASSES.indexOf(className) === -1) throw new Error('Unknown class.');
+  if (TERMS.indexOf(term) === -1) throw new Error('Bad term.');
+
+  // A student may read only their own record in the class assigned to their account.
+  // Administrators retain their existing support access.
+  if (!hasRole_(user, 'admin')) {
+    if (String(user.class || '').trim() !== className ||
+        String(user.email || '').trim().toLowerCase() !== studentId.toLowerCase()) {
+      throw new Error('Permission denied: students may only view their own scores.');
+    }
+    if (!academicYear) throw new Error('Academic year is required to view published results.');
+    throwIfStudentDebtor_(studentId, className, academicYear);
+    const isPublished = sheetToObjects(getSheet('ResultPublication')).some(function(row) {
+      return String(row.student_id || '').trim() === studentId &&
+        String(row.class || '').trim() === className &&
+        String(row.term || '').trim() === term &&
+        String(row.academic_year || '').trim() === academicYear &&
+        (row.published === true || String(row.published).toLowerCase() === 'true');
+    });
+    if (!isPublished) throw new Error('This result has not been published for the selected academic year.');
+  }
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
@@ -1044,7 +1151,12 @@ function saveScore(p, token) {
 
   assertTeacherClassSubjectAccess_(user, className, subject);
   const assessment = assessmentFromField_(field);
-  assertAssessmentEditable_(className, subject, term, assessment, user, p.academicYear);
+  const scoreLock = LockService.getScriptLock();
+  scoreLock.waitLock(10000);
+  try {
+    // Re-check the lock while holding the script lock so a concurrent submission
+    // cannot slip between the lock check and the score write.
+    assertAssessmentEditable_(className, subject, term, assessment, user, p.academicYear);
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
@@ -1063,6 +1175,9 @@ function saveScore(p, token) {
   scoreCell.setValue(value);
   if (String(previousValue) !== String(value)) logAudit(user.email, 'saveScore', { className: className, subject: subject, term: term, assessment: assessment, studentId: String(studentId), previousValue: previousValue, newValue: value });
   return { success: true };
+  } finally {
+    scoreLock.releaseLock();
+  }
 }
 
 /* ============ SUBMISSION / LOCK ============ */
@@ -1102,30 +1217,34 @@ function submitScores(p, token) {
   const assessment = normalizeAssessment_(p.assessment || p.field || '');
   const now = new Date();
   if (assessment) {
-    const state = assessmentLockState_(className, subject, term, assessment, user, p.academicYear);
-    if (state.state === 'locked') throw new Error('This assessment has already been submitted and locked.');
-    if (state.state === 'expired') throw new Error('The correction window has expired. Request a new authorisation.');
-    // An existing legacy term-wide lock is intentionally not overwritten. This specific
-    // assessment record permits only the authorised assessment to be corrected.
-    const sh = getSheet('Submissions');
-    const data = sh.getDataRange().getValues(), hm = submissionHeadersMap_(sh), map = hm.map;
+    const submissionLock = LockService.getScriptLock();
+    submissionLock.waitLock(10000);
     let current = null;
-    for (let i = 1; i < data.length; i++) {
-      if (submissionMatches_(data[i], map, { teacherEmail: user.email, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear })) {
-        current = { rowNum: i + 1, row: data[i], status: String(submissionValue_(data[i], map, 'status') || '').toLowerCase(), deadline: submissionValue_(data[i], map, 'correction_deadline') };
+    try {
+      const state = assessmentLockState_(className, subject, term, assessment, user, p.academicYear);
+      if (!state.editable) throw new Error(state.message || 'This assessment cannot be submitted in its current state.');
+      // Submission and score writes share the same lock to prevent a save racing a submit.
+      const sh = getSheet('Submissions');
+      const data = sh.getDataRange().getValues(), hm = submissionHeadersMap_(sh), map = hm.map;
+      for (let i = 1; i < data.length; i++) {
+        if (submissionMatches_(data[i], map, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear })) {
+          current = { rowNum: i + 1, row: data[i], status: String(submissionValue_(data[i], map, 'status') || '').toLowerCase(), deadline: submissionValue_(data[i], map, 'correction_deadline') };
+        }
       }
-    }
-    if (current && current.status === 'correction_open') {
-      const deadline = current.deadline ? new Date(current.deadline).getTime() : NaN;
-      if (!isFinite(deadline) || deadline <= now.getTime()) throw new Error('The correction window has expired.');
-    }
+      if (current && current.status === 'correction_open') {
+        const deadline = current.deadline ? new Date(current.deadline).getTime() : NaN;
+        if (!isFinite(deadline) || deadline <= now.getTime()) throw new Error('The correction window has expired.');
+      }
     const vals = {
       teacher_email: user.email, class: className, subject: subject, term: term,
       status: 'locked', timestamp: now, assessment: assessment,
       academic_year: p.academicYear || '', submitted_by: user.email,
       correction_deadline: '', resubmitted_at: current ? now : '', resubmitted_by: current ? user.email : ''
     };
-    upsertSubmission_(vals, { teacherEmail: user.email, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    upsertSubmission_(vals, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    } finally {
+      submissionLock.releaseLock();
+    }
     createNotification_('', 'admin', current ? 'Assessment resubmitted' : 'Assessment submitted', user.name + ' submitted ' + assessment + ' for ' + subject + ' (' + className + ', ' + term + ').', 'score_submission', 'submissions:' + className, user.email);
     logAudit(user.email, current ? 'resubmitAssessment' : 'submitAssessment', {
       className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear || ''
@@ -1184,7 +1303,13 @@ function unlockScores(p, token) {
       academic_year: p.academicYear || '', unlocked_at: now, unlocked_by: admin.email,
       unlock_reason: reason, correction_deadline: deadline, submitted_by: teacherEmail
     };
-    upsertSubmission_(vals, { teacherEmail: teacherEmail, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    const unlockLock = LockService.getScriptLock();
+    unlockLock.waitLock(10000);
+    try {
+      upsertSubmission_(vals, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    } finally {
+      unlockLock.releaseLock();
+    }
     logAudit(admin.email, 'unlockAssessmentForCorrection', { teacherEmail: teacherEmail, className: className, subject: subject, term: term, assessment: assessment, reason: reason, correctionDeadline: deadline, academicYear: p.academicYear || '' });
     return { success: true, assessment: assessment, status: 'correction_open', correctionDeadline: deadline.toISOString() };
   }
@@ -1413,14 +1538,9 @@ const SKIP = ["Users","Submissions","Students","Scores","Subjects","Classes","Au
 function doGet(e) {
   const params = (e && e.parameter) ? e.parameter : {};
   if (params.action) {
-    const sensitiveActions = [
-      'parentLogin','parentGetWards','parentGetResult','parentAskResultAI',
-      'parentGetDebts','parentGetAnnouncements','parentGetTestBreakdown'
-    ];
-    if (sensitiveActions.indexOf(String(params.action)) !== -1) {
-      return out({ success: false, error: 'Use POST for parent portal actions.' });
-    }
-    return handle(e);
+    // All application actions must use POST. This prevents credentials, session
+    // tokens and write parameters from being placed in URLs, browser history or logs.
+    return out({ success: false, error: 'Use POST for API actions.' });
   }
 
   try {
@@ -1430,6 +1550,18 @@ function doGet(e) {
         return out({ error: 'Backup access is disabled or unauthorised. Configure BACKUP_API_KEY and provide it only to trusted backup clients.' });
       }
     }
+    // A plain GET to the deployment URL is a read-only health/version check.
+    // Keep this before openSS() so the version can be checked without reading Sheets.
+    if (!params.sheet && params.sheets !== 'all') {
+      return out({
+        success: true,
+        service: 'GTMC Grade System API',
+        version: GTMC_APP_VERSION,
+        release: '2026-11-16',
+        message: 'Grade System API is running. Application actions must use POST.'
+      });
+    }
+
     const ss = openSS();
     const result = {};
     if (params.sheet) {
@@ -1442,8 +1574,6 @@ function doGet(e) {
         if (SKIP.indexOf(name) !== -1) return;
         result[name] = sh.getDataRange().getValues();
       });
-    } else {
-      return out({ success: true, message: 'Grade System API is running. Use ?action=... or ?sheets=all.' });
     }
     return out(result);
   } catch (err) {
@@ -2667,6 +2797,31 @@ function rankStudent_(studentId, className, term) {
   };
 }
 
+/* Result access is blocked while the student's recorded debtor balance for the
+   selected academic year is positive. The legacy Debtors register is the
+   source already used by the school's Debtors panel and report-card balance. */
+function studentDebtStatus_(studentId, className, academicYear) {
+  const rows = sheetToObjects(getSheet('Debtors')).filter(function (r) {
+    return String(r.student_id || '').trim() === String(studentId).trim() &&
+      String(r.class || '').trim() === String(className).trim() &&
+      String(r.academic_year || '').trim() === String(academicYear).trim();
+  });
+  const amount = Math.round(rows.reduce(function (sum, r) {
+    const value = Number(r.amount);
+    return sum + (isFinite(value) && value > 0 ? value : 0);
+  }, 0) * 100) / 100;
+  return { isDebtor: amount > 0, amount: amount };
+}
+function throwIfStudentDebtor_(studentId, className, academicYear) {
+  const debt = studentDebtStatus_(studentId, className, academicYear);
+  if (debt.isDebtor) {
+    throw new Error('DEBTOR: Outstanding balance is ₦' +
+      debt.amount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+      '. Your result is withheld until the balance is cleared. Please contact the school bursar.');
+  }
+  return debt;
+}
+
 /* ============ PARENT RESULT (with ranking) ============ */
 function parentGetResult(p, token) {
   const parent = requireRole(token, ['parent']);
@@ -2677,6 +2832,7 @@ function parentGetResult(p, token) {
   if (!className || !studentId || !term || !academicYear) throw new Error('className, studentId, term and academicYear are required.');
   portalAssertLinkedParent_(parent, className, studentId);
   if (TERMS.indexOf(term) < 0) throw new Error('Invalid term.');
+  throwIfStudentDebtor_(studentId, className, academicYear);
   if (!portalIsPublished_(studentId, className, term, academicYear)) throw new Error('This result has not been published yet.');
   const student = portalFindStudent_(className, studentId);
   if (!student) throw new Error('Student not found.');
@@ -4376,6 +4532,17 @@ function parentGetFeeStatement(p, token) {
   return {student:student,academicYear:year,term:term,lines:s.lines,totalDue:s.totalDue,totalPaid:s.totalPaid,balance:s.balance,payments:s.payments.map(function(x){return {receipt_no:x.receipt_no,amount:x.amount,allocated_category:x.allocated_category,recorded_at:x.recorded_at,status:x.status};})};
 }
 
+function leadershipBandCounts_() {
+  return { below40: 0, from40to49: 0, from50to59: 0, from60to69: 0, from70plus: 0 };
+}
+function leadershipAddBand_(bands, percentage) {
+  if (!Number.isFinite(percentage)) return;
+  if (percentage < 40) bands.below40++;
+  else if (percentage < 50) bands.from40to49++;
+  else if (percentage < 60) bands.from50to59++;
+  else if (percentage < 70) bands.from60to69++;
+  else bands.from70plus++;
+}
 function leadershipGetDashboard(p, token) {
   const user = gtmcRequireLeadership_(token);
   const term = String(p.term || 'Term1');
@@ -4386,7 +4553,8 @@ function leadershipGetDashboard(p, token) {
   const classes = p.className ? [String(p.className)] : CLASSES.slice();
   const classSummaries = [];
   const schoolSubjects = {};
-  let schoolSum = 0, schoolCount = 0, schoolEntered = 0, schoolExpected = 0;
+  let schoolSum = 0, schoolCount = 0, schoolEntered = 0, schoolExpected = 0, schoolPassed = 0;
+  const schoolBands = leadershipBandCounts_();
 
   classes.forEach(function(className) {
     if (CLASSES.indexOf(className) < 0) throw new Error('Invalid class: ' + className);
@@ -4400,12 +4568,14 @@ function leadershipGetDashboard(p, token) {
       : [];
 
     const subjectPerformance = [];
-    let classSum = 0, classCount = 0, enteredTotals = 0;
+    let classSum = 0, classCount = 0, enteredTotals = 0, classPassed = 0;
+    const classBands = leadershipBandCounts_();
     const studentCount = studentRows.filter(function(row) { return row[0] && row[1]; }).length;
     schoolExpected += studentCount * subjects.length;
 
     subjects.forEach(function(subject, subjectIndex) {
-      let sum = 0, count = 0, high = null, low = null;
+      let sum = 0, count = 0, high = null, low = null, passed = 0;
+      const bands = leadershipBandCounts_();
       studentRows.forEach(function(student, rowIndex) {
         if (!student[0] || !student[1]) return;
         const row = scoreRows[rowIndex] || [];
@@ -4432,6 +4602,10 @@ function leadershipGetDashboard(p, token) {
 
         if (raw === null || maximum === null) return;
         const percentage = raw / maximum * 100;
+        leadershipAddBand_(bands, percentage);
+        leadershipAddBand_(classBands, percentage);
+        leadershipAddBand_(schoolBands, percentage);
+        if (percentage >= 50) { passed++; classPassed++; schoolPassed++; }
         sum += percentage;
         count++;
         high = high === null ? percentage : Math.max(high, percentage);
@@ -4444,19 +4618,23 @@ function leadershipGetDashboard(p, token) {
         average: average,
         highest: high === null ? null : Math.round(high * 100) / 100,
         lowest: low === null ? null : Math.round(low * 100) / 100,
-        scoresEntered: count
+        scoresEntered: count,
+        passRate: count ? Math.round(passed / count * 10000) / 100 : null,
+        distribution: bands
       });
       classSum += sum;
       classCount += count;
       enteredTotals += count;
 
-      if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null };
+      if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null, passed: 0, bands: leadershipBandCounts_() };
       if (count) {
         const bucket = schoolSubjects[subject];
         bucket.sum += sum;
         bucket.count += count;
         bucket.high = bucket.high === null ? high : Math.max(bucket.high, high);
         bucket.low = bucket.low === null ? low : Math.min(bucket.low, low);
+        bucket.passed += passed;
+        Object.keys(bands).forEach(function(key) { bucket.bands[key] += bands[key]; });
       }
     });
 
@@ -4481,6 +4659,8 @@ function leadershipGetDashboard(p, token) {
       performance: average === null ? 'No Scores' : average < 50 ? 'Needs Attention' : average < 60 ? 'Satisfactory' : 'Strong',
       coverage: studentCount && subjects.length ? Math.round((assessment === 'total' ? enteredTotals : classCount) / (studentCount * subjects.length) * 10000) / 100 : 0,
       submissionCoverage: expectedSubmissions ? Math.min(100, Math.round(submittedSubjects / expectedSubmissions * 10000) / 100) : 0,
+      passRate: classCount ? Math.round(classPassed / classCount * 10000) / 100 : null,
+      distribution: classBands,
       subjectPerformance: subjectPerformance
     });
   });
@@ -4498,7 +4678,9 @@ function leadershipGetDashboard(p, token) {
       average: bucket.count ? Math.round(bucket.sum / bucket.count * 100) / 100 : null,
       highest: bucket.high === null ? null : Math.round(bucket.high * 100) / 100,
       lowest: bucket.low === null ? null : Math.round(bucket.low * 100) / 100,
-      scoresEntered: bucket.count
+      scoresEntered: bucket.count,
+      passRate: bucket.count ? Math.round(bucket.passed / bucket.count * 10000) / 100 : null,
+      distribution: bucket.bands
     };
   }).sort(function(a, b) {
     if (a.average === null) return 1;
@@ -4518,7 +4700,10 @@ function leadershipGetDashboard(p, token) {
     weakestClasses: classSummaries.filter(function(row) { return row.average !== null; }).slice(0, 5),
     subjectPerformance: subjectPerformance,
     overallAverage: overallAverage,
+    passRate: schoolCount ? Math.round(schoolPassed / schoolCount * 10000) / 100 : null,
+    distribution: schoolBands,
     scoreCoverage: schoolExpected ? Math.round(schoolEntered / schoolExpected * 10000) / 100 : 0,
+    benchmark: 'The 50% pass-rate indicator is an analytical threshold only; it does not change official grades or result calculations.',
     note: 'Aggregate academic indicators only. No student names, IDs or individual marks are returned.'
   };
 }

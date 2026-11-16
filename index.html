@@ -396,6 +396,15 @@
   .gtmc-module-copy p{font-size:12px}
 }
 
+
+/* Consistent click feedback and an explicit in-progress state for actions. */
+button{transition:transform .14s ease,filter .14s ease,box-shadow .14s ease}
+button:active{transform:translateY(1px) scale(.975);filter:brightness(.94)}
+button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}
+button:disabled{cursor:wait;opacity:.78}
+button.btn-loading{pointer-events:none;position:relative;padding-right:34px!important}
+button.btn-loading:after{content:"";position:absolute;right:12px;top:50%;width:13px;height:13px;margin-top:-7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gtmcBtnSpin .7s linear infinite}
+@keyframes gtmcBtnSpin{to{transform:rotate(360deg)}}
 </style>
 <link rel="stylesheet" href="gtmc-shell-refresh.css">
 <link rel="stylesheet" href="gtmc-nonresult-ui.css">
@@ -507,14 +516,26 @@ async function attendanceApi(action, payload = {}) {
 
 function saveSession(t,u){ S.token=t; S.user=u;
   localStorage.setItem('gs_token',t); localStorage.setItem('gs_user',JSON.stringify(u)); }
-function logout(){
+let LOGOUT_IN_PROGRESS = false;
+async function logout(){
+  if (LOGOUT_IN_PROGRESS) {
+    localStorage.removeItem('gs_token'); localStorage.removeItem('gs_user');
+    S.token=''; S.user=null;
+    return;
+  }
+  LOGOUT_IN_PROGRESS = true;
+  // Revoke the server-side session before clearing the local browser session.
+  // Local sign-out still completes if the network is unavailable.
+  try { if (S.token) await api('logout', {}); } catch (e) {}
   localStorage.removeItem('gs_token'); localStorage.removeItem('gs_user');
   S.token=''; S.user=null;
   document.getElementById('loginView').style.display='flex';
   document.getElementById('appView').style.display='none';
+  LOGOUT_IN_PROGRESS = false;
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function jsArg_(value){ return esc(JSON.stringify(String(value==null?'':value))); }
 function q(id){ return document.getElementById(id); }
 function toast(msg,kind){
   const el = q('toast');
@@ -564,7 +585,7 @@ async function doLogin() {
   const btn = q('loginBtn'), err = q('loginErr');
   err.textContent = '';
   if (!email || !password) { err.textContent = 'Enter your email and password.'; return; }
-  btn.disabled = true; btn.textContent = 'Signing in…';
+  btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Signing in…';
   let staffErr = null;
   try {
     try {
@@ -575,7 +596,7 @@ async function doLogin() {
       const r = await api('parentLogin', { email, password });
       saveSession(r.token, r.user); boot(); return;
     } catch (e2) { err.textContent = (staffErr && staffErr.message) || e2.message; }
-  } finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  } finally { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Sign In'; }
 }
 
 /* Resolve officer status from the attendance backend (cached per session) */
@@ -703,7 +724,7 @@ function renderLibraryRows(){
     return (!needle||text.includes(needle))&&(!cat||r.category===cat)&&(!cls||target==='ALL'||target===cls);
   });
   if(!rows.length){box.innerHTML='<div class="empty">No matching library resources yet.</div>';return;}
-  box.innerHTML='<div class="grid cols-2">'+rows.map(r=>`<div class="card" style="border:1px solid var(--line)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(r.title||'Untitled resource')}</h3><p class="sub">${esc(r.category||'Other')} · ${esc(r.subject||'General')} · ${esc(r.class||'ALL classes')}</p></div>${libraryIsAdmin()?`<div class="row"><button class="sec sm" onclick="editLibraryResource('${esc(r.id)}')">Edit</button><button class="danger sm" onclick="deleteLibraryResource('${esc(r.id)}')">Remove</button></div>`:''}</div>${r.author?`<p><strong>Author:</strong> ${esc(r.author)}</p>`:''}${r.description?`<p>${esc(r.description)}</p>`:''}<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="button blue" style="display:inline-block;text-decoration:none;margin-top:8px">Open Resource ↗</a></div>`).join('')+'</div>';
+  box.innerHTML='<div class="grid cols-2">'+rows.map(r=>`<div class="card" style="border:1px solid var(--line)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(r.title||'Untitled resource')}</h3><p class="sub">${esc(r.category||'Other')} · ${esc(r.subject||'General')} · ${esc(r.class||'ALL classes')}</p></div>${libraryIsAdmin()?`<div class="row"><button class="sec sm" onclick="editLibraryResource(${jsArg_(r.id)})">Edit</button><button class="danger sm" onclick="deleteLibraryResource(${jsArg_(r.id)})">Remove</button></div>`:''}</div>${r.author?`<p><strong>Author:</strong> ${esc(r.author)}</p>`:''}${r.description?`<p>${esc(r.description)}</p>`:''}<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="button blue" style="display:inline-block;text-decoration:none;margin-top:8px">Open Resource ↗</a></div>`).join('')+'</div>';
 }
 function resetLibraryForm(){['libId','libTitle','libAuthor','libSubject','libUrl','libDescription'].forEach(id=>{if(q(id))q(id).value='';});if(q('libClass'))q('libClass').value='ALL';if(q('libType'))q('libType').value='Textbook';if(q('libAdminStatus'))q('libAdminStatus').textContent='';}
 function editLibraryResource(id){const r=LIBRARY_CACHE.find(x=>String(x.id)===String(id));if(!r)return; q('libId').value=r.id||'';q('libTitle').value=r.title||'';q('libAuthor').value=r.author||'';q('libSubject').value=r.subject||'';q('libClass').value=r.class||'ALL';q('libType').value=r.category||'Other';q('libUrl').value=r.url||'';q('libDescription').value=r.description||'';q('libAdminStatus').textContent='Editing resource: '+r.title; q('libraryAdminCard').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -823,11 +844,14 @@ async function renderLeadership() {
           <button class="blue" onclick="loadLeadershipDashboard()">Refresh</button>
         </div>
       </div>
-      <div class="grid cols-3" id="leadershipStats">
+      <div class="grid cols-5" id="leadershipStats">
         <div class="card stat-card"><div class="sub">Classes monitored</div><div class="stat-number" id="leadClassCount">—</div></div>
         <div class="card stat-card"><div class="sub">School average</div><div class="stat-number" id="leadOverallAverage">—</div></div>
+        <div class="card stat-card"><div class="sub">At / above 50%</div><div class="stat-number" id="leadPassRate">—</div></div>
+        <div class="card stat-card"><div class="sub">Score coverage</div><div class="stat-number" id="leadScoreCoverage">—</div></div>
         <div class="card stat-card"><div class="sub">Classes needing attention</div><div class="stat-number" id="leadAttentionCount">—</div></div>
       </div>
+      <div class="card"><h2>School Score Distribution</h2><p class="sub">Share of entered assessment records in each percentage band. Missing scores are excluded.</p><div id="leadDistribution"><div class="empty">Loading distribution…</div></div></div>
       <div class="card">
         <h2>Class Performance</h2><p class="sub">Select a class to inspect its overall performance and subject-by-subject results.</p>
         <div style="max-width:360px;margin:10px 0 14px"><label for="leadershipClass">Select Class</label><select id="leadershipClass" onchange="renderLeadershipDetails()"><option value="">All classes</option></select></div>
@@ -896,6 +920,14 @@ async function loadLeadershipDashboard() {
     if (q('leadClassCount')) q('leadClassCount').textContent = classes.length;
     if (q('leadOverallAverage')) q('leadOverallAverage').textContent = data.overallAverage === null || data.overallAverage === undefined ? '—' : Number(data.overallAverage).toFixed(2) + '%';
     if (q('leadAttentionCount')) q('leadAttentionCount').textContent = attention;
+    if (q('leadPassRate')) q('leadPassRate').textContent = data.passRate == null ? '—' : Number(data.passRate).toFixed(1) + '%';
+    if (q('leadScoreCoverage')) q('leadScoreCoverage').textContent = Number(data.scoreCoverage || 0).toFixed(1) + '%';
+    const bands = data.distribution || {};
+    const bandRows = [['Below 40%',Number(bands.below40||0)],['40–49%',Number(bands.from40to49||0)],['50–59%',Number(bands.from50to59||0)],['60–69%',Number(bands.from60to69||0)],['70% and above',Number(bands.from70plus||0)]];
+    const bandTotal = bandRows.reduce((sum,row)=>sum+row[1],0);
+    if(q('leadDistribution')) q('leadDistribution').innerHTML = bandTotal
+      ? '<div class="table-wrap"><table><thead><tr><th>Score band</th><th>Records</th><th>Share</th></tr></thead><tbody>' + bandRows.map(row=>'<tr><td>'+esc(row[0])+'</td><td>'+row[1]+'</td><td>'+(row[1]/bandTotal*100).toFixed(1)+'%</td></tr>').join('') + '</tbody></table></div><p class="sub">50% is an analytical benchmark, not a change to official grading rules.</p>'
+      : '<div class="empty">No entered scores are available for this selection.</div>';
 
     const classSelect = q('leadershipClass');
     if (classSelect) {
@@ -919,10 +951,11 @@ async function loadLeadershipDashboard() {
       return c.performance === 'Strong' ? 'ok' : c.performance === 'Satisfactory' ? 'info' : 'warn';
     };
     classBox.innerHTML = classes.length
-      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>Performance</th><th>Score coverage</th><th>Submission coverage</th></tr></thead><tbody>' +
+      ? '<div class="table-wrap"><table><thead><tr><th>Class</th><th>Students</th><th>Average</th><th>50%+ rate</th><th>Performance</th><th>Score coverage</th><th>Submission coverage</th></tr></thead><tbody>' +
         classes.map(function(c) {
           return '<tr><td><strong>' + esc(c.className) + '</strong></td><td>' + Number(c.studentCount || 0) + '</td><td>' +
             (c.average === null || c.average === undefined ? '—' : Number(c.average).toFixed(2) + '%') +
+            '</td><td>' + (c.passRate == null ? '—' : Number(c.passRate).toFixed(1) + '%') +
             '</td><td><span class="badge ' + statusClass(c) + '">' + esc(c.performance || 'No Scores') +
             '</span></td><td>' + Number(c.coverage || 0).toFixed(1) + '%</td><td>' + Number(c.submissionCoverage || 0).toFixed(1) + '%</td></tr>';
         }).join('') + '</tbody></table></div>'
@@ -936,8 +969,8 @@ async function loadLeadershipDashboard() {
       : '<div class="empty">No classes are currently below the attention threshold.</div>';
 
     if (q('leadSubjects')) q('leadSubjects').innerHTML = subjects.length
-      ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>Scores entered</th></tr></thead><tbody>' +
-        subjects.map(function(x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') + '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>'; }).join('') +
+      ? '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Average</th><th>50%+ rate</th><th>Scores entered</th></tr></thead><tbody>' +
+        subjects.map(function(x) { return '<tr><td>' + esc(x.subject) + '</td><td>' + (x.average == null ? '—' : Number(x.average).toFixed(2) + '%') + '</td><td>' + (x.passRate == null ? '—' : Number(x.passRate).toFixed(1) + '%') + '</td><td>' + Number(x.scoresEntered || 0) + '</td></tr>'; }).join('') +
         '</tbody></table></div>'
       : '<div class="empty">Subject averages will appear when scores are available.</div>';
 
@@ -1561,8 +1594,8 @@ async function loadTeachers() {
         <td>${(t.roles||String(t.role).split(',')).map(r=>`<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
         <td>${esc(t.class||'—')}</td>
         <td><select id="teacherClassAssign_${idx}" aria-label="Class teacher class for ${esc(t.name)}"><option value="">— none —</option>${(window.__gtmcClasses||[]).map(c=>`<option value="${esc(c)}" ${String(t.class_teacher_class||'')===String(c)?'selected':''}>${esc(c)}</option>`).join('')}</select></td>
-        <td><button class="blue sm" onclick="saveTeacherClassAssignment('${esc(t.email)}','teacherClassAssign_${idx}')">Save class</button></td>
-        <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td></tr>`).join('')}
+        <td><button class="blue sm" onclick="saveTeacherClassAssignment(${jsArg_(t.email)},'teacherClassAssign_${idx}')">Save class</button></td>
+        <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher(${jsArg_(t.email)})">Disable</button>`}</td></tr>`).join('')}
       </tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -1600,7 +1633,7 @@ async function loadSubmissions() {
           <td>${esc(r.term)}</td><td><strong>${esc(r.assessment || 'Legacy term lock')}</strong></td>
           <td><span class="badge ${locked?'warn':'ok'}">${esc(r.status)}</span></td>
           <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
-          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}','${esc(r.assessment||'')}',${isDomains},'${esc(r.academic_year||'')}')">Authorise correction</button>` : ''}</td>
+          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission(${jsArg_(r.teacher_email)},${jsArg_(r.class)},${jsArg_(r.subject)},${jsArg_(r.term)},${jsArg_(r.assessment||'')},${isDomains},${jsArg_(r.academic_year||'')})">Authorise correction</button>` : ''}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -1886,7 +1919,7 @@ async function loadParentAccounts() {
           <td>${esc(a.email)}</td>
           <td style="font-family:ui-monospace;font-size:11px">${esc(a.password || '')}</td>
           <td>${(a.wards||[]).length ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)}
-            <button class="danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('') : '<span style="color:var(--muted)">None</span>'}</td>
+            <button class="danger sm" onclick="unlinkWard(${jsArg_(a.email)},${jsArg_(w.studentId)},${jsArg_(w.className)})">Unlink</button></div>`).join('') : '<span style="color:var(--muted)">None</span>'}</td>
         </tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -1920,7 +1953,7 @@ async function loadDebtsForClass() {
           <td><strong>${esc(st.name)}</strong></td>
           <td><input type="number" min="0" data-amount value="${d.total || ''}" style="width:100px"></td>
           <td><input data-note value="${esc(d.note)}" style="width:100%"></td>
-          <td><button class="ok sm" onclick="saveDebt('${esc(st.student_id)}')">Save</button></td>
+          <td><button class="ok sm" onclick="saveDebt(${jsArg_(st.student_id)})">Save</button></td>
         </tr>`;
       }).join('')}</tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="ok" onclick="saveAllDebts()">Save All</button></div>`;
@@ -1998,7 +2031,7 @@ async function loadAnnouncementsAdmin() {
       <div class="ann-card">
         <div class="msg">${esc(r.message)}</div>
         <div class="meta">Target: ${esc(r.targetClasses || 'ALL')} · Audience: ${esc(r.audience)} · ${r.active ? 'Active' : 'Inactive'} · ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
-        ${r.active ? ` · <button class="danger sm" onclick="deleteAnnouncement('${esc(r.id)}')">Deactivate</button>` : ''}</div>
+        ${r.active ? ` · <button class="danger sm" onclick="deleteAnnouncement(${jsArg_(r.id)})">Deactivate</button>` : ''}</div>
       </div>`).join('');
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -2289,7 +2322,7 @@ async function exportClassPDF() {
     }
     doc.save(`${className}_${term}_${year.replace(/[^\w]/g,'_')}.pdf`);
     status.textContent = `Done — ${students.length} student page(s).`;
-    toast('PDF saved', 'ok');
+    toast(debtorCount ? `PDF saved; ${debtorCount} debtor(s) withheld.` : 'PDF saved', 'ok');
   } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
 
@@ -2835,7 +2868,7 @@ async function loadStaffMessagesAdmin() {
         ${r.status !== 'Replied' ? `
           <div style="margin-top:8px">
             <textarea data-reply rows="2" placeholder="Type your reply…" maxlength="2000" style="width:100%"></textarea>
-            <button class="ok sm" style="margin-top:6px" onclick="replyToMessage('${esc(r.id)}', this)">Send Reply</button>
+            <button class="ok sm" style="margin-top:6px" onclick="replyToMessage(${jsArg_(r.id)}, this)">Send Reply</button>
           </div>` : ''}
       </div>`).join('');
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -2974,7 +3007,7 @@ async function ctLoadStudents() {
       <tbody>${rows.map(s => `
         <tr><td style="font-family:ui-monospace;font-size:12px">${esc(s.student_id)}</td>
         <td><strong>${esc(s.name)}</strong></td>
-        <td><button class="danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
+        <td><button class="danger sm" onclick="ctRemove(${jsArg_(s.student_id)})">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 async function ctAddBulk() {
@@ -3078,7 +3111,7 @@ async function ctLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="ctSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}',q('ctSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently. Other assessment columns remain editable until submitted.</p>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="ctSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="ctSubmit(${jsArg_(subject)},${jsArg_(term)},q('ctSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently. Other assessment columns remain editable until submitted.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => ctSaveCell(inp, subject, term));
@@ -3189,7 +3222,7 @@ async function stLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="stSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}',q('stSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently.</p>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="stSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="stSubmit(${jsArg_(className)},${jsArg_(subject)},${jsArg_(term)},q('stSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => stSaveCell(inp, className, subject, term));
@@ -3243,7 +3276,8 @@ async function renderStudent() {
       <div class="page-head"><h1>My Results</h1><p>View your scores per term.</p></div>
       <div class="card">
         <div class="row">
-          <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
+          <div><label for="studentYear">Academic year</label><input id="studentYear" value="2026/2027" style="max-width:130px"></div>
+          <div><label for="studentTerm">Term</label><select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
           <button class="blue" onclick="studentLoad()">Load</button>
           <button class="ok" onclick="downloadStudentResultPDF()">⬇ Download Result PDF</button>
           <button class="sec" onclick="printCurrentResult()">Print</button>
@@ -3256,7 +3290,9 @@ async function renderStudent() {
 async function studentLoad() {
   const box = q('studentBox'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, studentId: S.user.email });
+    const academicYear = q('studentYear').value.trim();
+    if (!academicYear) throw new Error('Enter the academic year.');
+    const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, academicYear, studentId: S.user.email });
     if (!rows.length) { box.innerHTML = '<div class="empty">No scores.</div>'; return; }
     window.__STUDENT_RESULT_ROWS = rows;
     const total = rows.reduce((sum,r) => sum + (Number(r.total)||0), 0);
@@ -3266,7 +3302,11 @@ async function studentLoad() {
       <div class="table-wrap"><table id="studentResultTable">
       <thead><tr><th>Subject</th><th>CA 1</th><th>CA 2</th><th>CA 3</th><th>Exam</th><th>Total</th><th>Grade</th></tr></thead>
       <tbody>${rows.map(r => `<tr><td><strong>${esc(r.subject)}</strong></td><td>${r.T1 ?? '—'}</td><td>${r.T2 ?? '—'}</td><td>${r.T3 ?? '—'}</td><td>${r.Exam ?? '—'}</td><td><strong>${r.total ?? '—'}</strong></td><td>${esc(r.grade || '—')}</td></tr>`).join('')}</tbody></table></div>`;
-  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+  } catch (e) {
+    window.__STUDENT_RESULT_ROWS = [];
+    const debtor = /^DEBTOR:/i.test(String(e.message || ''));
+    box.innerHTML = debtor ? `<div role="alert" style="padding:18px;border:1px solid #f2c078;background:#fff8e8;border-radius:12px;color:#7c2d12"><strong>DEBTOR — RESULT WITHHELD</strong><p style="margin-top:8px">${esc(e.message.replace(/^DEBTOR:\s*/i,''))}</p></div>` : `<div class="empty">${esc(e.message)}</div>`;
+  }
 }
 async function downloadStudentResultPDF() {
   const rows = window.__STUDENT_RESULT_ROWS || [];
@@ -3278,9 +3318,9 @@ async function downloadStudentResultPDF() {
     pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.text('GREATER TOMORROW MODEL COLLEGE',105,13,{align:'center'});
     pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text('Jesus, Our Teacher',105,19,{align:'center'});
     pdf.setFontSize(11); pdf.text('STUDENT RESULT',105,27,{align:'center'});
-    pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Term: ${q('studentTerm').value}`,12,35);
+    pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Academic year: ${q('studentYear').value}    Term: ${q('studentTerm').value}`,12,35);
     pdf.autoTable({startY:40,head:[['Subject','CA 1','CA 2','CA 3','Exam','Total','Grade']],body:rows.map(r=>[r.subject,r.T1??'—',r.T2??'—',r.T3??'—',r.Exam??'—',r.total??'—',r.grade||'—']),theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[4,62,122]},margin:{left:12,right:12},tableWidth:'auto'});
-    pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
+    pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${String(q('studentYear').value).replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
     toast('Student result PDF downloaded.', 'ok');
   } catch(e) { toast('Could not generate PDF: '+e.message,'err'); }
 }
@@ -3418,7 +3458,8 @@ async function parentLoad() {
     if (typeof window.gtmcRenderParentInsights === 'function') window.gtmcRenderParentInsights();
   } catch (e) {
     q('pStatus').textContent = e.message;
-    q('pReportBox').innerHTML = '';
+    const debtor = /^DEBTOR:/i.test(String(e.message || ''));
+    q('pReportBox').innerHTML = debtor ? `<div role="alert" style="padding:18px;border:1px solid #f2c078;background:#fff8e8;border-radius:12px;color:#7c2d12"><strong>DEBTOR — RESULT WITHHELD</strong><p style="margin-top:8px">${esc(e.message.replace(/^DEBTOR:\s*/i,''))}</p></div>` : '';
     toast(e.message, 'err');
   }
 }
@@ -4058,6 +4099,7 @@ function gtmcCardHTML(r, withId) {
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
+  if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className) , esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
   if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
     .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
@@ -4107,8 +4149,8 @@ function gtmcCardHTML(r, withId) {
   ${sc.length ? `<div class="rc-bar">Grade Scale</div><table class="rc-t rc-grades"><tbody><tr>${sc.map(g => `<td>${esc(g.grade)}<br><small>${Number(g.min)}&ndash;${Number(g.max)}</small></td>`).join('')}</tr></tbody></table>` : ''}
   <div class="rc-bar">Performance Summary</div>
   <table class="rc-t" style="margin-bottom:6px"><thead><tr>${sum.map(s => `<th>${s[0]}</th>`).join('')}</tr></thead><tbody><tr>${sum.map(s => `<td class="c" style="font-size:13px">${s[1]}</td>`).join('')}</tr></tbody></table>
-  ${t.showTeacherRemark !== false ? rem('Form Master/Mistress', r.teacherRemark) : ''}
-  ${t.showPrincipalRemark !== false ? rem('Head Teacher', r.principalRemark) : ''}
+  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.teacherRemark) : ''}
+  ${t.showPrincipalRemark !== false ? rem('Principal', r.principalRemark) : ''}
   ${(t.showAIComment !== false && r.aiComment) ? rem('Comment', r.aiComment) : ''}
   <div class="rc-foot">Report generated on ${rd}. Please contact the school if you notice any discrepancy.</div>
 </div>`;
@@ -4147,11 +4189,17 @@ async function gtmcExport(each) {
   try {
     const students = await api('getStudents', { className });
     if (!students.length) { status.textContent = 'No students.'; return; }
+    const debtRows = await api('adminGetDebts', { className, academicYear: year });
+    const debtByStudent = {};
+    debtRows.forEach(d => { debtByStudent[d.studentId] = (debtByStudent[d.studentId] || 0) + (Number(d.amount) || 0); });
+    const eligibleStudents = students.filter(st => !(Number(debtByStudent[st.student_id]) > 0));
+    const debtorCount = students.length - eligibleStudents.length;
+    if (!eligibleStudents.length) { status.textContent = `No report cards generated. ${debtorCount} debtor(s) have outstanding balances.`; return; }
     const { jsPDF } = window.jspdf;
     let doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
-    for (let i = 0; i < students.length; i++) {
-      const st = students[i];
-      status.textContent = `Building ${i + 1}/${students.length} — ${st.name}`;
+    for (let i = 0; i < eligibleStudents.length; i++) {
+      const st = eligibleStudents[i];
+      status.textContent = `Building ${i + 1}/${eligibleStudents.length} — ${st.name}`;
       const r = await buildReportPayload(className, st.student_id, st.name, term, year);
       r.classSize = students.length;
       if (each) {
@@ -4164,7 +4212,7 @@ async function gtmcExport(each) {
       }
     }
     if (!each) doc.save(`${className}_${term}_${year.replace(/[^\w]/g, '_')}.pdf`);
-    status.textContent = each ? `Done — ${students.length} files downloaded.` : `Done — ${students.length} student page(s).`;
+    status.textContent = (each ? `Done — ${eligibleStudents.length} files downloaded.` : `Done — ${eligibleStudents.length} student page(s).`) + (debtorCount ? ` ${debtorCount} debtor(s) withheld.` : '');
     toast('PDF saved', 'ok');
   } catch (e) { status.textContent = 'Error: ' + e.message; toast(e.message, 'err'); }
 }
@@ -4227,6 +4275,11 @@ renderClassTeacher = async function () {
   function status(p){return p===null?"Incomplete":p<40?"Critical":p<50?"Poor":p<70?"Needs improvement":"On track";}
   function badge(p){var c=p===null?"warn":p<50?"err":p<70?"warn":"ok";return '<span class="badge '+c+'">'+status(p)+'</span>';}
   function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+  function bandStats(values){
+    var bands=[{label:"Below 40%",count:0},{label:"40–49%",count:0},{label:"50–59%",count:0},{label:"60–69%",count:0},{label:"70% and above",count:0}];
+    values.forEach(function(v){if(v<40)bands[0].count++;else if(v<50)bands[1].count++;else if(v<60)bands[2].count++;else if(v<70)bands[3].count++;else bands[4].count++;});
+    return bands;
+  }
 
   var oldClass=window.loadTeacherAcademicSummary;
   if(typeof oldClass==="function")window.loadTeacherAcademicSummary=async function(){
@@ -4246,10 +4299,15 @@ renderClassTeacher = async function () {
       }).sort(function(a,b){return a.average===null?1:b.average===null?-1:b.average-a.average;});
       var ranked=rows.filter(function(r){return r.average!==null;}),top=ranked[0],low=ranked[ranked.length-1];
       var flagged=rows.filter(function(r){return r.average!==null&&r.average<50;});
+      var distribution=bandStats(ranked.map(function(r){return r.average;}));
+      var passRate=ranked.length?ranked.filter(function(r){return r.average>=50;}).length/ranked.length*100:null;
       var html='<div id="ctPerfEarlyWarning" class="card" style="border-left:4px solid #b45309;margin-bottom:14px"><h2>Class Performance Alerts</h2>'+
-        '<div class="grid cols-3" style="margin:10px 0"><div><div class="sub">Best overall student</div><strong>'+(top?safe(top.name):"—")+'</strong><div>'+(top?top.average.toFixed(1)+"%":"No complete scores")+'</div></div>'+
+        '<div class="grid cols-4" style="margin:10px 0"><div><div class="sub">Complete records</div><strong>'+ranked.length+'/'+rows.length+'</strong></div><div><div class="sub">Class pass benchmark</div><strong>'+(passRate===null?"—":passRate.toFixed(1)+"%")+'</strong></div><div><div class="sub">Best overall student</div><strong>'+(top?safe(top.name):"—")+'</strong><div>'+(top?top.average.toFixed(1)+"%":"No complete scores")+'</div></div>'+
         '<div><div class="sub">Lowest overall student</div><strong>'+(low?safe(low.name):"—")+'</strong><div>'+(low?low.average.toFixed(1)+"%":"—")+'</div></div>'+
-        '<div><div class="sub">Students needing attention</div><strong style="font-size:24px;color:#b91c1c">'+flagged.length+'</strong><div class="sub">Below 50%, complete records</div></div></div>';
+        '<div><div class="sub">Students needing attention</div><strong style="font-size:24px;color:#b91c1c">'+flagged.length+'</strong><div class="sub">Below 50%, complete records</div></div></div>'+
+        '<h3 style="margin:12px 0 6px">Class score distribution</h3><div class="table-wrap"><table><thead><tr><th>Band</th><th>Students</th><th>Share</th></tr></thead><tbody>'+
+        distribution.map(function(b){return '<tr><td>'+safe(b.label)+'</td><td>'+b.count+'</td><td>'+(ranked.length?(b.count/ranked.length*100).toFixed(1):"0.0")+'%</td></tr>';}).join('')+
+        '</tbody></table></div>';
       if(flagged.length){
         html+='<h3 style="margin:12px 0 6px">Students requiring follow-up</h3><div class="table-wrap"><table><thead><tr><th>Student</th><th>Average</th><th>Alert</th></tr></thead><tbody>';
         flagged.forEach(function(r){html+='<tr><td><strong>'+safe(r.name)+'</strong></td><td>'+r.average.toFixed(1)+'%</td><td>'+badge(r.average)+'</td></tr>';});
@@ -4288,7 +4346,8 @@ renderClassTeacher = async function () {
       if(mine.length&&mine.indexOf(sub)<0)throw new Error("This subject is not assigned to your account.");
       var rows=students.map(function(st){var score=rawScore((scoreMap[st.student_id]||{})[sub],a);return {name:st.name||st.student_id,score:score,percent:pct(score,a)};}).sort(function(x,y){return x.percent===null?1:y.percent===null?-1:y.percent-x.percent;});
       var done=rows.filter(function(r){return r.percent!==null;}),top=done[0],low=done[done.length-1],average=mean(done.map(function(r){return r.percent;})),flagged=done.filter(function(r){return r.percent<50;});
-      if(sum)sum.innerHTML='<div class="grid cols-4"><div class="card stat-card"><div class="sub">Students</div><div class="stat-number">'+students.length+'</div></div><div class="card stat-card"><div class="sub">Class average</div><div class="stat-number">'+(average===null?"—":average.toFixed(1)+"%")+'</div></div><div class="card stat-card"><div class="sub">Best student</div><strong>'+(top?safe(top.name):"—")+'</strong><div class="sub">'+(top?top.percent.toFixed(1)+"%":"")+'</div></div><div class="card stat-card"><div class="sub">Weakest student</div><strong>'+(low?safe(low.name):"—")+'</strong><div class="sub">'+(low?low.percent.toFixed(1)+"%":"")+'</div></div></div><div class="portal-note" style="margin-bottom:14px">'+flagged.length+' student(s) below 50% in '+safe(sub)+'. Missing scores are not ranked.</div>';
+      var distribution=bandStats(done.map(function(r){return r.percent;})),passRate=done.length?done.filter(function(r){return r.percent>=50;}).length/done.length*100:null;
+      if(sum)sum.innerHTML='<div class="grid cols-4"><div class="card stat-card"><div class="sub">Students</div><div class="stat-number">'+students.length+'</div></div><div class="card stat-card"><div class="sub">Class average</div><div class="stat-number">'+(average===null?"—":average.toFixed(1)+"%")+'</div></div><div class="card stat-card"><div class="sub">Best student</div><strong>'+(top?safe(top.name):"—")+'</strong><div class="sub">'+(top?top.percent.toFixed(1)+"%":"")+'</div></div><div class="card stat-card"><div class="sub">Weakest student</div><strong>'+(low?safe(low.name):"—")+'</strong><div class="sub">'+(low?low.percent.toFixed(1)+"%":"")+'</div></div></div><div class="portal-note" style="margin-bottom:14px">'+flagged.length+' student(s) below 50% in '+safe(sub)+'. Missing scores are not ranked. Pass benchmark: '+(passRate===null?"—":passRate.toFixed(1)+"%")+' of entered scores at or above 50%; coverage '+done.length+'/'+students.length+'.</div><div class="table-wrap" style="margin-bottom:14px"><table><thead><tr><th>Score band</th><th>Students</th><th>Share of entered scores</th></tr></thead><tbody>'+distribution.map(function(b){return '<tr><td>'+safe(b.label)+'</td><td>'+b.count+'</td><td>'+(done.length?(b.count/done.length*100).toFixed(1):"0.0")+'%</td></tr>';}).join('')+'</tbody></table></div>';
       var html='<div class="table-wrap"><table><thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Percentage</th><th>Performance</th></tr></thead><tbody>';
       rows.forEach(function(r,i){html+='<tr><td>'+(r.percent===null?"—":i+1)+'</td><td><strong>'+safe(r.name)+'</strong></td><td>'+(r.score===null?"—":r.score.toFixed(1))+'</td><td>'+(r.percent===null?"—":r.percent.toFixed(1)+"%")+'</td><td>'+badge(r.percent)+'</td></tr>';});
       box.innerHTML=html+'</tbody></table></div><p class="sub" style="margin-top:8px">Assessment: '+safe(a)+' · '+safe(term)+' · '+safe(cls)+'. Marks are converted to percentage equivalents.</p>';
@@ -4495,5 +4554,6 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
 
 
 <script src="./feature-controls.js"></script>
+<script src="./login-appearance.js"></script>
 </body>
 </html>
