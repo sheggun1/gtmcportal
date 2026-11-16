@@ -1016,6 +1016,7 @@ function getStudentScores(p, token) {
   const className = String(p.className || '').trim();
   const term = String(p.term || '').trim();
   const studentId = String(p.studentId || '').trim();
+  const academicYear = String(p.academicYear || '').trim();
   if (!className || !term || !studentId)
     throw new Error('className, term, studentId required');
   if (CLASSES.indexOf(className) === -1) throw new Error('Unknown class.');
@@ -1028,6 +1029,15 @@ function getStudentScores(p, token) {
         String(user.email || '').trim().toLowerCase() !== studentId.toLowerCase()) {
       throw new Error('Permission denied: students may only view their own scores.');
     }
+    if (!academicYear) throw new Error('Academic year is required to view published results.');
+    const isPublished = sheetToObjects(getSheet('ResultPublication')).some(function(row) {
+      return String(row.student_id || '').trim() === studentId &&
+        String(row.class || '').trim() === className &&
+        String(row.term || '').trim() === term &&
+        String(row.academic_year || '').trim() === academicYear &&
+        (row.published === true || String(row.published).toLowerCase() === 'true');
+    });
+    if (!isPublished) throw new Error('This result has not been published for the selected academic year.');
   }
 
   const sheet = getSheet(className);
