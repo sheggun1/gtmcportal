@@ -902,12 +902,15 @@ function normalizeAssessment_(assessment) {
   return result;
 }
 function submissionMatches_(row, map, criteria) {
-  return String(submissionValue_(row, map, 'teacher_email')) === String(criteria.teacherEmail) &&
-    String(submissionValue_(row, map, 'class')) === String(criteria.className) &&
-    String(submissionValue_(row, map, 'subject')) === String(criteria.subject) &&
-    String(submissionValue_(row, map, 'term')) === String(criteria.term) &&
-    (criteria.assessment === undefined || String(submissionValue_(row, map, 'assessment') || '') === String(criteria.assessment || '')) &&
-    (!criteria.academicYear || !submissionValue_(row, map, 'academic_year') || String(submissionValue_(row, map, 'academic_year')) === String(criteria.academicYear));
+  // teacherEmail is optional: omit it when checking the shared assessment lock.
+  // The lock key is class + subject + term + assessment (+ academic year), not teacher.
+  return (criteria.teacherEmail === undefined || criteria.teacherEmail === null ||
+      String(submissionValue_(row, map, 'teacher_email')).toLowerCase() === String(criteria.teacherEmail).toLowerCase()) &&
+    String(submissionValue_(row, map, 'class')).trim().toUpperCase() === String(criteria.className).trim().toUpperCase() &&
+    String(submissionValue_(row, map, 'subject')).trim().toLowerCase() === String(criteria.subject).trim().toLowerCase() &&
+    String(submissionValue_(row, map, 'term')).trim().toLowerCase() === String(criteria.term).trim().toLowerCase() &&
+    (criteria.assessment === undefined || normalizeAssessment_(submissionValue_(row, map, 'assessment') || '') === normalizeAssessment_(criteria.assessment || '')) &&
+    (!criteria.academicYear || !submissionValue_(row, map, 'academic_year') || String(submissionValue_(row, map, 'academic_year')).trim() === String(criteria.academicYear).trim());
 }
 function assessmentLockState_(className, subject, term, assessment, user, academicYear) {
   if (hasRole_(user, 'admin')) return { editable: true, state: 'admin' };
@@ -917,16 +920,26 @@ function assessmentLockState_(className, subject, term, assessment, user, academ
   const hm = submissionHeadersMap_(sh), map = hm.map;
   let specific = null;
   for (let i = 1; i < d.length; i++) {
-    if (!submissionMatches_(d[i], map, { teacherEmail: user.email, className: className, subject: subject, term: term, academicYear: academicYear })) continue;
-    const a = String(submissionValue_(d[i], map, 'assessment') || '').trim();
+    if (!submissionMatches_(d[i], map, { className: className, subject: subject, term: term, academicYear: academicYear })) continue;
+    const a = normalizeAssessment_(submissionValue_(d[i], map, 'assessment') || '');
     const status = String(submissionValue_(d[i], map, 'status') || '').toLowerCase();
-    if (a === assessment) specific = { rowNum: i + 1, row: d[i], status: status, deadline: submissionValue_(d[i], map, 'correction_deadline') };
+    if (a === normalizeAssessment_(assessment)) {
+      // Last matching row is the canonical/latest record, including older teacher-specific rows.
+      specific = {
+        rowNum: i + 1, row: d[i], status: status,
+        deadline: submissionValue_(d[i], map, 'correction_deadline'),
+        teacherEmail: String(submissionValue_(d[i], map, 'teacher_email') || '')
+      };
+    }
     // Legacy term-wide rows are ignored by the assessment lock model.
     // Each T1/T2/T3/Exam assessment is controlled only by its own record.
   }
   if (specific) {
     if (specific.status === 'locked') return { editable: false, state: 'locked', message: 'This assessment is locked. Ask the administrator to authorise a correction.' };
     if (specific.status === 'correction_open') {
+      if (String(specific.teacherEmail || '').toLowerCase() !== String(user.email || '').toLowerCase()) {
+        return { editable: false, state: 'correction_restricted', message: 'This correction window is authorised for another teacher. Contact the administrator.' };
+      }
       const deadline = specific.deadline ? new Date(specific.deadline).getTime() : NaN;
       if (!isFinite(deadline) || deadline <= Date.now()) return { editable: false, state: 'expired', message: 'The authorised correction window has expired.' };
       return { editable: true, state: 'correction_open', deadline: new Date(deadline).toISOString() };
@@ -1044,7 +1057,12 @@ function saveScore(p, token) {
 
   assertTeacherClassSubjectAccess_(user, className, subject);
   const assessment = assessmentFromField_(field);
-  assertAssessmentEditable_(className, subject, term, assessment, user, p.academicYear);
+  const scoreLock = LockService.getScriptLock();
+  scoreLock.waitLock(10000);
+  try {
+    // Re-check the lock while holding the script lock so a concurrent submission
+    // cannot slip between the lock check and the score write.
+    assertAssessmentEditable_(className, subject, term, assessment, user, p.academicYear);
 
   const sheet = getSheet(className);
   const lastRow = sheet.getLastRow();
@@ -1063,6 +1081,9 @@ function saveScore(p, token) {
   scoreCell.setValue(value);
   if (String(previousValue) !== String(value)) logAudit(user.email, 'saveScore', { className: className, subject: subject, term: term, assessment: assessment, studentId: String(studentId), previousValue: previousValue, newValue: value });
   return { success: true };
+  } finally {
+    scoreLock.releaseLock();
+  }
 }
 
 /* ============ SUBMISSION / LOCK ============ */
@@ -1102,30 +1123,34 @@ function submitScores(p, token) {
   const assessment = normalizeAssessment_(p.assessment || p.field || '');
   const now = new Date();
   if (assessment) {
-    const state = assessmentLockState_(className, subject, term, assessment, user, p.academicYear);
-    if (state.state === 'locked') throw new Error('This assessment has already been submitted and locked.');
-    if (state.state === 'expired') throw new Error('The correction window has expired. Request a new authorisation.');
-    // An existing legacy term-wide lock is intentionally not overwritten. This specific
-    // assessment record permits only the authorised assessment to be corrected.
-    const sh = getSheet('Submissions');
-    const data = sh.getDataRange().getValues(), hm = submissionHeadersMap_(sh), map = hm.map;
+    const submissionLock = LockService.getScriptLock();
+    submissionLock.waitLock(10000);
     let current = null;
-    for (let i = 1; i < data.length; i++) {
-      if (submissionMatches_(data[i], map, { teacherEmail: user.email, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear })) {
-        current = { rowNum: i + 1, row: data[i], status: String(submissionValue_(data[i], map, 'status') || '').toLowerCase(), deadline: submissionValue_(data[i], map, 'correction_deadline') };
+    try {
+      const state = assessmentLockState_(className, subject, term, assessment, user, p.academicYear);
+      if (!state.editable) throw new Error(state.message || 'This assessment cannot be submitted in its current state.');
+      // Submission and score writes share the same lock to prevent a save racing a submit.
+      const sh = getSheet('Submissions');
+      const data = sh.getDataRange().getValues(), hm = submissionHeadersMap_(sh), map = hm.map;
+      for (let i = 1; i < data.length; i++) {
+        if (submissionMatches_(data[i], map, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear })) {
+          current = { rowNum: i + 1, row: data[i], status: String(submissionValue_(data[i], map, 'status') || '').toLowerCase(), deadline: submissionValue_(data[i], map, 'correction_deadline') };
+        }
       }
-    }
-    if (current && current.status === 'correction_open') {
-      const deadline = current.deadline ? new Date(current.deadline).getTime() : NaN;
-      if (!isFinite(deadline) || deadline <= now.getTime()) throw new Error('The correction window has expired.');
-    }
+      if (current && current.status === 'correction_open') {
+        const deadline = current.deadline ? new Date(current.deadline).getTime() : NaN;
+        if (!isFinite(deadline) || deadline <= now.getTime()) throw new Error('The correction window has expired.');
+      }
     const vals = {
       teacher_email: user.email, class: className, subject: subject, term: term,
       status: 'locked', timestamp: now, assessment: assessment,
       academic_year: p.academicYear || '', submitted_by: user.email,
       correction_deadline: '', resubmitted_at: current ? now : '', resubmitted_by: current ? user.email : ''
     };
-    upsertSubmission_(vals, { teacherEmail: user.email, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    upsertSubmission_(vals, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    } finally {
+      submissionLock.releaseLock();
+    }
     createNotification_('', 'admin', current ? 'Assessment resubmitted' : 'Assessment submitted', user.name + ' submitted ' + assessment + ' for ' + subject + ' (' + className + ', ' + term + ').', 'score_submission', 'submissions:' + className, user.email);
     logAudit(user.email, current ? 'resubmitAssessment' : 'submitAssessment', {
       className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear || ''
@@ -1184,7 +1209,13 @@ function unlockScores(p, token) {
       academic_year: p.academicYear || '', unlocked_at: now, unlocked_by: admin.email,
       unlock_reason: reason, correction_deadline: deadline, submitted_by: teacherEmail
     };
-    upsertSubmission_(vals, { teacherEmail: teacherEmail, className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    const unlockLock = LockService.getScriptLock();
+    unlockLock.waitLock(10000);
+    try {
+      upsertSubmission_(vals, { className: className, subject: subject, term: term, assessment: assessment, academicYear: p.academicYear });
+    } finally {
+      unlockLock.releaseLock();
+    }
     logAudit(admin.email, 'unlockAssessmentForCorrection', { teacherEmail: teacherEmail, className: className, subject: subject, term: term, assessment: assessment, reason: reason, correctionDeadline: deadline, academicYear: p.academicYear || '' });
     return { success: true, assessment: assessment, status: 'correction_open', correctionDeadline: deadline.toISOString() };
   }
