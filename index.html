@@ -507,7 +507,10 @@ async function attendanceApi(action, payload = {}) {
 
 function saveSession(t,u){ S.token=t; S.user=u;
   localStorage.setItem('gs_token',t); localStorage.setItem('gs_user',JSON.stringify(u)); }
-function logout(){
+async function logout(){
+  // Revoke the server-side session before clearing the local browser session.
+  // Local sign-out still completes if the network is unavailable.
+  try { if (S.token) await api('logout', {}); } catch (e) {}
   localStorage.removeItem('gs_token'); localStorage.removeItem('gs_user');
   S.token=''; S.user=null;
   document.getElementById('loginView').style.display='flex';
