@@ -3267,7 +3267,8 @@ async function renderStudent() {
       <div class="page-head"><h1>My Results</h1><p>View your scores per term.</p></div>
       <div class="card">
         <div class="row">
-          <select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select>
+          <div><label for="studentYear">Academic year</label><input id="studentYear" value="2026/2027" style="max-width:130px"></div>
+          <div><label for="studentTerm">Term</label><select id="studentTerm" style="max-width:200px"><option>Term1</option><option>Term2</option><option>Term3</option></select></div>
           <button class="blue" onclick="studentLoad()">Load</button>
           <button class="ok" onclick="downloadStudentResultPDF()">⬇ Download Result PDF</button>
           <button class="sec" onclick="printCurrentResult()">Print</button>
@@ -3280,7 +3281,9 @@ async function renderStudent() {
 async function studentLoad() {
   const box = q('studentBox'); box.innerHTML = '<div class="empty">Loading…</div>';
   try {
-    const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, studentId: S.user.email });
+    const academicYear = q('studentYear').value.trim();
+    if (!academicYear) throw new Error('Enter the academic year.');
+    const rows = await api('getStudentScores', { className: S.user.class, term: q('studentTerm').value, academicYear, studentId: S.user.email });
     if (!rows.length) { box.innerHTML = '<div class="empty">No scores.</div>'; return; }
     window.__STUDENT_RESULT_ROWS = rows;
     const total = rows.reduce((sum,r) => sum + (Number(r.total)||0), 0);
@@ -3302,9 +3305,9 @@ async function downloadStudentResultPDF() {
     pdf.setFont('helvetica','bold'); pdf.setFontSize(16); pdf.text('GREATER TOMORROW MODEL COLLEGE',105,13,{align:'center'});
     pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text('Jesus, Our Teacher',105,19,{align:'center'});
     pdf.setFontSize(11); pdf.text('STUDENT RESULT',105,27,{align:'center'});
-    pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Term: ${q('studentTerm').value}`,12,35);
+    pdf.setFontSize(9); pdf.text(`Student: ${S.user.name || S.user.email || 'Student'}    Class: ${S.user.class || '—'}    Academic year: ${q('studentYear').value}    Term: ${q('studentTerm').value}`,12,35);
     pdf.autoTable({startY:40,head:[['Subject','CA 1','CA 2','CA 3','Exam','Total','Grade']],body:rows.map(r=>[r.subject,r.T1??'—',r.T2??'—',r.T3??'—',r.Exam??'—',r.total??'—',r.grade||'—']),theme:'grid',styles:{fontSize:8,cellPadding:2},headStyles:{fillColor:[4,62,122]},margin:{left:12,right:12},tableWidth:'auto'});
-    pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
+    pdf.save(`GTMC_${String(S.user.name||'Student').replace(/[^\w-]+/g,'_')}_${String(q('studentYear').value).replace(/[^\w-]+/g,'_')}_${q('studentTerm').value}_Result.pdf`);
     toast('Student result PDF downloaded.', 'ok');
   } catch(e) { toast('Could not generate PDF: '+e.message,'err'); }
 }
