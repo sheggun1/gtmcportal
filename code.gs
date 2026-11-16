@@ -4426,6 +4426,17 @@ function parentGetFeeStatement(p, token) {
   return {student:student,academicYear:year,term:term,lines:s.lines,totalDue:s.totalDue,totalPaid:s.totalPaid,balance:s.balance,payments:s.payments.map(function(x){return {receipt_no:x.receipt_no,amount:x.amount,allocated_category:x.allocated_category,recorded_at:x.recorded_at,status:x.status};})};
 }
 
+function leadershipBandCounts_() {
+  return { below40: 0, from40to49: 0, from50to59: 0, from60to69: 0, from70plus: 0 };
+}
+function leadershipAddBand_(bands, percentage) {
+  if (!Number.isFinite(percentage)) return;
+  if (percentage < 40) bands.below40++;
+  else if (percentage < 50) bands.from40to49++;
+  else if (percentage < 60) bands.from50to59++;
+  else if (percentage < 70) bands.from60to69++;
+  else bands.from70plus++;
+}
 function leadershipGetDashboard(p, token) {
   const user = gtmcRequireLeadership_(token);
   const term = String(p.term || 'Term1');
@@ -4436,7 +4447,8 @@ function leadershipGetDashboard(p, token) {
   const classes = p.className ? [String(p.className)] : CLASSES.slice();
   const classSummaries = [];
   const schoolSubjects = {};
-  let schoolSum = 0, schoolCount = 0, schoolEntered = 0, schoolExpected = 0;
+  let schoolSum = 0, schoolCount = 0, schoolEntered = 0, schoolExpected = 0, schoolPassed = 0;
+  const schoolBands = leadershipBandCounts_();
 
   classes.forEach(function(className) {
     if (CLASSES.indexOf(className) < 0) throw new Error('Invalid class: ' + className);
@@ -4450,12 +4462,14 @@ function leadershipGetDashboard(p, token) {
       : [];
 
     const subjectPerformance = [];
-    let classSum = 0, classCount = 0, enteredTotals = 0;
+    let classSum = 0, classCount = 0, enteredTotals = 0, classPassed = 0;
+    const classBands = leadershipBandCounts_();
     const studentCount = studentRows.filter(function(row) { return row[0] && row[1]; }).length;
     schoolExpected += studentCount * subjects.length;
 
     subjects.forEach(function(subject, subjectIndex) {
-      let sum = 0, count = 0, high = null, low = null;
+      let sum = 0, count = 0, high = null, low = null, passed = 0;
+      const bands = leadershipBandCounts_();
       studentRows.forEach(function(student, rowIndex) {
         if (!student[0] || !student[1]) return;
         const row = scoreRows[rowIndex] || [];
@@ -4482,6 +4496,10 @@ function leadershipGetDashboard(p, token) {
 
         if (raw === null || maximum === null) return;
         const percentage = raw / maximum * 100;
+        leadershipAddBand_(bands, percentage);
+        leadershipAddBand_(classBands, percentage);
+        leadershipAddBand_(schoolBands, percentage);
+        if (percentage >= 50) { passed++; classPassed++; schoolPassed++; }
         sum += percentage;
         count++;
         high = high === null ? percentage : Math.max(high, percentage);
@@ -4494,19 +4512,23 @@ function leadershipGetDashboard(p, token) {
         average: average,
         highest: high === null ? null : Math.round(high * 100) / 100,
         lowest: low === null ? null : Math.round(low * 100) / 100,
-        scoresEntered: count
+        scoresEntered: count,
+        passRate: count ? Math.round(passed / count * 10000) / 100 : null,
+        distribution: bands
       });
       classSum += sum;
       classCount += count;
       enteredTotals += count;
 
-      if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null };
+      if (!schoolSubjects[subject]) schoolSubjects[subject] = { sum: 0, count: 0, high: null, low: null, passed: 0, bands: leadershipBandCounts_() };
       if (count) {
         const bucket = schoolSubjects[subject];
         bucket.sum += sum;
         bucket.count += count;
         bucket.high = bucket.high === null ? high : Math.max(bucket.high, high);
         bucket.low = bucket.low === null ? low : Math.min(bucket.low, low);
+        bucket.passed += passed;
+        Object.keys(bands).forEach(function(key) { bucket.bands[key] += bands[key]; });
       }
     });
 
@@ -4531,6 +4553,8 @@ function leadershipGetDashboard(p, token) {
       performance: average === null ? 'No Scores' : average < 50 ? 'Needs Attention' : average < 60 ? 'Satisfactory' : 'Strong',
       coverage: studentCount && subjects.length ? Math.round((assessment === 'total' ? enteredTotals : classCount) / (studentCount * subjects.length) * 10000) / 100 : 0,
       submissionCoverage: expectedSubmissions ? Math.min(100, Math.round(submittedSubjects / expectedSubmissions * 10000) / 100) : 0,
+      passRate: classCount ? Math.round(classPassed / classCount * 10000) / 100 : null,
+      distribution: classBands,
       subjectPerformance: subjectPerformance
     });
   });
@@ -4548,7 +4572,9 @@ function leadershipGetDashboard(p, token) {
       average: bucket.count ? Math.round(bucket.sum / bucket.count * 100) / 100 : null,
       highest: bucket.high === null ? null : Math.round(bucket.high * 100) / 100,
       lowest: bucket.low === null ? null : Math.round(bucket.low * 100) / 100,
-      scoresEntered: bucket.count
+      scoresEntered: bucket.count,
+      passRate: bucket.count ? Math.round(bucket.passed / bucket.count * 10000) / 100 : null,
+      distribution: bucket.bands
     };
   }).sort(function(a, b) {
     if (a.average === null) return 1;
@@ -4568,7 +4594,10 @@ function leadershipGetDashboard(p, token) {
     weakestClasses: classSummaries.filter(function(row) { return row.average !== null; }).slice(0, 5),
     subjectPerformance: subjectPerformance,
     overallAverage: overallAverage,
+    passRate: schoolCount ? Math.round(schoolPassed / schoolCount * 10000) / 100 : null,
+    distribution: schoolBands,
     scoreCoverage: schoolExpected ? Math.round(schoolEntered / schoolExpected * 10000) / 100 : 0,
+    benchmark: 'The 50% pass-rate indicator is an analytical threshold only; it does not change official grades or result calculations.',
     note: 'Aggregate academic indicators only. No student names, IDs or individual marks are returned.'
   };
 }
