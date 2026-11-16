@@ -191,6 +191,7 @@ function route(action, p) {
   switch (action) {
     case 'login':               return login(p.email, p.password);
     case 'me':                  return verifyToken(p.token);
+    case 'logout':               return logoutSession_(p.token);
     case 'getClasses':          return getClasses(p.token);
     case 'getSubjectsForClass': return subjectsForClass(p.className);
     case 'getStudents':         return getStudents(p.className, p.token);
@@ -687,6 +688,12 @@ function verifyToken(token) {
   const raw = CacheService.getScriptCache().get('sess_' + token);
   if (!raw) throw new Error('Session expired — please log in again');
   return JSON.parse(raw);
+}
+function logoutSession_(token) {
+  if (!token) throw new Error('No token');
+  verifyToken(token);
+  CacheService.getScriptCache().remove('sess_' + token);
+  return { success: true };
 }
 
 function requireRole(token, roles) {
