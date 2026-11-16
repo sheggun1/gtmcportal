@@ -526,6 +526,7 @@ async function logout(){
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function jsArg_(value){ return esc(JSON.stringify(String(value==null?'':value))); }
 function q(id){ return document.getElementById(id); }
 function toast(msg,kind){
   const el = q('toast');
@@ -714,7 +715,7 @@ function renderLibraryRows(){
     return (!needle||text.includes(needle))&&(!cat||r.category===cat)&&(!cls||target==='ALL'||target===cls);
   });
   if(!rows.length){box.innerHTML='<div class="empty">No matching library resources yet.</div>';return;}
-  box.innerHTML='<div class="grid cols-2">'+rows.map(r=>`<div class="card" style="border:1px solid var(--line)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(r.title||'Untitled resource')}</h3><p class="sub">${esc(r.category||'Other')} · ${esc(r.subject||'General')} · ${esc(r.class||'ALL classes')}</p></div>${libraryIsAdmin()?`<div class="row"><button class="sec sm" onclick="editLibraryResource('${esc(r.id)}')">Edit</button><button class="danger sm" onclick="deleteLibraryResource('${esc(r.id)}')">Remove</button></div>`:''}</div>${r.author?`<p><strong>Author:</strong> ${esc(r.author)}</p>`:''}${r.description?`<p>${esc(r.description)}</p>`:''}<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="button blue" style="display:inline-block;text-decoration:none;margin-top:8px">Open Resource ↗</a></div>`).join('')+'</div>';
+  box.innerHTML='<div class="grid cols-2">'+rows.map(r=>`<div class="card" style="border:1px solid var(--line)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h3>${esc(r.title||'Untitled resource')}</h3><p class="sub">${esc(r.category||'Other')} · ${esc(r.subject||'General')} · ${esc(r.class||'ALL classes')}</p></div>${libraryIsAdmin()?`<div class="row"><button class="sec sm" onclick="editLibraryResource(${jsArg_(r.id)})">Edit</button><button class="danger sm" onclick="deleteLibraryResource(${jsArg_(r.id)})">Remove</button></div>`:''}</div>${r.author?`<p><strong>Author:</strong> ${esc(r.author)}</p>`:''}${r.description?`<p>${esc(r.description)}</p>`:''}<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="button blue" style="display:inline-block;text-decoration:none;margin-top:8px">Open Resource ↗</a></div>`).join('')+'</div>';
 }
 function resetLibraryForm(){['libId','libTitle','libAuthor','libSubject','libUrl','libDescription'].forEach(id=>{if(q(id))q(id).value='';});if(q('libClass'))q('libClass').value='ALL';if(q('libType'))q('libType').value='Textbook';if(q('libAdminStatus'))q('libAdminStatus').textContent='';}
 function editLibraryResource(id){const r=LIBRARY_CACHE.find(x=>String(x.id)===String(id));if(!r)return; q('libId').value=r.id||'';q('libTitle').value=r.title||'';q('libAuthor').value=r.author||'';q('libSubject').value=r.subject||'';q('libClass').value=r.class||'ALL';q('libType').value=r.category||'Other';q('libUrl').value=r.url||'';q('libDescription').value=r.description||'';q('libAdminStatus').textContent='Editing resource: '+r.title; q('libraryAdminCard').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -1584,8 +1585,8 @@ async function loadTeachers() {
         <td>${(t.roles||String(t.role).split(',')).map(r=>`<span class="badge info">${esc(r)}</span>`).join(' ')}</td>
         <td>${esc(t.class||'—')}</td>
         <td><select id="teacherClassAssign_${idx}" aria-label="Class teacher class for ${esc(t.name)}"><option value="">— none —</option>${(window.__gtmcClasses||[]).map(c=>`<option value="${esc(c)}" ${String(t.class_teacher_class||'')===String(c)?'selected':''}>${esc(c)}</option>`).join('')}</select></td>
-        <td><button class="blue sm" onclick="saveTeacherClassAssignment('${esc(t.email)}','teacherClassAssign_${idx}')">Save class</button></td>
-        <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher('${esc(t.email)}')">Disable</button>`}</td></tr>`).join('')}
+        <td><button class="blue sm" onclick="saveTeacherClassAssignment(${jsArg_(t.email)},'teacherClassAssign_${idx}')">Save class</button></td>
+        <td>${t.active===false?'':`<button class="danger sm" onclick="deleteTeacher(${jsArg_(t.email)})">Disable</button>`}</td></tr>`).join('')}
       </tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -1623,7 +1624,7 @@ async function loadSubmissions() {
           <td>${esc(r.term)}</td><td><strong>${esc(r.assessment || 'Legacy term lock')}</strong></td>
           <td><span class="badge ${locked?'warn':'ok'}">${esc(r.status)}</span></td>
           <td style="font-size:12px;color:var(--muted)">${esc(when)}</td>
-          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission('${esc(r.teacher_email)}','${esc(r.class)}','${esc(r.subject)}','${esc(r.term)}','${esc(r.assessment||'')}',${isDomains},'${esc(r.academic_year||'')}')">Authorise correction</button>` : ''}</td>
+          <td>${locked ? `<button class="blue sm" onclick="unlockSubmission(${jsArg_(r.teacher_email)},${jsArg_(r.class)},${jsArg_(r.subject)},${jsArg_(r.term)},${jsArg_(r.assessment||'')},${isDomains},${jsArg_(r.academic_year||'')})">Authorise correction</button>` : ''}</td>
         </tr>`;
       }).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -1909,7 +1910,7 @@ async function loadParentAccounts() {
           <td>${esc(a.email)}</td>
           <td style="font-family:ui-monospace;font-size:11px">${esc(a.password || '')}</td>
           <td>${(a.wards||[]).length ? a.wards.map(w => `<div>${esc(w.studentId)} · ${esc(w.className)}
-            <button class="danger sm" onclick="unlinkWard('${esc(a.email)}','${esc(w.studentId)}','${esc(w.className)}')">Unlink</button></div>`).join('') : '<span style="color:var(--muted)">None</span>'}</td>
+            <button class="danger sm" onclick="unlinkWard(${jsArg_(a.email)},${jsArg_(w.studentId)},${jsArg_(w.className)})">Unlink</button></div>`).join('') : '<span style="color:var(--muted)">None</span>'}</td>
         </tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -1943,7 +1944,7 @@ async function loadDebtsForClass() {
           <td><strong>${esc(st.name)}</strong></td>
           <td><input type="number" min="0" data-amount value="${d.total || ''}" style="width:100px"></td>
           <td><input data-note value="${esc(d.note)}" style="width:100%"></td>
-          <td><button class="ok sm" onclick="saveDebt('${esc(st.student_id)}')">Save</button></td>
+          <td><button class="ok sm" onclick="saveDebt(${jsArg_(st.student_id)})">Save</button></td>
         </tr>`;
       }).join('')}</tbody></table></div>
       <div class="row" style="margin-top:12px"><button class="ok" onclick="saveAllDebts()">Save All</button></div>`;
@@ -2021,7 +2022,7 @@ async function loadAnnouncementsAdmin() {
       <div class="ann-card">
         <div class="msg">${esc(r.message)}</div>
         <div class="meta">Target: ${esc(r.targetClasses || 'ALL')} · Audience: ${esc(r.audience)} · ${r.active ? 'Active' : 'Inactive'} · ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}
-        ${r.active ? ` · <button class="danger sm" onclick="deleteAnnouncement('${esc(r.id)}')">Deactivate</button>` : ''}</div>
+        ${r.active ? ` · <button class="danger sm" onclick="deleteAnnouncement(${jsArg_(r.id)})">Deactivate</button>` : ''}</div>
       </div>`).join('');
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
@@ -2858,7 +2859,7 @@ async function loadStaffMessagesAdmin() {
         ${r.status !== 'Replied' ? `
           <div style="margin-top:8px">
             <textarea data-reply rows="2" placeholder="Type your reply…" maxlength="2000" style="width:100%"></textarea>
-            <button class="ok sm" style="margin-top:6px" onclick="replyToMessage('${esc(r.id)}', this)">Send Reply</button>
+            <button class="ok sm" style="margin-top:6px" onclick="replyToMessage(${jsArg_(r.id)}, this)">Send Reply</button>
           </div>` : ''}
       </div>`).join('');
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -2997,7 +2998,7 @@ async function ctLoadStudents() {
       <tbody>${rows.map(s => `
         <tr><td style="font-family:ui-monospace;font-size:12px">${esc(s.student_id)}</td>
         <td><strong>${esc(s.name)}</strong></td>
-        <td><button class="danger sm" onclick="ctRemove('${esc(s.student_id)}')">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
+        <td><button class="danger sm" onclick="ctRemove(${jsArg_(s.student_id)})">Remove</button></td></tr>`).join('')}</tbody></table></div>`;
   } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 async function ctAddBulk() {
@@ -3101,7 +3102,7 @@ async function ctLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="ctSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="ctSubmit('${esc(subject)}','${esc(term)}',q('ctSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently. Other assessment columns remain editable until submitted.</p>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="ctSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="ctSubmit(${jsArg_(subject)},${jsArg_(term)},q('ctSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently. Other assessment columns remain editable until submitted.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => ctSaveCell(inp, subject, term));
@@ -3212,7 +3213,7 @@ async function stLoadScores() {
             <td style="font-weight:700;color:var(--blue)" class="total">${total || ''}</td>
           </tr>`;
         }).join('')}</tbody></table></div>
-      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="stSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="stSubmit('${esc(className)}','${esc(subject)}','${esc(term)}',q('stSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently.</p>`;
+      <div class="row" style="margin-top:12px;align-items:flex-end"><div><label>Assessment to submit and lock</label><select id="stSubmitAssessment"><option value="T1">T1 · CA 1</option><option value="T2">T2 · CA 2</option><option value="T3">T3 · CA 3</option><option value="Exam">Exam</option></select></div><button class="ok" onclick="stSubmit(${jsArg_(className)},${jsArg_(subject)},${jsArg_(term)},q('stSubmitAssessment').value)">Submit &amp; Lock Selected Assessment</button></div><p class="sub">Each assessment is locked independently.</p>`;
     box.querySelectorAll('input.score-input').forEach(inp => {
       inp.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i+1]) all[i+1].focus(); } else if(ev.key === 'ArrowUp') { ev.preventDefault(); const all=[...box.querySelectorAll('input.score-input')]; const i=all.indexOf(inp); if(all[i-1]) all[i-1].focus(); } });
       inp.addEventListener('change', () => stSaveCell(inp, className, subject, term));
