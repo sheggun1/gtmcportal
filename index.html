@@ -507,7 +507,14 @@ async function attendanceApi(action, payload = {}) {
 
 function saveSession(t,u){ S.token=t; S.user=u;
   localStorage.setItem('gs_token',t); localStorage.setItem('gs_user',JSON.stringify(u)); }
+let LOGOUT_IN_PROGRESS = false;
 async function logout(){
+  if (LOGOUT_IN_PROGRESS) {
+    localStorage.removeItem('gs_token'); localStorage.removeItem('gs_user');
+    S.token=''; S.user=null;
+    return;
+  }
+  LOGOUT_IN_PROGRESS = true;
   // Revoke the server-side session before clearing the local browser session.
   // Local sign-out still completes if the network is unavailable.
   try { if (S.token) await api('logout', {}); } catch (e) {}
@@ -515,6 +522,7 @@ async function logout(){
   S.token=''; S.user=null;
   document.getElementById('loginView').style.display='flex';
   document.getElementById('appView').style.display='none';
+  LOGOUT_IN_PROGRESS = false;
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
