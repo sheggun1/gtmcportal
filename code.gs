@@ -15,6 +15,8 @@
 
 const SHEET_ID = '1ijAtsR96Z3UzB9sa1c5vE9Ks6jBvaNiT1m6dH9zHX34';
 const SESSION_SECONDS = 6 * 60 * 60;
+// Release identifier shown by the Apps Script health endpoint.
+const GTMC_APP_VERSION = '14.1.0';
 const ADMIN_EMAILS = ['admin@school.com'];
 
 /* ============ CLASS LIST ============ */
@@ -1493,6 +1495,18 @@ function doGet(e) {
         return out({ error: 'Backup access is disabled or unauthorised. Configure BACKUP_API_KEY and provide it only to trusted backup clients.' });
       }
     }
+    // A plain GET to the deployment URL is a read-only health/version check.
+    // Keep this before openSS() so the version can be checked without reading Sheets.
+    if (!params.sheet && params.sheets !== 'all') {
+      return out({
+        success: true,
+        service: 'GTMC Grade System API',
+        version: GTMC_APP_VERSION,
+        release: '2026-11-16',
+        message: 'Grade System API is running. Application actions must use POST.'
+      });
+    }
+
     const ss = openSS();
     const result = {};
     if (params.sheet) {
@@ -1505,8 +1519,6 @@ function doGet(e) {
         if (SKIP.indexOf(name) !== -1) return;
         result[name] = sh.getDataRange().getValues();
       });
-    } else {
-      return out({ success: true, message: 'Grade System API is running. Use ?action=... or ?sheets=all.' });
     }
     return out(result);
   } catch (err) {
