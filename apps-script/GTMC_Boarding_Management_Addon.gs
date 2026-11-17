@@ -29,7 +29,6 @@ function gtmcBoardingUser_(token,allowAll){
   gtmcBoardingEnsure_();
   var u=verifyToken(token),roles=roleList_(u),section='';
   if(roles.indexOf('admin')>=0||roles.indexOf('vice_principal_admin')>=0)return {user:u,all:true,section:''};
-  if(!allowAll&&roles.indexOf('vice_principal')>=0)return {user:u,all:true,section:''};
   if(roles.indexOf('housemaster')>=0||roles.indexOf('housemistress')>=0){
     var rows=sheetToObjects(getSheet('Users')),row=rows.filter(function(x){return String(x.email||'').toLowerCase()===String(u.email||'').toLowerCase();})[0];
     section=String(row&&row.boarding_section||'').trim();
