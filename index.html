@@ -2199,7 +2199,7 @@ function exportAuditLogsCSV() {
   const headers = ['timestamp','email','action','details'];
   const csvCell = value => '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
   const rows = [headers.join(',')].concat(_auditLogsCache.map(r => headers.map(h => csvCell(h === 'details' && typeof r[h] !== 'string' ? JSON.stringify(r[h]) : r[h])).join(',')));
-  const blob = new Blob(['\\ufeff' + rows.join('\\r\\n')], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\ufeff' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = 'GTMC_Audit_Logs.csv'; a.click(); URL.revokeObjectURL(url);
 }
