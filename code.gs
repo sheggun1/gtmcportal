@@ -2932,6 +2932,9 @@ function reportVerificationToken_(identity, issuedAt) {
   return reportVerificationHmac_('GTMC-REPORT-QR|' + identity + '|' + issuedAt);
 }
 function issueReportVerification_(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
   const identity = JSON.stringify([
     String(data.studentId), String(data.className), String(data.term), String(data.academicYear)
   ]);
@@ -2965,6 +2968,7 @@ function issueReportVerification_(data) {
   if (rowNumber) sh.getRange(rowNumber, 1, 1, record.length).setValues([record]);
   else sh.appendRow(record);
   return 'https://greaterportal.vercel.app/verify.html?code=' + encodeURIComponent(token);
+  } finally { lock.releaseLock(); }
 }
 function adminIssueReportVerification_(p, token) {
   requireRole(token, ['admin']);
@@ -2996,7 +3000,8 @@ function verifyReportCard_(p) {
   const code = String(p.code || '').trim();
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(code)) return { verified: false, status: 'INVALID', message: 'This QR code is not valid.' };
   const tokenHash = reportVerificationHash_(code);
-  const sh = reportVerificationSheet_();
+  const sh = openSS().getSheetByName('ReportVerifications');
+  if (!sh) return { verified: false, status: 'INVALID', message: 'No matching GTMC report-card record was found.' };
   const values = sh.getDataRange().getValues();
   for (let i = 1; i < values.length; i++) {
     if (!reportVerificationEqual_(values[i][0], tokenHash)) continue;
