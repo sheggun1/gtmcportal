@@ -427,10 +427,155 @@ function sheetToObjects(sheet) {
   });
 }
 
+/* ============ AUTOMATIC AUDIT ARCHIVE ============ */
+// Archive old audit rows before the active tab becomes unwieldy.
+// 50,000 active rows trigger a 40,000-row transfer, retaining 10,000 recent rows.
+const GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_ = 50000;
+const GTMC_AUDIT_ARCHIVE_BATCH_ROWS_ = 40000;
+const GTMC_AUDIT_ARCHIVE_VOLUME_ROWS_ = 4500000;
+const GTMC_AUDIT_ARCHIVE_PROP_ = 'GTMC_AUDIT_ARCHIVE_FILE_IDS';
+
+function gtmcAuditArchiveIds_() {
+  const props = PropertiesService.getScriptProperties();
+  try {
+    const ids = JSON.parse(props.getProperty(GTMC_AUDIT_ARCHIVE_PROP_) || '[]');
+    return Array.isArray(ids) ? ids.filter(String) : [];
+  } catch (e) { return []; }
+}
+
+function gtmcCreateAuditArchiveVolume_() {
+  const ids = gtmcAuditArchiveIds_();
+  const n = ids.length + 1;
+  const name = n === 1 ? 'GTMC Audit Archive' : 'GTMC Audit Archive ' + n;
+  const ss = SpreadsheetApp.create(name);
+  const sh = ss.getSheets()[0];
+  sh.setName('Audit');
+  sh.getRange(1, 1, 1, 4).setValues([['timestamp', 'email', 'action', 'details']]);
+  // Keep the archive grid to four columns so its cell budget is used for audit rows.
+  if (sh.getMaxColumns() > 4) sh.deleteColumns(5, sh.getMaxColumns() - 4);
+  sh.setFrozenRows(1);
+  ids.push(ss.getId());
+  PropertiesService.getScriptProperties().setProperty(GTMC_AUDIT_ARCHIVE_PROP_, JSON.stringify(ids));
+  return { id: ss.getId(), sheet: sh };
+}
+
+function gtmcGetWritableAuditArchive_() {
+  const ids = gtmcAuditArchiveIds_();
+  if (!ids.length) return gtmcCreateAuditArchiveVolume_();
+  let ss = SpreadsheetApp.openById(ids[ids.length - 1]);
+  let sh = ss.getSheetByName('Audit');
+  if (!sh) throw new Error('Audit tab is missing from archive spreadsheet ' + ss.getId());
+  if (sh.getLastRow() >= GTMC_AUDIT_ARCHIVE_VOLUME_ROWS_) return gtmcCreateAuditArchiveVolume_();
+  return { id: ss.getId(), sheet: sh };
+}
+
+function gtmcAuditRowKey_(row) {
+  return row.map(function (v) {
+    return v instanceof Date ? String(v.getTime()) : String(v == null ? '' : v);
+  }).join('|');
+}
+
+function gtmcArchiveAuditRows_() {
+  const archiveLock = LockService.getScriptLock();
+  if (!archiveLock.tryLock(100)) throw new Error('Audit archive is busy; this run will retry on a later audit write.');
+  try {
+  const active = getSheet('Audit');
+  const last = active.getLastRow();
+  if (last < GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) return { archived: 0, activeRows: Math.max(0, last - 1) };
+
+  const count = Math.min(GTMC_AUDIT_ARCHIVE_BATCH_ROWS_, last - 1);
+  const sourceRows = active.getRange(2, 1, count, 4).getValues();
+  const target = gtmcGetWritableAuditArchive_();
+  const dest = target.sheet;
+  const destLast = dest.getLastRow();
+
+  // If a previous execution copied the batch but stopped before source deletion,
+  // recognise the matching tail and avoid copying that same batch twice.
+  let alreadyCopied = false;
+  if (destLast >= count + 1) {
+    const tail = dest.getRange(destLast - count + 1, 1, count, 4).getValues();
+    alreadyCopied = sourceRows.every(function (row, i) {
+      return gtmcAuditRowKey_(row) === gtmcAuditRowKey_(tail[i]);
+    });
+  }
+
+  if (!alreadyCopied) {
+    const start = dest.getLastRow() + 1;
+    const requiredLastRow = start + sourceRows.length - 1;
+    if (dest.getMaxRows() < requiredLastRow) {
+      dest.insertRowsAfter(dest.getMaxRows(), requiredLastRow - dest.getMaxRows());
+    }
+    dest.getRange(start, 1, sourceRows.length, 4).setValues(sourceRows);
+    SpreadsheetApp.flush();
+    const written = dest.getRange(start, 1, sourceRows.length, 4).getValues();
+    const verified = sourceRows.every(function (row, i) {
+      return gtmcAuditRowKey_(row) === gtmcAuditRowKey_(written[i]);
+    });
+    if (!verified) throw new Error('Audit archive verification failed; source rows were retained.');
+  }
+
+  // Only remove source rows after the archive copy has been verified.
+  active.deleteRows(2, count);
+  return { archived: count, archiveSpreadsheetId: target.id, activeRows: active.getLastRow() - 1 };
+  } finally {
+    archiveLock.releaseLock();
+  }
+}
+
+function gtmcCollectAuditRowsFromSheet_(sheet, p, limit) {
+  const found = [];
+  if (!sheet || sheet.getLastRow() < 2) return found;
+  const headers = sheet.getRange(1, 1, 1, 4).getValues()[0].map(String);
+  const emailFilter = String(p.email || '').toLowerCase();
+  const actionFilter = String(p.action || '').toLowerCase();
+  const from = p.fromDate ? new Date(p.fromDate).getTime() : -Infinity;
+  const to = p.toDate ? new Date(p.toDate).getTime() : Infinity;
+  const last = sheet.getLastRow();
+  const chunkSize = 5000;
+  for (let end = last; end >= 2 && found.length < limit; end -= chunkSize) {
+    const start = Math.max(2, end - chunkSize + 1);
+    const values = sheet.getRange(start, 1, end - start + 1, 4).getValues();
+    for (let i = values.length - 1; i >= 0 && found.length < limit; i--) {
+      const row = values[i], obj = {};
+      headers.forEach(function (h, j) { obj[h] = row[j]; });
+      const time = new Date(obj.timestamp || 0).getTime();
+      if (time < from) return found; // Rows are chronological; older rows cannot match.
+      if (time > to) continue;
+      if (emailFilter && String(obj.email).toLowerCase() !== emailFilter) continue;
+      if (actionFilter && String(obj.action).toLowerCase().indexOf(actionFilter) === -1) continue;
+      found.push(obj);
+    }
+  }
+  return found;
+}
+
+function gtmcGetAuditHistory_(p, limit) {
+  let rows = gtmcCollectAuditRowsFromSheet_(getSheet('Audit'), p, limit);
+  if (rows.length < limit) {
+    const ids = gtmcAuditArchiveIds_();
+    for (let i = ids.length - 1; i >= 0 && rows.length < limit; i--) {
+      const sh = SpreadsheetApp.openById(ids[i]).getSheetByName('Audit');
+      const older = gtmcCollectAuditRowsFromSheet_(sh, p, limit - rows.length);
+      rows = rows.concat(older);
+    }
+  }
+  rows.sort(function (a, b) { return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime(); });
+  return rows.slice(0, limit);
+}
+
 function logAudit(email, action, details) {
   try {
-    getSheet('Audit').appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
-  } catch (e) {}
+    const audit = getSheet('Audit');
+    // Archive first if the next write would cross the configured active-row threshold.
+    if (audit.getLastRow() >= GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) {
+      try { gtmcArchiveAuditRows_(); }
+      catch (archiveError) { console.error('GTMC audit archive deferred: ' + String(archiveError && archiveError.message ? archiveError.message : archiveError)); }
+    }
+    // Keep recording the new event even if another execution currently owns the archive lock.
+    audit.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
+  } catch (e) {
+    console.error('GTMC audit logging/archive issue: ' + String(e && e.message ? e.message : e));
+  }
 }
 
 /* ============ SETUP ============ */
@@ -4550,13 +4695,8 @@ function adminReplyParentEnquiry(p, token) {
 
 function adminGetAuditLogs(p, token) {
   requireRole(token, ['admin']);
-  let rows = sheetToObjects(getSheet('Audit'));
-  if (p.email) rows = rows.filter(function (r) { return String(r.email).toLowerCase() === String(p.email).toLowerCase(); });
-  if (p.action) rows = rows.filter(function (r) { return String(r.action).toLowerCase().indexOf(String(p.action).toLowerCase()) !== -1; });
-  if (p.fromDate) { const from = new Date(p.fromDate).getTime(); if (isFinite(from)) rows = rows.filter(function (r) { return new Date(r.timestamp).getTime() >= from; }); }
-  if (p.toDate) { const to = new Date(p.toDate).getTime(); if (isFinite(to)) rows = rows.filter(function (r) { return new Date(r.timestamp).getTime() <= to; }); }
-  rows.sort(function (a, b) { return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime(); });
-  return rows.slice(0, Math.min(Math.max(Number(p.limit) || 200, 1), 1000));
+  const limit = Math.min(Math.max(Number(p.limit) || 200, 1), 1000);
+  return gtmcGetAuditHistory_(p || {}, limit);
 }
 function adminListAcademicArchives(p, token) {
   requireRole(token, ['admin']);
