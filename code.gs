@@ -427,10 +427,112 @@ function sheetToObjects(sheet) {
   });
 }
 
+/* ============ AUTOMATIC AUDIT ARCHIVE ============ */
+// Archive old audit rows before the active tab becomes unwieldy.
+// 50,000 active rows trigger a 40,000-row transfer, retaining 10,000 recent rows.
+const GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_ = 50000;
+const GTMC_AUDIT_ARCHIVE_BATCH_ROWS_ = 40000;
+const GTMC_AUDIT_ARCHIVE_VOLUME_ROWS_ = 4500000;
+const GTMC_AUDIT_ARCHIVE_PROP_ = 'GTMC_AUDIT_ARCHIVE_FILE_IDS';
+
+function gtmcAuditArchiveIds_() {
+  const props = PropertiesService.getScriptProperties();
+  try {
+    const ids = JSON.parse(props.getProperty(GTMC_AUDIT_ARCHIVE_PROP_) || '[]');
+    return Array.isArray(ids) ? ids.filter(String) : [];
+  } catch (e) { return []; }
+}
+
+function gtmcCreateAuditArchiveVolume_() {
+  const ids = gtmcAuditArchiveIds_();
+  const n = ids.length + 1;
+  const name = n === 1 ? 'GTMC Audit Archive' : 'GTMC Audit Archive ' + n;
+  const ss = SpreadsheetApp.create(name);
+  const sh = ss.getSheets()[0];
+  sh.setName('Audit');
+  sh.getRange(1, 1, 1, 4).setValues([['timestamp', 'email', 'action', 'details']]);
+  sh.setFrozenRows(1);
+  ids.push(ss.getId());
+  PropertiesService.getScriptProperties().setProperty(GTMC_AUDIT_ARCHIVE_PROP_, JSON.stringify(ids));
+  return { id: ss.getId(), sheet: sh };
+}
+
+function gtmcGetWritableAuditArchive_() {
+  const ids = gtmcAuditArchiveIds_();
+  if (!ids.length) return gtmcCreateAuditArchiveVolume_();
+  let ss = SpreadsheetApp.openById(ids[ids.length - 1]);
+  let sh = ss.getSheetByName('Audit');
+  if (!sh) throw new Error('Audit tab is missing from archive spreadsheet ' + ss.getId());
+  if (sh.getLastRow() >= GTMC_AUDIT_ARCHIVE_VOLUME_ROWS_) return gtmcCreateAuditArchiveVolume_();
+  return { id: ss.getId(), sheet: sh };
+}
+
+function gtmcAuditRowKey_(row) {
+  return row.map(function (v) {
+    return v instanceof Date ? String(v.getTime()) : String(v == null ? '' : v);
+  }).join('|');
+}
+
+function gtmcArchiveAuditRows_() {
+  const active = getSheet('Audit');
+  const last = active.getLastRow();
+  if (last < GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) return { archived: 0, activeRows: Math.max(0, last - 1) };
+
+  const count = Math.min(GTMC_AUDIT_ARCHIVE_BATCH_ROWS_, last - 1);
+  const sourceRows = active.getRange(2, 1, count, 4).getValues();
+  const target = gtmcGetWritableAuditArchive_();
+  const dest = target.sheet;
+  const destLast = dest.getLastRow();
+
+  // If a previous execution copied the batch but stopped before source deletion,
+  // recognise the matching tail and avoid copying that same batch twice.
+  let alreadyCopied = false;
+  if (destLast >= count + 1) {
+    const tail = dest.getRange(destLast - count + 1, 1, count, 4).getValues();
+    alreadyCopied = sourceRows.every(function (row, i) {
+      return gtmcAuditRowKey_(row) === gtmcAuditRowKey_(tail[i]);
+    });
+  }
+
+  if (!alreadyCopied) {
+    const start = dest.getLastRow() + 1;
+    dest.getRange(start, 1, sourceRows.length, 4).setValues(sourceRows);
+    SpreadsheetApp.flush();
+    const written = dest.getRange(start, 1, sourceRows.length, 4).getValues();
+    const verified = sourceRows.every(function (row, i) {
+      return gtmcAuditRowKey_(row) === gtmcAuditRowKey_(written[i]);
+    });
+    if (!verified) throw new Error('Audit archive verification failed; source rows were retained.');
+  }
+
+  // Only remove source rows after the archive copy has been verified.
+  active.deleteRows(2, count);
+  return { archived: count, archiveSpreadsheetId: target.id, activeRows: active.getLastRow() - 1 };
+}
+
+function gtmcReadArchivedAuditRows_() {
+  const all = [];
+  gtmcAuditArchiveIds_().forEach(function (id) {
+    const ss = SpreadsheetApp.openById(id);
+    const sh = ss.getSheetByName('Audit');
+    if (sh && sh.getLastRow() > 1) {
+      Array.prototype.push.apply(all, sheetToObjects(sh));
+    }
+  });
+  return all;
+}
+
 function logAudit(email, action, details) {
   try {
-    getSheet('Audit').appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
-  } catch (e) {}
+    const audit = getSheet('Audit');
+    // Archive first if the next write would cross the configured active-row threshold.
+    if (audit.getLastRow() >= GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) {
+      gtmcArchiveAuditRows_();
+    }
+    audit.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
+  } catch (e) {
+    console.error('GTMC audit logging/archive issue: ' + String(e && e.message ? e.message : e));
+  }
 }
 
 /* ============ SETUP ============ */
@@ -4550,7 +4652,8 @@ function adminReplyParentEnquiry(p, token) {
 
 function adminGetAuditLogs(p, token) {
   requireRole(token, ['admin']);
-  let rows = sheetToObjects(getSheet('Audit'));
+  // Search both archived history and the active Audit tab.
+  let rows = gtmcReadArchivedAuditRows_().concat(sheetToObjects(getSheet('Audit')));
   if (p.email) rows = rows.filter(function (r) { return String(r.email).toLowerCase() === String(p.email).toLowerCase(); });
   if (p.action) rows = rows.filter(function (r) { return String(r.action).toLowerCase().indexOf(String(p.action).toLowerCase()) !== -1; });
   if (p.fromDate) { const from = new Date(p.fromDate).getTime(); if (isFinite(from)) rows = rows.filter(function (r) { return new Date(r.timestamp).getTime() >= from; }); }
