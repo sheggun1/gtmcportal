@@ -4290,8 +4290,10 @@ function gtmcCardHTML(r, withId) {
     const b = comparisonOverride !== undefined ? n(comparisonOverride) : benchmark(s, key);
     if (v === null) return f(value);
     if (b === null) return esc(v);
-    const colourClass = v < b ? 'rc-score-below' : 'rc-score-at-or-above';
-    return `<span class="${colourClass}">${esc(v)}</span>`;
+    const isBelow = v < b;
+    const colourClass = isBelow ? 'rc-score-below' : 'rc-score-at-or-above';
+    const colour = isBelow ? '#b91c1c' : '#0756a8';
+    return `<span class="${colourClass}" style="color:${colour}!important;font-weight:900!important;-webkit-print-color-adjust:exact;print-color-adjust:exact">${esc(v)}</span>`;
   };
 
   const cols = [['S/N', (s, i) => i + 1], ['Subject', s => `<b>${esc(s.subject)}</b>`, 'l']];
@@ -4329,10 +4331,13 @@ function gtmcCardHTML(r, withId) {
   const colouredSummary = (value, comparison) => {
     if (value == null) return '—';
     if (comparison == null || !Number.isFinite(Number(comparison))) return `${value}%`;
-    const colourClass = Number(value) < Number(comparison) ? 'rc-score-below' : 'rc-score-at-or-above';
-    return `<span class="${colourClass}">${value}%</span>`;
+    const isBelow = Number(value) < Number(comparison);
+    const colourClass = isBelow ? 'rc-score-below' : 'rc-score-at-or-above';
+    const colour = isBelow ? '#b91c1c' : '#0756a8';
+    return `<span class="${colourClass}" style="color:${colour}!important;font-weight:900!important;-webkit-print-color-adjust:exact;print-color-adjust:exact">${value}%</span>`;
   };
-  const obtainedValue = done.length ? (obtainedColor ? `<span class="${got < Number(r.overallMarksObtainedBenchmark) ? 'rc-score-below' : 'rc-score-at-or-above'}">${got}</span>` : got) : '—';
+  const obtainedBelow = got < Number(r.overallMarksObtainedBenchmark);
+  const obtainedValue = done.length ? (obtainedColor ? `<span class="${obtainedBelow ? 'rc-score-below' : 'rc-score-at-or-above'}" style="color:${obtainedBelow ? '#b91c1c' : '#0756a8'}!important;font-weight:900!important;-webkit-print-color-adjust:exact;print-color-adjust:exact">${got}</span>` : got) : '—';
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', obtainedValue], ['Average', colouredSummary(avg, r.overallAverageBenchmark)]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
@@ -4380,7 +4385,6 @@ function gtmcCardHTML(r, withId) {
   <div class="rc-main">
     <div>
       <div class="rc-bar">Cognitive Domain</div>
-      <div class="rc-score-colour-legend"><span class="rc-score-below">Red: Below class average</span><span class="rc-score-at-or-above">Blue: Equal to or above class average</span></div>
       <div class="rc-scroll"><table class="rc-t rc-subject-table"><colgroup>${cols.map((c, i) => `<col style="width:${i === 0 ? 5 : i === 1 ? 27 : (68 / Math.max(1, cols.length - 2)).toFixed(3)}%">`).join('')}</colgroup><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
     </div>
     <div class="rc-side">
