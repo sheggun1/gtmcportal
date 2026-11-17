@@ -2480,7 +2480,17 @@ function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) 
 
 function isLegacyAutoPrincipalRemark_(remark) {
   const value = String(remark || '');
-  return /^(An excellent result\\. Keep up this outstanding performance\\.|A very good result\\. Aim even higher next term\\.|A good result\\. There is room for steady improvement\\.|A fair result\\. More effort is required\\.|A pass\\. Consistent study will improve your performance\\.|A poor result\\. Significant and focused improvement is needed\\.) \\(Overall: [0-9]+(?:\\.[0-9]+)?%\\)$/.test(value);
+  const legacyStarts = [
+    'An excellent result. Keep up this outstanding performance.',
+    'A very good result. Aim even higher next term.',
+    'A good result. There is room for steady improvement.',
+    'A fair result. More effort is required.',
+    'A pass. Consistent study will improve your performance.',
+    'A poor result. Significant and focused improvement is needed.'
+  ];
+  return value.slice(-2) === '%)' && legacyStarts.some(function (prefix) {
+    return value.indexOf(prefix + ' (Overall: ') === 0;
+  });
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
