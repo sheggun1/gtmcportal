@@ -4174,7 +4174,7 @@ function gtmcCardHTML(r, withId) {
   const stamp = t.schoolStampUrl ? `<div><img src="${esc(t.schoolStampUrl)}" alt="" onerror="this.remove()"></div>` : '';
   const rem = (label, txt) => `<div class="rc-rem"><b>${label}:</b> ${esc(txt || '—')}</div>`;
   const rd = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  const verificationBlock = r.verificationUrl ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Reference: ${esc(String(r.verificationUrl).split('code=')[1] || '').slice(-10)}</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="width:76px;height:76px;object-fit:contain"></div>` : '';
+  const verificationBlock = r.verificationUrl ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Official online verification</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="width:76px;height:76px;object-fit:contain"></div>` : '';
 
   return `<div ${withId ? 'id="reportCard" ' : ''}class="rc" style="--rcp:${esc(P)}">
   <div class="rc-head">
