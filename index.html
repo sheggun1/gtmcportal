@@ -4251,6 +4251,17 @@ if (S.token && S.user) boot();
   document.head.appendChild(el);
 })();
 
+/* Report-card score comparison colours: force visibility in preview and print/PDF. */
+(function addReportScoreColourStyles() {
+  const css = `
+    .rc .rc-score-below{color:#b91c1c!important;font-weight:900!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rc .rc-score-at-or-above{color:#0756a8!important;font-weight:900!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rc .rc-score-colour-legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:5px 0 7px;font-size:8px;font-weight:700}
+    .rc .rc-score-colour-legend span{font-weight:900!important}
+  `;
+  const el=document.createElement('style');el.id='gtmc-report-score-colours';el.textContent=css;document.head.appendChild(el);
+})();
+
 /* ---------- 2. Report card (template layout, your scoring logic) ---------- */
 function gtmcCardHTML(r, withId) {
   const t = r.template || {}, cal = r.calendar || {}, d = r.domains || {};
@@ -4274,21 +4285,22 @@ function gtmcCardHTML(r, withId) {
     const value = subjectBenchmarks[key];
     return value == null || !Number.isFinite(Number(value)) ? null : Number(value);
   };
-  const scoreCell = (s, key, value) => {
-    const v=n(value), b=benchmark(s,key);
-    if(v===null)return f(value);
-    if(b===null)return esc(v);
-    const color=v<b?'#b91c1c':'#0756a8';
-    return `<span style="color:${color};font-weight:900">${esc(v)}</span>`;
+  const scoreCell = (s, key, value, comparisonOverride) => {
+    const v = n(value);
+    const b = comparisonOverride !== undefined ? n(comparisonOverride) : benchmark(s, key);
+    if (v === null) return f(value);
+    if (b === null) return esc(v);
+    const colourClass = v < b ? 'rc-score-below' : 'rc-score-at-or-above';
+    return `<span class="${colourClass}">${esc(v)}</span>`;
   };
 
   const cols = [['S/N', (s, i) => i + 1], ['Subject', s => `<b>${esc(s.subject)}</b>`, 'l']];
   if (t.showTests !== false) cols.push(['CA1<br>(10)', s => scoreCell(s,'T1',s.T1)], ['CA2<br>(10)', s => scoreCell(s,'T2',s.T2)], ['CA3<br>(10)', s => scoreCell(s,'T3',s.T3)], ['CA<br>(30)', s => scoreCell(s,'ca',caOf(s))]);
   if (t.showExam !== false) cols.push(['Exam<br>(70)', s => scoreCell(s,'Exam',s.Exam)]);
-  if (r.term !== 'Term1' && has(s => s.term1Total)) cols.push(['T1<br>Total', s => s.term1Total]);
-  if (r.term === 'Term3' && has(s => s.term2Total)) cols.push(['T2<br>Total', s => s.term2Total]);
+  if (r.term !== 'Term1' && has(s => s.term1Total)) cols.push(['T1<br>Total', s => scoreCell(s, 'term1Total', s.term1Total, s.term1TotalBenchmark)]);
+  if (r.term === 'Term3' && has(s => s.term2Total)) cols.push(['T2<br>Total', s => scoreCell(s, 'term2Total', s.term2Total, s.term2TotalBenchmark)]);
   if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : scoreCell(s,'total',s.total)]);
-  if (r.term !== 'Term1' && has(s => s.cumulative)) cols.push(['Cumul.<br>Avg', s => s.cumulative]);
+  if (r.term !== 'Term1' && has(s => s.cumulative)) cols.push(['Cumul.<br>Avg', s => scoreCell(s, 'cumulative', s.cumulative, s.cumulativeBenchmark)]);
   if (has(pos)) cols.push(['Position', s => pos(s) == null ? null : esc(pos(s))]);
   if (t.showGrade !== false) cols.push(['Grade', s => s.grade ? `<b>${esc(s.grade)}</b>` : null]);
 
@@ -4317,10 +4329,10 @@ function gtmcCardHTML(r, withId) {
   const colouredSummary = (value, comparison) => {
     if (value == null) return '—';
     if (comparison == null || !Number.isFinite(Number(comparison))) return `${value}%`;
-    const color = Number(value) < Number(comparison) ? '#b91c1c' : '#0756a8';
-    return `<span style="color:${color};font-weight:900">${value}%</span>`;
+    const colourClass = Number(value) < Number(comparison) ? 'rc-score-below' : 'rc-score-at-or-above';
+    return `<span class="${colourClass}">${value}%</span>`;
   };
-  const obtainedValue = done.length ? (obtainedColor ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : got) : '—';
+  const obtainedValue = done.length ? (obtainedColor ? `<span class="${got < Number(r.overallMarksObtainedBenchmark) ? 'rc-score-below' : 'rc-score-at-or-above'}">${got}</span>` : got) : '—';
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', obtainedValue], ['Average', colouredSummary(avg, r.overallAverageBenchmark)]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
@@ -4368,6 +4380,7 @@ function gtmcCardHTML(r, withId) {
   <div class="rc-main">
     <div>
       <div class="rc-bar">Cognitive Domain</div>
+      <div class="rc-score-colour-legend"><span class="rc-score-below">Red: Below class average</span><span class="rc-score-at-or-above">Blue: Equal to or above class average</span></div>
       <div class="rc-scroll"><table class="rc-t rc-subject-table"><colgroup>${cols.map((c, i) => `<col style="width:${i === 0 ? 5 : i === 1 ? 27 : (68 / Math.max(1, cols.length - 2)).toFixed(3)}%">`).join('')}</colgroup><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
     </div>
     <div class="rc-side">
