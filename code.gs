@@ -474,6 +474,9 @@ function gtmcAuditRowKey_(row) {
 }
 
 function gtmcArchiveAuditRows_() {
+  const archiveLock = LockService.getScriptLock();
+  if (!archiveLock.tryLock(100)) throw new Error('Audit archive is busy; this run will retry on a later audit write.');
+  try {
   const active = getSheet('Audit');
   const last = active.getLastRow();
   if (last < GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) return { archived: 0, activeRows: Math.max(0, last - 1) };
@@ -508,6 +511,9 @@ function gtmcArchiveAuditRows_() {
   // Only remove source rows after the archive copy has been verified.
   active.deleteRows(2, count);
   return { archived: count, archiveSpreadsheetId: target.id, activeRows: active.getLastRow() - 1 };
+  } finally {
+    archiveLock.releaseLock();
+  }
 }
 
 function gtmcCollectAuditRowsFromSheet_(sheet, p, limit) {
@@ -556,8 +562,10 @@ function logAudit(email, action, details) {
     const audit = getSheet('Audit');
     // Archive first if the next write would cross the configured active-row threshold.
     if (audit.getLastRow() >= GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) {
-      gtmcArchiveAuditRows_();
+      try { gtmcArchiveAuditRows_(); }
+      catch (archiveError) { console.error('GTMC audit archive deferred: ' + String(archiveError && archiveError.message ? archiveError.message : archiveError)); }
     }
+    // Keep recording the new event even if another execution currently owns the archive lock.
     audit.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
   } catch (e) {
     console.error('GTMC audit logging/archive issue: ' + String(e && e.message ? e.message : e));
