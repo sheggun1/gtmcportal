@@ -549,15 +549,63 @@ function gtmcCollectAuditRowsFromSheet_(sheet, p, limit) {
   return found;
 }
 
+// Dedicated audit storage is separate from the main GTMC workbook.
+// Older records in the main Audit tab and legacy archive volumes remain readable.
+const GTMC_AUDIT_STORAGE_PROP_ = 'GTMC_AUDIT_STORAGE_FILE_IDS';
+const GTMC_AUDIT_STORAGE_VOLUME_ROWS_ = 4500000;
+
+function gtmcAuditStorageIds_() {
+  const props = PropertiesService.getScriptProperties();
+  try {
+    const ids = JSON.parse(props.getProperty(GTMC_AUDIT_STORAGE_PROP_) || '[]');
+    return Array.isArray(ids) ? ids.filter(String) : [];
+  } catch (e) { return []; }
+}
+
+function gtmcCreateAuditStorageVolume_() {
+  const ids = gtmcAuditStorageIds_();
+  const n = ids.length + 1;
+  const name = n === 1 ? 'GTMC Audit' : 'GTMC Audit ' + n;
+  const ss = SpreadsheetApp.create(name);
+  const sh = ss.getSheets()[0];
+  sh.setName('Audit');
+  sh.getRange(1, 1, 1, 4).setValues([['timestamp', 'email', 'action', 'details']]);
+  if (sh.getMaxColumns() > 4) sh.deleteColumns(5, sh.getMaxColumns() - 4);
+  sh.setFrozenRows(1);
+  ids.push(ss.getId());
+  PropertiesService.getScriptProperties().setProperty(GTMC_AUDIT_STORAGE_PROP_, JSON.stringify(ids));
+  return { id: ss.getId(), sheet: sh };
+}
+
+function gtmcGetWritableAuditStorage_() {
+  const ids = gtmcAuditStorageIds_();
+  if (!ids.length) return gtmcCreateAuditStorageVolume_();
+  const ss = SpreadsheetApp.openById(ids[ids.length - 1]);
+  const sh = ss.getSheetByName('Audit');
+  if (!sh) throw new Error('Audit tab is missing from dedicated audit spreadsheet ' + ss.getId());
+  if (sh.getLastRow() >= GTMC_AUDIT_STORAGE_VOLUME_ROWS_) return gtmcCreateAuditStorageVolume_();
+  return { id: ss.getId(), sheet: sh };
+}
+
 function gtmcGetAuditHistory_(p, limit) {
-  let rows = gtmcCollectAuditRowsFromSheet_(getSheet('Audit'), p, limit);
+  let rows = [];
+  // Newest records are stored directly in the dedicated audit spreadsheet volumes.
+  const storageIds = gtmcAuditStorageIds_();
+  for (let i = storageIds.length - 1; i >= 0 && rows.length < limit; i--) {
+    const sh = SpreadsheetApp.openById(storageIds[i]).getSheetByName('Audit');
+    rows = rows.concat(gtmcCollectAuditRowsFromSheet_(sh, p, limit - rows.length));
+  }
+  // Read the previous archive arrangement for backward-compatible history.
   if (rows.length < limit) {
-    const ids = gtmcAuditArchiveIds_();
-    for (let i = ids.length - 1; i >= 0 && rows.length < limit; i--) {
-      const sh = SpreadsheetApp.openById(ids[i]).getSheetByName('Audit');
-      const older = gtmcCollectAuditRowsFromSheet_(sh, p, limit - rows.length);
-      rows = rows.concat(older);
+    const legacyIds = gtmcAuditArchiveIds_();
+    for (let i = legacyIds.length - 1; i >= 0 && rows.length < limit; i--) {
+      const sh = SpreadsheetApp.openById(legacyIds[i]).getSheetByName('Audit');
+      rows = rows.concat(gtmcCollectAuditRowsFromSheet_(sh, p, limit - rows.length));
     }
+  }
+  // Finally include any older records still in the original workbook's Audit tab.
+  if (rows.length < limit) {
+    rows = rows.concat(gtmcCollectAuditRowsFromSheet_(getSheet('Audit'), p, limit - rows.length));
   }
   rows.sort(function (a, b) { return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime(); });
   return rows.slice(0, limit);
@@ -565,21 +613,10 @@ function gtmcGetAuditHistory_(p, limit) {
 
 function logAudit(email, action, details) {
   try {
-    const audit = getSheet('Audit');
-    // Provision the separate archive spreadsheet automatically on the first audit event.
-    if (!gtmcAuditArchiveIds_().length) {
-      try { gtmcCreateAuditArchiveVolume_(); }
-      catch (createError) { console.error('GTMC audit archive creation deferred: ' + String(createError && createError.message ? createError.message : createError)); }
-    }
-    // Archive first if the next write would cross the configured active-row threshold.
-    if (audit.getLastRow() >= GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) {
-      try { gtmcArchiveAuditRows_(); }
-      catch (archiveError) { console.error('GTMC audit archive deferred: ' + String(archiveError && archiveError.message ? archiveError.message : archiveError)); }
-    }
-    // Keep recording the new event even if another execution currently owns the archive lock.
-    audit.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
+    const target = gtmcGetWritableAuditStorage_();
+    target.sheet.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
   } catch (e) {
-    console.error('GTMC audit logging/archive issue: ' + String(e && e.message ? e.message : e));
+    console.error('GTMC dedicated audit logging issue: ' + String(e && e.message ? e.message : e));
   }
 }
 
