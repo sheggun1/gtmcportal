@@ -89,6 +89,20 @@ function gtmcBoardingStudentOptions_(p,token){
   var sh=getSheet(cls),last=sh.getLastRow();if(last<4)return [];
   return sh.getRange(4,1,last-3,2).getValues().filter(function(r){return r[0]!==''&&r[1]!=='';}).map(function(r){return {student_id:String(r[0]),name:String(r[1]),class:cls};});
 }
+function gtmcBoardingStudentIdsForClass_(className,token){
+  var access=gtmcBoardingUser_(token,false);
+  return sheetToObjects(getSheet('BoardingAssignments')).filter(function(x){return String(x.class)===String(className)&&String(x.status)==='Boarder'&&!x.ended_at&&(!access.section||String(x.section)===access.section);}).map(function(x){return String(x.student_id);});
+}
+function gtmcBoardingPerformance_(p,token){
+  var access=gtmcBoardingUser_(token,false),cls=String(p.className||'').trim();
+  if(CLASSES.indexOf(cls)<0)throw new Error('Choose a valid class.');
+  var ids=gtmcBoardingStudentIdsForClass_(cls,token);
+  if(!ids.length)return {students:[],scores:{}};
+  var scores=getClassScores({className:cls,term:p.term},token),filtered={};
+  ids.forEach(function(id){if(scores[id])filtered[id]=scores[id];});
+  var students=sheetToObjects(getSheet('BoardingAssignments')).filter(function(x){return String(x.class)===cls&&String(x.status)==='Boarder'&&!x.ended_at&&(!access.section||String(x.section)===access.section)&&ids.indexOf(String(x.student_id))>=0;}).map(function(x){return {student_id:x.student_id,name:x.student_name,class:x.class,section:x.section};});
+  return {students:students,scores:filtered};
+}
 function gtmcBoardingList_(p,token){
   var access=gtmcBoardingUser_(token,false),rows=sheetToObjects(getSheet('BoardingAssignments'));
   rows=rows.filter(function(x){return String(x.status)==='Boarder'&&!x.ended_at&&(!access.section||String(x.section)===access.section);});
@@ -141,6 +155,7 @@ route=function(action,p){
   p=p||{};
   switch(action){
     case 'boardingList':return gtmcBoardingList_(p,p.token);
+    case 'boardingPerformance':return gtmcBoardingPerformance_(p,p.token);
     case 'boardingStudentOptions':return gtmcBoardingStudentOptions_(p,p.token);
     case 'boardingAssign':return gtmcBoardingAssign_(p,p.token);
     case 'boardingEnd':return gtmcBoardingEnd_(p,p.token);
