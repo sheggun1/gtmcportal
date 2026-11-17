@@ -2448,7 +2448,13 @@ function unlockDomains(p, token) {
 function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) {
   if (overallPercent == null || !isFinite(Number(overallPercent))) return 'Result pending.';
   const pct = Number(overallPercent);
-  const configured = Array.isArray(principalRemarkScale) ? principalRemarkScale.slice() : [];
+  const configured = Array.isArray(principalRemarkScale) && principalRemarkScale.length ? principalRemarkScale.slice() : [
+    {min:75,remark:'Excellent performance. Keep up the outstanding work.'},
+    {min:60,remark:'A very good result. Aim even higher.'},
+    {min:50,remark:'A good result. Continue working hard.'},
+    {min:40,remark:'A fair result. More consistent effort is needed.'},
+    {min:0,remark:'This result needs improvement. Please work harder and seek support.'}
+  ];
   const band = configured
     .filter(function (b) { return isFinite(Number(b.min)) && String(b.remark || '').trim(); })
     .sort(function (a, b) { return Number(b.min) - Number(a.min); })
@@ -2470,6 +2476,11 @@ function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) 
   };
   return (map[grade] || 'Result available.') +
     ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
+}
+
+function isLegacyAutoPrincipalRemark_(remark) {
+  const value = String(remark || '');
+  return /^(An excellent result\\. Keep up this outstanding performance\\.|A very good result\\. Aim even higher next term\\.|A good result\\. There is room for steady improvement\\.|A fair result\\. More effort is required\\.|A pass\\. Consistent study will improve your performance\\.|A poor result\\. Significant and focused improvement is needed\\.) \\(Overall: [0-9]+(?:\\.[0-9]+)?%\\)$/.test(value);
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
@@ -2521,7 +2532,8 @@ function adminPreviewPrincipalRemark(p, token) {
   if (!className || !studentId || !term || !academicYear) throw new Error('className, studentId, term, academicYear required.');
 
   const overallPercent = computeOverallFor_(className, studentId, term);
-  const override = principalRemarkFor_(studentId, className, term, academicYear);
+  const savedRemark = principalRemarkFor_(studentId, className, term, academicYear);
+  const override = savedRemark && !isLegacyAutoPrincipalRemark_(savedRemark) ? savedRemark : '';
   const template = portalGetTemplate_();
   const auto = autoPrincipalRemark_(overallPercent, template.gradeScale, template.principalRemarkScale);
 
@@ -2699,7 +2711,7 @@ function adminSaveReportTemplate(p, token) {
   }
   sh.appendRow(['config', json, new Date(), admin.email]);
   logAudit(admin.email, 'adminSaveReportTemplate', { keys: Object.keys(clean) });
-  return { success: true, template: clean };
+  return { success: true, template: merged };
 }
 
 /* ============================================================
@@ -2939,7 +2951,8 @@ function parentGetResult(p, token) {
     psychomotor: domainVisible_('psychomotor') ? String(domVals[3] || '').trim().toUpperCase() : ''
   };
 
-  const override = principalRemarkFor_(studentId, className, term, academicYear);
+  const savedRemark = principalRemarkFor_(studentId, className, term, academicYear);
+  const override = savedRemark && !isLegacyAutoPrincipalRemark_(savedRemark) ? savedRemark : '';
   const principalRemark = override || autoPrincipalRemark_(overallAverage, template.gradeScale, template.principalRemarkScale);
 
   const affective = getDomainAssessments({
