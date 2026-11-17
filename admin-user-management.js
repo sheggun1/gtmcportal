@@ -2,8 +2,8 @@
 (function(){
   function q(id){return document.getElementById(id);}
   function esc(v){return typeof window.esc==='function'?window.esc(v==null?'':String(v)):String(v==null?'':v);}
-  var roles=['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student'];
-  function roleLabel(r){return ({admin:'Administrator',principal:'Principal',vice_principal:'Vice Principal',bursar:'Bursar',registrar:'Registrar',class_teacher:'Class Teacher',subject_teacher:'Subject Teacher',student:'Student'})[r]||r;}
+  var roles=['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','housemaster','housemistress'];
+  function roleLabel(r){return ({admin:'Administrator',principal:'Principal',vice_principal:'Vice Principal',bursar:'Bursar',registrar:'Registrar',class_teacher:'Class Teacher',subject_teacher:'Subject Teacher',student:'Student',housemaster:'Housemaster',housemistress:'Housemistress'})[r]||r;}
   function addNav(){
     var side=q('sidebar'); if(!side||side.querySelector('[data-tab="userManagement"]'))return;
     side.insertAdjacentHTML('beforeend','<div class="nav-item" data-tab="userManagement" onclick="setNav(\'userManagement\')"><span class="dot"></span><span>User Management</span></div>');
