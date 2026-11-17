@@ -2179,13 +2179,52 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     ? Math.round(completeTotals.reduce((a, r) => a + r.total, 0) / subjectResults.length * 100) / 100
     : null;
 
+  // Class averages are the below-average benchmarks; this is display-only.
+  const benchmarkValues = {};
+  const classRows = Object.values(bundle.scores || {});
+  declaredSubjects.forEach(function (subj) {
+    const keys = ['T1','T2','T3','Exam','ca','total'];
+    const buckets = Object.fromEntries(keys.map(k => [k, []]));
+    classRows.forEach(function (studentRows) {
+      const row = (studentRows || {})[subj] || {};
+      const read = k => row[k] === '' || row[k] == null || !Number.isFinite(Number(row[k])) ? null : Number(row[k]);
+      ['T1','T2','T3','Exam'].forEach(k => { const v=read(k); if(v!==null)buckets[k].push(v); });
+      const tests = ['T1','T2','T3'].map(read);
+      if(tests.some(v=>v!==null)) buckets.ca.push(tests.reduce((a,v)=>a+(v||0),0));
+      const parts = ['T1','T2','T3','Exam'].map(read);
+      if(parts.every(v=>v!==null)) buckets.total.push(parts.reduce((a,v)=>a+v,0));
+    });
+    benchmarkValues[subj] = {};
+    keys.forEach(k => { const a=buckets[k]; benchmarkValues[subj][k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null; });
+  });
+  const peerOverall = classRows.map(function(studentRows) {
+    const totals = declaredSubjects.map(subj => {
+      const row=(studentRows||{})[subj]||{};
+      const vals=['T1','T2','T3','Exam'].map(k => row[k]===''||row[k]==null||!Number.isFinite(Number(row[k]))?null:Number(row[k]));
+      return vals.every(v=>v!==null)?vals.reduce((a,b)=>a+b,0):null;
+    }).filter(v=>v!==null);
+    return totals.length===declaredSubjects.length&&totals.length?totals.reduce((a,b)=>a+b,0)/totals.length:null;
+  }).filter(v=>v!==null);
+  const classOverallAverage = peerOverall.length?peerOverall.reduce((a,b)=>a+b,0)/peerOverall.length:null;
+
   const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
   const termAverages = { Term1: null, Term2: null, Term3: null };
+  const peerTermAverages = {};
   let enrolledFrom = null;
   for (const t of ['Term1','Term2','Term3']) {
     try {
       const tb = await loadBulkForClass(className, t, academicYear);
+      peerTermAverages[t] = {};
+      Object.keys(tb.scores || {}).forEach(function(peerId) {
+        const peerRows = tb.scores[peerId] || {};
+        const peerTotals = declaredSubjects.map(function(subj) {
+          const peerRow = peerRows[subj] || {};
+          const vals = ['T1','T2','T3','Exam'].map(k => peerRow[k] === '' || peerRow[k] == null || !Number.isFinite(Number(peerRow[k])) ? null : Number(peerRow[k]));
+          return vals.every(v => v !== null) ? vals.reduce((x,y)=>x+y,0) : null;
+        }).filter(v => v !== null);
+        if (peerTotals.length === declaredSubjects.length && peerTotals.length) peerTermAverages[t][peerId] = peerTotals.reduce((x,y)=>x+y,0)/peerTotals.length;
+      });
       const rowFor = tb.scores[studentId] || {};
       const totalsT = [];
       declaredSubjects.forEach(function (subj) {
@@ -2204,6 +2243,11 @@ async function buildReportPayload(className, studentId, studentName, term, acade
   const cumulativeAverage = presentTerms.length
     ? Math.round(presentTerms.reduce((a,t)=>a+termAverages[t],0) / presentTerms.length * 100) / 100
     : null;
+  const peerCumulative = Object.keys(bundle.scores || {}).map(function(peerId) {
+    const values = presentTerms.map(t => peerTermAverages[t] && peerTermAverages[t][peerId]).filter(v => v != null);
+    return values.length === presentTerms.length && values.length ? values.reduce((x,y)=>x+y,0)/values.length : null;
+  }).filter(v => v !== null);
+  const classCumulativeAverage = peerCumulative.length ? peerCumulative.reduce((x,y)=>x+y,0)/peerCumulative.length : null;
   const verification = await api('adminIssueReportVerification', { className, studentId, term, academicYear, portalUrl: window.location.origin });
 
   return {
@@ -2211,6 +2255,9 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     term, academicYear,
     subjects: subjectResults,
     overallAverage,
+    scoreBenchmarks: benchmarkValues,
+    overallAverageBenchmark: classOverallAverage,
+    cumulativeAverageBenchmark: classCumulativeAverage,
     complete: completeTotals.length === subjectResults.length,
     domains: {
       days_opened: dom.days ? dom.days.days_opened : null,
@@ -4122,7 +4169,7 @@ if (S.token && S.user) boot();
 
   /* ---------- Report card ---------- */
   .rc{--rcp:#0756a8;background:#fff;color:#111;border:1.5px solid #1f2937;max-width:900px;margin:0 auto;padding:14px;font:11px/1.35 Inter,'Segoe UI',Arial,sans-serif}
-  .rc *{box-sizing:border-box}
+  .rc *{box-sizing:border-box;font-weight:700}
   .rc-head{display:grid;grid-template-columns:84px 1fr 84px;align-items:center;gap:10px;border:1.5px solid #1f2937;padding:8px;margin-bottom:8px}
   .rc-logo{width:76px;height:76px;border:1.5px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;font:900 30px Georgia,serif;color:var(--rcp)}
   .rc-logo img{width:100%;height:100%;object-fit:contain}
@@ -4137,9 +4184,13 @@ if (S.token && S.user) boot();
   .rc-main{display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:10px;margin-bottom:8px}
   .rc-bar{background:var(--rcp);color:#fff;text-align:center;font-weight:800;font-size:10.5px;letter-spacing:.06em;padding:5px;text-transform:uppercase}
   .rc-scroll{overflow-x:auto}
-  .rc-t{width:100%;border-collapse:collapse;font-size:10.5px}
-  .rc-t th{background:var(--rcp);color:#fff;font-size:9px;padding:4px;border:1px solid #fff;text-align:center;text-transform:uppercase;position:static}
-  .rc-t td{border:1px solid #cbd5e1;padding:3px 5px;text-align:center}
+  .rc-t{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px;font-weight:800}
+  .rc-t th{background:var(--rcp);color:#fff;font-size:10px;font-weight:900;padding:5px 4px;border:1px solid #fff;text-align:center;text-transform:uppercase;position:static}
+  .rc-t td{border:1px solid #cbd5e1;padding:5px 6px;text-align:center;font-size:11.5px;font-weight:800}
+  .rc-subject-table{width:100%;min-width:100%;table-layout:fixed}
+  .rc-subject-table td.l{font-size:12px;font-weight:900;text-align:left;padding-left:8px}
+  .rc-subject-table td:not(.l){font-size:11.5px;font-weight:900}
+  .rc-subject-table th{font-size:10px;font-weight:900}
   .rc-t td.l{text-align:left;text-transform:uppercase}
   .rc-t tbody tr:nth-child(even) td{background:#f8fafc}
   .rc-t tbody tr:hover td{background:inherit}
@@ -4183,13 +4234,23 @@ function gtmcCardHTML(r, withId) {
   };
   const pos = s => s.position ?? s.rank;
   const has = fn => subs.some(s => fn(s) != null);
+  const benchmark = (s, key) => {
+    const v = r.scoreBenchmarks && r.scoreBenchmarks[s.subject] && r.scoreBenchmarks[s.subject][key];
+    return v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+  };
+  const scoreCell = (s, key, value) => {
+    const v=n(value), b=benchmark(s,key);
+    if(v===null)return f(value);
+    const color=b!==null&&v<b?'#b91c1c':'#0756a8';
+    return `<span style="color:${color};font-weight:900">${esc(v)}</span>`;
+  };
 
   const cols = [['S/N', (s, i) => i + 1], ['Subject', s => `<b>${esc(s.subject)}</b>`, 'l']];
-  if (t.showTests !== false) cols.push(['CA1<br>(10)', s => s.T1], ['CA2<br>(10)', s => s.T2], ['CA3<br>(10)', s => s.T3], ['CA<br>(30)', caOf]);
-  if (t.showExam !== false) cols.push(['Exam<br>(70)', s => s.Exam]);
+  if (t.showTests !== false) cols.push(['CA1<br>(10)', s => scoreCell(s,'T1',s.T1)], ['CA2<br>(10)', s => scoreCell(s,'T2',s.T2)], ['CA3<br>(10)', s => scoreCell(s,'T3',s.T3)], ['CA<br>(30)', s => scoreCell(s,'ca',caOf(s))]);
+  if (t.showExam !== false) cols.push(['Exam<br>(70)', s => scoreCell(s,'Exam',s.Exam)]);
   if (r.term !== 'Term1' && has(s => s.term1Total)) cols.push(['T1<br>Total', s => s.term1Total]);
   if (r.term === 'Term3' && has(s => s.term2Total)) cols.push(['T2<br>Total', s => s.term2Total]);
-  if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : `<b>${s.total}</b>`]);
+  if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : scoreCell(s,'total',s.total)]);
   if (r.term !== 'Term1' && has(s => s.cumulative)) cols.push(['Cumul.<br>Avg', s => s.cumulative]);
   if (has(pos)) cols.push(['Position', s => pos(s) == null ? null : esc(pos(s))]);
   if (t.showGrade !== false) cols.push(['Grade', s => s.grade ? `<b>${esc(s.grade)}</b>` : null]);
@@ -4213,12 +4274,15 @@ function gtmcCardHTML(r, withId) {
   const present = r.daysPresent ?? d.days_present;
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
-  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
+  const averageColor = avg == null ? '' : (r.overallAverageBenchmark != null && avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const obtainedColor = avg == null ? '' : averageColor;
+  const cumulativeColor = r.cumulativeAverage == null ? '' : (r.cumulativeAverageBenchmark != null && Number(r.cumulativeAverage) < Number(r.cumulativeAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : '—'], ['Average', avg == null ? '—' : `<span style="color:${averageColor};font-weight:900">${avg}%</span>`]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
   if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
-    .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
+    .forEach(([l, v]) => { if (v != null) { const color = l === 'Cumulative' ? cumulativeColor : (r.overallAverageBenchmark != null && Number(v) < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8'); sum.push([l + '<br>Avg', `<span style="color:${color};font-weight:900">${v}%</span>`]); } });
 
   const P = t.primaryColor || '#0756a8';
   const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="" onerror="this.remove()">` : 'G';
@@ -4226,7 +4290,9 @@ function gtmcCardHTML(r, withId) {
   const stamp = t.schoolStampUrl ? `<div><img src="${esc(t.schoolStampUrl)}" alt="" onerror="this.remove()"></div>` : '';
   const rem = (label, txt) => `<div class="rc-rem"><b>${label}:</b> ${esc(txt || '—')}</div>`;
   const rd = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  const verificationBlock = r.verificationUrl ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Official online verification</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="width:76px;height:76px;object-fit:contain"></div>` : '';
+  const verificationBlock = r.verificationUrl
+    ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Official online verification</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="display:block;width:76px;height:76px;min-width:76px;object-fit:contain"></div>`
+    : `<div style="border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px;text-align:right;font-size:8px"><b>AUTHENTICITY VERIFICATION</b><br><span style="color:#b45309">Verification link unavailable. Ask the administrator to update the report-verification service.</span></div>`;
 
   return `<div ${withId ? 'id="reportCard" ' : ''}class="rc" style="--rcp:${esc(P)}">
   <div class="rc-head">
@@ -4249,7 +4315,7 @@ function gtmcCardHTML(r, withId) {
   <div class="rc-main">
     <div>
       <div class="rc-bar">Cognitive Domain</div>
-      <div class="rc-scroll"><table class="rc-t"><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+      <div class="rc-scroll"><table class="rc-t rc-subject-table"><colgroup>${cols.map((c, i) => `<col style="width:${i === 0 ? 5 : i === 1 ? 27 : (68 / Math.max(1, cols.length - 2)).toFixed(3)}%">`).join('')}</colgroup><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
     </div>
     <div class="rc-side">
       ${domRows ? `<div><div class="rc-bar">Affective / Psychomotor Domain</div><table class="rc-t"><tbody>${domRows}</tbody></table><div class="rc-legend">5 = Excellent &middot; 4 = Very Good &middot; 3 = Good &middot; 2 = Fair &middot; 1 = Needs Improvement</div></div>` : ''}
@@ -4288,33 +4354,53 @@ async function renderReportVerificationQr(root) {
   if (!root) return;
   const images = Array.from(root.querySelectorAll('.rc-verify-qr[data-verify-url]'));
   if (!images.length) return;
+
   await Promise.all(images.map(async img => {
     const verifyUrl = String(img.getAttribute('data-verify-url') || '').trim();
-    if (!/^https:\/\/\//i.test(verifyUrl)) {
+    let parsedUrl;
+    try { parsedUrl = new URL(verifyUrl, window.location.href); } catch (e) {}
+    if (!parsedUrl || parsedUrl.protocol !== 'https:' || !parsedUrl.hostname) {
       img.alt = 'Invalid report verification link';
+      img.title = 'The report verification link is not a valid HTTPS address.';
       return;
     }
+
     img.width = 220;
     img.height = 220;
     img.decoding = 'sync';
     img.referrerPolicy = 'no-referrer';
+    img.style.display = 'block';
+
+    const waitForImage = () => new Promise((resolve, reject) => {
+      if (img.complete && img.naturalWidth > 0) return resolve();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('QR image failed to load.'));
+    });
+
     try {
-      if (window.QRCode && typeof window.QRCode.toDataURL === 'function') {
-        const dataUrl = await window.QRCode.toDataURL(verifyUrl, { width: 220, margin: 2, errorCorrectionLevel: 'H', type: 'image/png' });
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) throw new Error('QR generator returned an invalid image.');
-        img.src = dataUrl;
-        if (typeof img.decode === 'function') await img.decode();
-        return;
+      if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
+        throw new Error('QR generator library is unavailable.');
       }
-      throw new Error('QR library unavailable');
-    } catch (error) {
-      // Last-resort image service keeps report verification usable when the bundled CDN library is blocked.
-      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&format=png&data=' + encodeURIComponent(verifyUrl);
+      const dataUrl = await window.QRCode.toDataURL(verifyUrl, {
+        width: 220, margin: 2, errorCorrectionLevel: 'H', type: 'image/png'
+      });
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) {
+        throw new Error('QR generator returned an invalid PNG image.');
+      }
+      img.src = dataUrl;
+      if (typeof img.decode === 'function') await img.decode();
+      else await waitForImage();
+      return;
+    } catch (generatorError) {
+      // Fallback is used only if the local QR generator or its PNG fails.
+      img.removeAttribute('src');
       try {
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&format=png&data=' + encodeURIComponent(verifyUrl);
         if (typeof img.decode === 'function') await img.decode();
+        else await waitForImage();
       } catch (fallbackError) {
         img.removeAttribute('src');
-        img.alt = 'QR code could not be loaded. Open the report verification link manually.';
+        img.alt = 'QR code could not be loaded. Open the verification link manually.';
         img.title = verifyUrl;
       }
     }
