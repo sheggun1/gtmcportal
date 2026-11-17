@@ -2219,9 +2219,13 @@ async function buildReportPayload(className, studentId, studentName, term, acade
       return vals.every(value => value !== null) ? vals.reduce((a,b) => a + b, 0) : null;
     });
     return totals.length && totals.every(value => value !== null)
-      ? totals.reduce((a,b) => a + b, 0) / totals.length : null;
+      ? { average: totals.reduce((a,b) => a + b, 0) / totals.length, marks: totals.reduce((a,b) => a + b, 0) }
+      : null;
   }).filter(value => value !== null);
-  const classOverallAverage = peerOverall.length ? peerOverall.reduce((a,b) => a + b, 0) / peerOverall.length : null;
+  const classOverallAverage = peerOverall.length
+    ? peerOverall.reduce((sum, value) => sum + value.average, 0) / peerOverall.length : null;
+  const classOverallMarksObtained = peerOverall.length
+    ? peerOverall.reduce((sum, value) => sum + value.marks, 0) / peerOverall.length : null;
 
   const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
@@ -2280,6 +2284,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     overallAverage,
     scoreBenchmarks: benchmarkValues,
     overallAverageBenchmark: classOverallAverage,
+    overallMarksObtainedBenchmark: classOverallMarksObtained,
     cumulativeAverageBenchmark: classCumulativeAverage,
     termAverageBenchmarks: termAverageBenchmarks,
     complete: completeTotals.length === subjectResults.length,
@@ -4307,14 +4312,15 @@ function gtmcCardHTML(r, withId) {
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
   const averageColor = avg == null || r.overallAverageBenchmark == null ? '' : (avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
-  const cumulativeColor = r.cumulativeAverage == null || r.cumulativeAverageBenchmark == null ? '' : (Number(r.cumulativeAverage) < Number(r.cumulativeAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const obtainedColor = avg == null || r.overallMarksObtainedBenchmark == null
+    ? '' : (got < Number(r.overallMarksObtainedBenchmark) ? '#b91c1c' : '#0756a8');
   const colouredSummary = (value, comparison) => {
     if (value == null) return '—';
     if (comparison == null || !Number.isFinite(Number(comparison))) return `${value}%`;
     const color = Number(value) < Number(comparison) ? '#b91c1c' : '#0756a8';
     return `<span style="color:${color};font-weight:900">${value}%</span>`;
   };
-  const obtainedValue = done.length ? (averageColor ? `<span style="color:${averageColor};font-weight:900">${got}</span>` : got) : '—';
+  const obtainedValue = done.length ? (obtainedColor ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : got) : '—';
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', obtainedValue], ['Average', colouredSummary(avg, r.overallAverageBenchmark)]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
