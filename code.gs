@@ -4444,9 +4444,13 @@ function getClassScores(p, token) {
 
   if (!hasRole_(user, 'admin') &&
       !hasRole_(user, 'class_teacher') &&
-      !hasRole_(user, 'subject_teacher')) {
+      !hasRole_(user, 'subject_teacher') &&
+      !hasRole_(user, 'housemaster') && !hasRole_(user, 'housemistress')) {
     throw new Error('Permission denied.');
   }
+
+  const boardingAllowedIds = (hasRole_(user, 'housemaster') || hasRole_(user, 'housemistress'))
+    ? gtmcBoardingStudentIdsForClass_(className, token) : null;
 
   // A class teacher who also has the subject_teacher role must be able
   // to review every subject in their assigned class. Subject filtering
@@ -4483,6 +4487,7 @@ function getClassScores(p, token) {
   idAndScores.forEach(function (row) {
     const sid = String(row[0] || '').trim();
     if (!sid) return;
+    if (boardingAllowedIds && boardingAllowedIds.indexOf(sid) < 0) return;
 
     const slice = row.slice(termStart - 1);
     const perSubject = {};
