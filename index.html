@@ -1913,7 +1913,6 @@ function parseGradeScaleBands_(raw) {
     if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max > 100 || min > max || !grade) {
       throw new Error('Grade line '+(index+1)+' needs valid minimum/maximum scores between 0 and 100 and a grade letter.');
     }
-    if (Math.round(min*100)!==min*100 || Math.round(max*100)!==max*100) throw new Error('Use no more than two decimal places in grade ranges.');
     return {min,max,grade,remark};
   }).sort((a,b)=>a.min-b.min);
   if (bands[0].min !== 0 || bands[bands.length-1].max !== 100) throw new Error('Grade ranges must start at 0 and end at 100.');
@@ -2205,7 +2204,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
   const cumulativeAverage = presentTerms.length
     ? Math.round(presentTerms.reduce((a,t)=>a+termAverages[t],0) / presentTerms.length * 100) / 100
     : null;
-  const verification = await api('adminIssueReportVerification', { className, studentId, term, academicYear });
+  const verification = await api('adminIssueReportVerification', { className, studentId, term, academicYear, portalUrl: window.location.origin });
 
   return {
     student: { studentId, name: studentName, className },
@@ -2219,7 +2218,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
       affective: dom.days ? dom.days.affective_letter : '',
       psychomotor: dom.days ? dom.days.psychomotor_letter : ''
     },
-    principalRemark: pr ? pr.remark : '',
+    principalRemark: (pr && pr.remark) || principalRemarkFromTemplate_(overallAverage, template),
     affective: dom.affective || {},
     psychomotor: dom.psychomotor || {},
     teacherRemark: (bundle.remarks || {})[studentId] || '',
@@ -2239,6 +2238,14 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     verificationUrl: verification.verificationUrl,
     template
   };
+}
+
+function principalRemarkFromTemplate_(average, template) {
+  if (average === null || average === undefined || !Number.isFinite(Number(average))) return '';
+  const bands = Array.isArray(template && template.principalRemarkScale) ? template.principalRemarkScale : [];
+  const score = Number(average);
+  const match = bands.slice().sort((a,b) => Number(b.min) - Number(a.min)).find(b => score >= Number(b.min));
+  return match ? String(match.remark || '') : '';
 }
 
 function gradeFor(score, scale) {
