@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
 <style>
   :root{
     --login-bg-image: url('school.jpg');
@@ -84,6 +85,8 @@
     font-size:10px; color:var(--muted); font-weight:700;
     letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; }
   .login-card input { margin-bottom:12px; }
+  .password-reveal-row { margin:-5px 0 12px; text-align:right; }
+  .password-reveal { padding:0!important;background:transparent!important;border:0!important;color:var(--blue)!important;font-size:12px!important;font-weight:700!important;text-decoration:underline;cursor:pointer; }
   .login-card button.primary-btn { width:100%; margin-top:6px; padding:12px; font-size:15px; font-weight:700;
     background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%); letter-spacing:.03em; }
   .login-card button.primary-btn:hover { background:linear-gradient(135deg,var(--blue-dark) 0%,#0f1f4a 100%); }
@@ -426,6 +429,7 @@ button.btn-loading:after{content:"";position:absolute;right:12px;top:50%;width:1
     <label>Password</label>
     <input id="loginPassword" type="password" autocomplete="current-password"
       placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="password-reveal-row"><button type="button" class="password-reveal" onclick="togglePasswordVisibility('loginPassword',this)">Click here to show</button></div>
     <button class="primary-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
     <div id="loginErr" class="login-err"></div>
     <div class="login-footer">
@@ -540,6 +544,14 @@ async function logout(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jsArg_(value){ return esc(JSON.stringify(String(value==null?'':value))); }
 function q(id){ return document.getElementById(id); }
+function togglePasswordVisibility(id, button) {
+  const input = q(id);
+  if (!input || !button) return;
+  const showing = input.type === 'password';
+  input.type = showing ? 'text' : 'password';
+  button.textContent = showing ? 'Click here to hide' : 'Click here to show';
+  button.setAttribute('aria-pressed', String(showing));
+}
 function toast(msg,kind){
   const el = q('toast');
   el.textContent = msg;
@@ -1314,7 +1326,7 @@ async function renderAdmin() {
         <div class="grid cols-3">
           <div><label>Name</label><input id="parName"></div>
           <div><label>Email</label><input id="parEmail" type="email"></div>
-          <div><label>Password (min 6)</label><input id="parPass" type="password"></div>
+          <div><label>Password (min 6)</label><input id="parPass" type="password"><div class="password-reveal-row"><button type="button" class="password-reveal" onclick="togglePasswordVisibility('parPass',this)">Click here to show</button></div></div>
         </div>
         <div class="row" style="margin-top:12px"><button class="ok" onclick="createParent()">Create Parent</button></div>
       </div>
@@ -2148,6 +2160,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
   const cumulativeAverage = presentTerms.length
     ? Math.round(presentTerms.reduce((a,t)=>a+termAverages[t],0) / presentTerms.length * 100) / 100
     : null;
+  const verification = await api('adminIssueReportVerification', { className, studentId, term, academicYear });
 
   return {
     student: { studentId, name: studentName, className },
@@ -2174,6 +2187,11 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     term3Average: termAverages.Term3,
     cumulativeAverage: cumulativeAverage,
     enrolledFrom: enrolledFrom,
+    positionArm: verification.positionArm,
+    positionClass: verification.positionClass,
+    classSize: verification.classSize,
+    armSize: verification.armSize,
+    verificationUrl: verification.verificationUrl,
     template
   };
 }
