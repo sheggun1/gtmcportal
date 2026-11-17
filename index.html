@@ -2179,6 +2179,34 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     ? Math.round(completeTotals.reduce((a, r) => a + r.total, 0) / subjectResults.length * 100) / 100
     : null;
 
+  // Class averages are the below-average benchmarks; this is display-only.
+  const benchmarkValues = {};
+  const classRows = Object.values(bundle.scores || {});
+  declaredSubjects.forEach(function (subj) {
+    const keys = ['T1','T2','T3','Exam','ca','total'];
+    const buckets = Object.fromEntries(keys.map(k => [k, []]));
+    classRows.forEach(function (studentRows) {
+      const row = (studentRows || {})[subj] || {};
+      const read = k => row[k] === '' || row[k] == null || !Number.isFinite(Number(row[k])) ? null : Number(row[k]);
+      ['T1','T2','T3','Exam'].forEach(k => { const v=read(k); if(v!==null)buckets[k].push(v); });
+      const tests = ['T1','T2','T3'].map(read);
+      if(tests.some(v=>v!==null)) buckets.ca.push(tests.reduce((a,v)=>a+(v||0),0));
+      const parts = ['T1','T2','T3','Exam'].map(read);
+      if(parts.every(v=>v!==null)) buckets.total.push(parts.reduce((a,v)=>a+v,0));
+    });
+    benchmarkValues[subj] = {};
+    keys.forEach(k => { const a=buckets[k]; benchmarkValues[subj][k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null; });
+  });
+  const peerOverall = classRows.map(function(studentRows) {
+    const totals = declaredSubjects.map(subj => {
+      const row=(studentRows||{})[subj]||{};
+      const vals=['T1','T2','T3','Exam'].map(k => row[k]===''||row[k]==null||!Number.isFinite(Number(row[k]))?null:Number(row[k]));
+      return vals.every(v=>v!==null)?vals.reduce((a,b)=>a+b,0):null;
+    }).filter(v=>v!==null);
+    return totals.length===declaredSubjects.length&&totals.length?totals.reduce((a,b)=>a+b,0)/totals.length:null;
+  }).filter(v=>v!==null);
+  const classOverallAverage = peerOverall.length?peerOverall.reduce((a,b)=>a+b,0)/peerOverall.length:null;
+
   const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
   const termAverages = { Term1: null, Term2: null, Term3: null };
@@ -2211,6 +2239,8 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     term, academicYear,
     subjects: subjectResults,
     overallAverage,
+    scoreBenchmarks: benchmarkValues,
+    overallAverageBenchmark: classOverallAverage,
     complete: completeTotals.length === subjectResults.length,
     domains: {
       days_opened: dom.days ? dom.days.days_opened : null,
@@ -4187,13 +4217,23 @@ function gtmcCardHTML(r, withId) {
   };
   const pos = s => s.position ?? s.rank;
   const has = fn => subs.some(s => fn(s) != null);
+  const benchmark = (s, key) => {
+    const v = r.scoreBenchmarks && r.scoreBenchmarks[s.subject] && r.scoreBenchmarks[s.subject][key];
+    return v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+  };
+  const scoreCell = (s, key, value) => {
+    const v=n(value), b=benchmark(s,key);
+    if(v===null)return f(value);
+    const color=b!==null&&v<b?'#b91c1c':'#0756a8';
+    return `<span style="color:${color};font-weight:900">${esc(v)}</span>`;
+  };
 
   const cols = [['S/N', (s, i) => i + 1], ['Subject', s => `<b>${esc(s.subject)}</b>`, 'l']];
-  if (t.showTests !== false) cols.push(['CA1<br>(10)', s => s.T1], ['CA2<br>(10)', s => s.T2], ['CA3<br>(10)', s => s.T3], ['CA<br>(30)', caOf]);
-  if (t.showExam !== false) cols.push(['Exam<br>(70)', s => s.Exam]);
+  if (t.showTests !== false) cols.push(['CA1<br>(10)', s => scoreCell(s,'T1',s.T1)], ['CA2<br>(10)', s => scoreCell(s,'T2',s.T2)], ['CA3<br>(10)', s => scoreCell(s,'T3',s.T3)], ['CA<br>(30)', s => scoreCell(s,'ca',caOf(s))]);
+  if (t.showExam !== false) cols.push(['Exam<br>(70)', s => scoreCell(s,'Exam',s.Exam)]);
   if (r.term !== 'Term1' && has(s => s.term1Total)) cols.push(['T1<br>Total', s => s.term1Total]);
   if (r.term === 'Term3' && has(s => s.term2Total)) cols.push(['T2<br>Total', s => s.term2Total]);
-  if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : `<b>${s.total}</b>`]);
+  if (t.showSubjectTotals !== false) cols.push(['Total<br>(100)', s => s.total == null ? null : scoreCell(s,'total',s.total)]);
   if (r.term !== 'Term1' && has(s => s.cumulative)) cols.push(['Cumul.<br>Avg', s => s.cumulative]);
   if (has(pos)) cols.push(['Position', s => pos(s) == null ? null : esc(pos(s))]);
   if (t.showGrade !== false) cols.push(['Grade', s => s.grade ? `<b>${esc(s.grade)}</b>` : null]);
@@ -4217,7 +4257,8 @@ function gtmcCardHTML(r, withId) {
   const present = r.daysPresent ?? d.days_present;
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
-  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
+  const averageColor = avg == null ? '' : (r.overallAverageBenchmark != null && avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : `<span style="color:${averageColor};font-weight:900">${avg}%</span>`]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
