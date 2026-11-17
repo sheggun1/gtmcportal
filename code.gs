@@ -3110,7 +3110,7 @@ function parentGetResult(p, token) {
   const scoreBenchmarks = {};
   const benchmarkBuckets = {};
   subjects.forEach(function (subject) {
-    benchmarkBuckets[subject] = { T1: [], T2: [], T3: [], Exam: [], total: [], caByMask: {} };
+    benchmarkBuckets[subject] = { T1: [], T2: [], T3: [], Exam: [], total: [], term2Total: [], cumulative: [], caByMask: {} };
   });
   const classLastRow = sh.getLastRow();
   if (classLastRow >= 4) {
@@ -3128,6 +3128,21 @@ function parentGetResult(p, token) {
         vals.forEach(function (value, fieldIndex) {
           if (value !== null) bucket[FIELDS[fieldIndex]].push(value);
         });
+        // Display-only historical-term benchmarks for T2 Total and Cumulative Average.
+        const historicalTotals = TERMS.map(function (_, historicalTermIndex) {
+          const historicalBase = 2 + historicalTermIndex * cellsPerTerm + subjectIndex * FIELDS.length;
+          const historicalValues = FIELDS.map(function (_, fieldIndex) {
+            const raw = classRow[historicalBase + fieldIndex];
+            return raw === '' || raw === null || raw === undefined || !isFinite(Number(raw)) ? null : Number(raw);
+          });
+          return historicalValues.every(function (value) { return value !== null; })
+            ? historicalValues.reduce(function (sum, value) { return sum + value; }, 0) : null;
+        });
+        if (historicalTotals[1] !== null) bucket.term2Total.push(historicalTotals[1]);
+        const availableHistoricalTotals = historicalTotals.filter(function (value) { return value !== null; });
+        if (availableHistoricalTotals.length) {
+          bucket.cumulative.push(availableHistoricalTotals.reduce(function (sum, value) { return sum + value; }, 0) / availableHistoricalTotals.length);
+        }
         const mask = vals.slice(0, 3).map(function (value) { return value === null ? '0' : '1'; }).join('');
         if (mask.indexOf('1') !== -1) {
           if (!bucket.caByMask[mask]) bucket.caByMask[mask] = [];
@@ -3142,7 +3157,7 @@ function parentGetResult(p, token) {
   subjects.forEach(function (subject) {
     const bucket = benchmarkBuckets[subject];
     scoreBenchmarks[subject] = {};
-    ['T1','T2','T3','Exam','total'].forEach(function (key) {
+    ['T1','T2','T3','Exam','total','term2Total','cumulative'].forEach(function (key) {
       const values = bucket[key];
       scoreBenchmarks[subject][key] = values.length
         ? values.reduce(function (sum, value) { return sum + value; }, 0) / values.length
