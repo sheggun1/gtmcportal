@@ -2210,10 +2210,21 @@ async function buildReportPayload(className, studentId, studentName, term, acade
   const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
   const termAverages = { Term1: null, Term2: null, Term3: null };
+  const peerTermAverages = {};
   let enrolledFrom = null;
   for (const t of ['Term1','Term2','Term3']) {
     try {
       const tb = await loadBulkForClass(className, t, academicYear);
+      peerTermAverages[t] = {};
+      Object.keys(tb.scores || {}).forEach(function(peerId) {
+        const peerRows = tb.scores[peerId] || {};
+        const peerTotals = declaredSubjects.map(function(subj) {
+          const peerRow = peerRows[subj] || {};
+          const vals = ['T1','T2','T3','Exam'].map(k => peerRow[k] === '' || peerRow[k] == null || !Number.isFinite(Number(peerRow[k])) ? null : Number(peerRow[k]));
+          return vals.every(v => v !== null) ? vals.reduce((x,y)=>x+y,0) : null;
+        }).filter(v => v !== null);
+        if (peerTotals.length === declaredSubjects.length && peerTotals.length) peerTermAverages[t][peerId] = peerTotals.reduce((x,y)=>x+y,0)/peerTotals.length;
+      });
       const rowFor = tb.scores[studentId] || {};
       const totalsT = [];
       declaredSubjects.forEach(function (subj) {
@@ -2232,6 +2243,11 @@ async function buildReportPayload(className, studentId, studentName, term, acade
   const cumulativeAverage = presentTerms.length
     ? Math.round(presentTerms.reduce((a,t)=>a+termAverages[t],0) / presentTerms.length * 100) / 100
     : null;
+  const peerCumulative = Object.keys(bundle.scores || {}).map(function(peerId) {
+    const values = presentTerms.map(t => peerTermAverages[t] && peerTermAverages[t][peerId]).filter(v => v != null);
+    return values.length === presentTerms.length && values.length ? values.reduce((x,y)=>x+y,0)/values.length : null;
+  }).filter(v => v !== null);
+  const classCumulativeAverage = peerCumulative.length ? peerCumulative.reduce((x,y)=>x+y,0)/peerCumulative.length : null;
   const verification = await api('adminIssueReportVerification', { className, studentId, term, academicYear, portalUrl: window.location.origin });
 
   return {
@@ -2241,6 +2257,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     overallAverage,
     scoreBenchmarks: benchmarkValues,
     overallAverageBenchmark: classOverallAverage,
+    cumulativeAverageBenchmark: classCumulativeAverage,
     complete: completeTotals.length === subjectResults.length,
     domains: {
       days_opened: dom.days ? dom.days.days_opened : null,
@@ -4258,12 +4275,14 @@ function gtmcCardHTML(r, withId) {
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
   const averageColor = avg == null ? '' : (r.overallAverageBenchmark != null && avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
-  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : `<span style="color:${averageColor};font-weight:900">${avg}%</span>`]];
+  const obtainedColor = avg == null ? '' : averageColor;
+  const cumulativeColor = r.cumulativeAverage == null ? '' : (r.cumulativeAverageBenchmark != null && Number(r.cumulativeAverage) < Number(r.cumulativeAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : '—'], ['Average', avg == null ? '—' : `<span style="color:${averageColor};font-weight:900">${avg}%</span>`]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
   if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
-    .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
+    .forEach(([l, v]) => { if (v != null) { const color = l === 'Cumulative' ? cumulativeColor : (r.overallAverageBenchmark != null && Number(v) < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8'); sum.push([l + '<br>Avg', `<span style="color:${color};font-weight:900">${v}%</span>`]); } });
 
   const P = t.primaryColor || '#0756a8';
   const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="" onerror="this.remove()">` : 'G';
