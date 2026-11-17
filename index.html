@@ -2179,64 +2179,91 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     ? Math.round(completeTotals.reduce((a, r) => a + r.total, 0) / subjectResults.length * 100) / 100
     : null;
 
-  // Class averages are the below-average benchmarks; this is display-only.
+  // Display-only class benchmarks. Blank/unconducted assessments are excluded.
   const benchmarkValues = {};
   const classRows = Object.values(bundle.scores || {});
+  const readScore = value => value === '' || value == null || (typeof value === 'string' && value.trim() === '') || !Number.isFinite(Number(value)) ? null : Number(value);
   declaredSubjects.forEach(function (subj) {
-    const keys = ['T1','T2','T3','Exam','ca','total'];
-    const buckets = Object.fromEntries(keys.map(k => [k, []]));
+    const buckets = { T1: [], T2: [], T3: [], Exam: [], total: [] };
+    const caBucketsByMask = {};
     classRows.forEach(function (studentRows) {
       const row = (studentRows || {})[subj] || {};
-      const read = k => row[k] === '' || row[k] == null || !Number.isFinite(Number(row[k])) ? null : Number(row[k]);
-      ['T1','T2','T3','Exam'].forEach(k => { const v=read(k); if(v!==null)buckets[k].push(v); });
-      const tests = ['T1','T2','T3'].map(read);
-      if(tests.some(v=>v!==null)) buckets.ca.push(tests.reduce((a,v)=>a+(v||0),0));
-      const parts = ['T1','T2','T3','Exam'].map(read);
-      if(parts.every(v=>v!==null)) buckets.total.push(parts.reduce((a,v)=>a+v,0));
+      const tests = ['T1','T2','T3'].map(k => readScore(row[k]));
+      tests.forEach((value, index) => { if (value !== null) buckets['T' + (index + 1)].push(value); });
+      // Compare CA totals only among students with the same tests conducted/recorded.
+      const mask = tests.map(value => value === null ? '0' : '1').join('');
+      if (mask.includes('1')) {
+        if (!caBucketsByMask[mask]) caBucketsByMask[mask] = [];
+        caBucketsByMask[mask].push(tests.reduce((sum, value) => sum + (value === null ? 0 : value), 0));
+      }
+      const exam = readScore(row.Exam);
+      if (exam !== null) buckets.Exam.push(exam);
+      const parts = tests.concat([exam]);
+      if (parts.every(value => value !== null)) buckets.total.push(parts.reduce((sum, value) => sum + value, 0));
     });
     benchmarkValues[subj] = {};
-    keys.forEach(k => { const a=buckets[k]; benchmarkValues[subj][k]=a.length?a.reduce((x,y)=>x+y,0)/a.length:null; });
+    ['T1','T2','T3','Exam','total'].forEach(key => {
+      const values = buckets[key];
+      benchmarkValues[subj][key] = values.length ? values.reduce((a,b) => a + b, 0) / values.length : null;
+    });
+    benchmarkValues[subj].caByMask = {};
+    Object.keys(caBucketsByMask).forEach(mask => {
+      const values = caBucketsByMask[mask];
+      benchmarkValues[subj].caByMask[mask] = values.length ? values.reduce((a,b) => a + b, 0) / values.length : null;
+    });
   });
-  const peerOverall = classRows.map(function(studentRows) {
-    const totals = declaredSubjects.map(subj => {
-      const row=(studentRows||{})[subj]||{};
-      const vals=['T1','T2','T3','Exam'].map(k => row[k]===''||row[k]==null||!Number.isFinite(Number(row[k]))?null:Number(row[k]));
-      return vals.every(v=>v!==null)?vals.reduce((a,b)=>a+b,0):null;
-    }).filter(v=>v!==null);
-    return totals.length===declaredSubjects.length&&totals.length?totals.reduce((a,b)=>a+b,0)/totals.length:null;
-  }).filter(v=>v!==null);
-  const classOverallAverage = peerOverall.length?peerOverall.reduce((a,b)=>a+b,0)/peerOverall.length:null;
+  const peerOverall = classRows.map(function (studentRows) {
+    const totals = declaredSubjects.map(function (subj) {
+      const row = (studentRows || {})[subj] || {};
+      const vals = ['T1','T2','T3','Exam'].map(k => readScore(row[k]));
+      return vals.every(value => value !== null) ? vals.reduce((a,b) => a + b, 0) : null;
+    });
+    return totals.length && totals.every(value => value !== null)
+      ? { average: totals.reduce((a,b) => a + b, 0) / totals.length, marks: totals.reduce((a,b) => a + b, 0) }
+      : null;
+  }).filter(value => value !== null);
+  const classOverallAverage = peerOverall.length
+    ? peerOverall.reduce((sum, value) => sum + value.average, 0) / peerOverall.length : null;
+  const classOverallMarksObtained = peerOverall.length
+    ? peerOverall.reduce((sum, value) => sum + value.marks, 0) / peerOverall.length : null;
 
   const dom = (bundle.domains[studentId] || { affective: {}, psychomotor: {}, days: {} });
 
   const termAverages = { Term1: null, Term2: null, Term3: null };
   const peerTermAverages = {};
+  const termAverageBenchmarks = {};
   let enrolledFrom = null;
   for (const t of ['Term1','Term2','Term3']) {
     try {
       const tb = await loadBulkForClass(className, t, academicYear);
-      peerTermAverages[t] = {};
-      Object.keys(tb.scores || {}).forEach(function(peerId) {
-        const peerRows = tb.scores[peerId] || {};
-        const peerTotals = declaredSubjects.map(function(subj) {
-          const peerRow = peerRows[subj] || {};
-          const vals = ['T1','T2','T3','Exam'].map(k => peerRow[k] === '' || peerRow[k] == null || !Number.isFinite(Number(peerRow[k])) ? null : Number(peerRow[k]));
-          return vals.every(v => v !== null) ? vals.reduce((x,y)=>x+y,0) : null;
-        }).filter(v => v !== null);
-        if (peerTotals.length === declaredSubjects.length && peerTotals.length) peerTermAverages[t][peerId] = peerTotals.reduce((x,y)=>x+y,0)/peerTotals.length;
-      });
       const rowFor = tb.scores[studentId] || {};
-      const totalsT = [];
+      const targetSubjectTotals = {};
       declaredSubjects.forEach(function (subj) {
-        const row = rowFor[subj];
-        if (!row) return;
-        const nums = [row.T1, row.T2, row.T3, row.Exam].map(v => v === '' || v === null ? null : Number(v));
-        if (nums.every(n => n !== null && isFinite(n))) totalsT.push(nums.reduce((a,b)=>a+b,0));
+        const row = rowFor[subj] || {};
+        const nums = ['T1','T2','T3','Exam'].map(k => readScore(row[k]));
+        if (nums.every(value => value !== null)) targetSubjectTotals[subj] = nums.reduce((a,b) => a + b, 0);
       });
-      if (totalsT.length) {
-        termAverages[t] = Math.round(totalsT.reduce((a,b)=>a+b,0) / totalsT.length * 100) / 100;
+      const targetSubjects = Object.keys(targetSubjectTotals);
+      if (targetSubjects.length) {
+        termAverages[t] = Math.round(targetSubjects.reduce((sum, subj) => sum + targetSubjectTotals[subj], 0) / targetSubjects.length * 100) / 100;
         if (enrolledFrom === null) enrolledFrom = t;
       }
+      // Match the same completed subjects as this student's term average.
+      peerTermAverages[t] = {};
+      Object.keys(tb.scores || {}).forEach(function (peerId) {
+        const peerRows = tb.scores[peerId] || {};
+        const peerTotals = targetSubjects.map(function (subj) {
+          const peerRow = peerRows[subj] || {};
+          const nums = ['T1','T2','T3','Exam'].map(k => readScore(peerRow[k]));
+          return nums.every(value => value !== null) ? nums.reduce((a,b) => a + b, 0) : null;
+        });
+        if (peerTotals.length && peerTotals.every(value => value !== null)) {
+          peerTermAverages[t][peerId] = peerTotals.reduce((a,b) => a + b, 0) / peerTotals.length;
+        }
+      });
+      const peerValues = Object.values(peerTermAverages[t]);
+      termAverageBenchmarks[t] = peerValues.length
+        ? peerValues.reduce((a,b) => a + b, 0) / peerValues.length : null;
     } catch (e) {}
   }
   const presentTerms = ['Term1','Term2','Term3'].filter(t => termAverages[t] !== null);
@@ -2257,7 +2284,9 @@ async function buildReportPayload(className, studentId, studentName, term, acade
     overallAverage,
     scoreBenchmarks: benchmarkValues,
     overallAverageBenchmark: classOverallAverage,
+    overallMarksObtainedBenchmark: classOverallMarksObtained,
     cumulativeAverageBenchmark: classCumulativeAverage,
+    termAverageBenchmarks: termAverageBenchmarks,
     complete: completeTotals.length === subjectResults.length,
     domains: {
       days_opened: dom.days ? dom.days.days_opened : null,
@@ -4235,13 +4264,21 @@ function gtmcCardHTML(r, withId) {
   const pos = s => s.position ?? s.rank;
   const has = fn => subs.some(s => fn(s) != null);
   const benchmark = (s, key) => {
-    const v = r.scoreBenchmarks && r.scoreBenchmarks[s.subject] && r.scoreBenchmarks[s.subject][key];
-    return v == null || !Number.isFinite(Number(v)) ? null : Number(v);
+    const subjectBenchmarks = r.scoreBenchmarks && r.scoreBenchmarks[s.subject];
+    if (!subjectBenchmarks) return null;
+    if (key === 'ca') {
+      const mask = ['T1','T2','T3'].map(k => n(s[k]) === null ? '0' : '1').join('');
+      const value = subjectBenchmarks.caByMask && subjectBenchmarks.caByMask[mask];
+      return value == null || !Number.isFinite(Number(value)) ? null : Number(value);
+    }
+    const value = subjectBenchmarks[key];
+    return value == null || !Number.isFinite(Number(value)) ? null : Number(value);
   };
   const scoreCell = (s, key, value) => {
     const v=n(value), b=benchmark(s,key);
     if(v===null)return f(value);
-    const color=b!==null&&v<b?'#b91c1c':'#0756a8';
+    if(b===null)return esc(v);
+    const color=v<b?'#b91c1c':'#0756a8';
     return `<span style="color:${color};font-weight:900">${esc(v)}</span>`;
   };
 
@@ -4274,15 +4311,31 @@ function gtmcCardHTML(r, withId) {
   const present = r.daysPresent ?? d.days_present;
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
-  const averageColor = avg == null ? '' : (r.overallAverageBenchmark != null && avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
-  const obtainedColor = avg == null ? '' : averageColor;
-  const cumulativeColor = r.cumulativeAverage == null ? '' : (r.cumulativeAverageBenchmark != null && Number(r.cumulativeAverage) < Number(r.cumulativeAverageBenchmark) ? '#b91c1c' : '#0756a8');
-  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : '—'], ['Average', avg == null ? '—' : `<span style="color:${averageColor};font-weight:900">${avg}%</span>`]];
+  const averageColor = avg == null || r.overallAverageBenchmark == null ? '' : (avg < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8');
+  const obtainedColor = avg == null || r.overallMarksObtainedBenchmark == null
+    ? '' : (got < Number(r.overallMarksObtainedBenchmark) ? '#b91c1c' : '#0756a8');
+  const colouredSummary = (value, comparison) => {
+    if (value == null) return '—';
+    if (comparison == null || !Number.isFinite(Number(comparison))) return `${value}%`;
+    const color = Number(value) < Number(comparison) ? '#b91c1c' : '#0756a8';
+    return `<span style="color:${color};font-weight:900">${value}%</span>`;
+  };
+  const obtainedValue = done.length ? (obtainedColor ? `<span style="color:${obtainedColor};font-weight:900">${got}</span>` : got) : '—';
+  const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', obtainedValue], ['Average', colouredSummary(avg, r.overallAverageBenchmark)]];
   if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
   if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
-  if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
-    .forEach(([l, v]) => { if (v != null) { const color = l === 'Cumulative' ? cumulativeColor : (r.overallAverageBenchmark != null && Number(v) < Number(r.overallAverageBenchmark) ? '#b91c1c' : '#0756a8'); sum.push([l + '<br>Avg', `<span style="color:${color};font-weight:900">${v}%</span>`]); } });
+  if (r.term !== 'Term1') [
+    ['Term 1', r.term1Average, 'Term1'],
+    ['Term 2', r.term2Average, 'Term2'],
+    ['Term 3', r.term3Average, 'Term3'],
+    ['Cumulative', r.cumulativeAverage, 'Cumulative']
+  ].forEach(([label, value, key]) => {
+    if (value != null) {
+      const comparison = key === 'Cumulative' ? r.cumulativeAverageBenchmark : (r.termAverageBenchmarks || {})[key];
+      sum.push([label + '<br>Avg', colouredSummary(value, comparison)]);
+    }
+  });
 
   const P = t.primaryColor || '#0756a8';
   const logo = t.logoUrl ? `<img src="${esc(t.logoUrl)}" alt="" onerror="this.remove()">` : 'G';
