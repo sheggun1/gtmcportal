@@ -4122,7 +4122,7 @@ if (S.token && S.user) boot();
 
   /* ---------- Report card ---------- */
   .rc{--rcp:#0756a8;background:#fff;color:#111;border:1.5px solid #1f2937;max-width:900px;margin:0 auto;padding:14px;font:11px/1.35 Inter,'Segoe UI',Arial,sans-serif}
-  .rc *{box-sizing:border-box}
+  .rc *{box-sizing:border-box;font-weight:700}
   .rc-head{display:grid;grid-template-columns:84px 1fr 84px;align-items:center;gap:10px;border:1.5px solid #1f2937;padding:8px;margin-bottom:8px}
   .rc-logo{width:76px;height:76px;border:1.5px solid #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;font:900 30px Georgia,serif;color:var(--rcp)}
   .rc-logo img{width:100%;height:100%;object-fit:contain}
@@ -4226,7 +4226,9 @@ function gtmcCardHTML(r, withId) {
   const stamp = t.schoolStampUrl ? `<div><img src="${esc(t.schoolStampUrl)}" alt="" onerror="this.remove()"></div>` : '';
   const rem = (label, txt) => `<div class="rc-rem"><b>${label}:</b> ${esc(txt || '—')}</div>`;
   const rd = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  const verificationBlock = r.verificationUrl ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Official online verification</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="width:76px;height:76px;object-fit:contain"></div>` : '';
+  const verificationBlock = r.verificationUrl
+    ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Official online verification</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="display:block;width:76px;height:76px;min-width:76px;object-fit:contain"></div>`
+    : `<div style="border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px;text-align:right;font-size:8px"><b>AUTHENTICITY VERIFICATION</b><br><span style="color:#b45309">Verification link unavailable. Ask the administrator to update the report-verification service.</span></div>`;
 
   return `<div ${withId ? 'id="reportCard" ' : ''}class="rc" style="--rcp:${esc(P)}">
   <div class="rc-head">
@@ -4288,33 +4290,53 @@ async function renderReportVerificationQr(root) {
   if (!root) return;
   const images = Array.from(root.querySelectorAll('.rc-verify-qr[data-verify-url]'));
   if (!images.length) return;
+
   await Promise.all(images.map(async img => {
     const verifyUrl = String(img.getAttribute('data-verify-url') || '').trim();
-    if (!/^https:\/\/\//i.test(verifyUrl)) {
+    let parsedUrl;
+    try { parsedUrl = new URL(verifyUrl, window.location.href); } catch (e) {}
+    if (!parsedUrl || parsedUrl.protocol !== 'https:' || !parsedUrl.hostname) {
       img.alt = 'Invalid report verification link';
+      img.title = 'The report verification link is not a valid HTTPS address.';
       return;
     }
+
     img.width = 220;
     img.height = 220;
     img.decoding = 'sync';
     img.referrerPolicy = 'no-referrer';
+    img.style.display = 'block';
+
+    const waitForImage = () => new Promise((resolve, reject) => {
+      if (img.complete && img.naturalWidth > 0) return resolve();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('QR image failed to load.'));
+    });
+
     try {
-      if (window.QRCode && typeof window.QRCode.toDataURL === 'function') {
-        const dataUrl = await window.QRCode.toDataURL(verifyUrl, { width: 220, margin: 2, errorCorrectionLevel: 'H', type: 'image/png' });
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) throw new Error('QR generator returned an invalid image.');
-        img.src = dataUrl;
-        if (typeof img.decode === 'function') await img.decode();
-        return;
+      if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
+        throw new Error('QR generator library is unavailable.');
       }
-      throw new Error('QR library unavailable');
-    } catch (error) {
-      // Last-resort image service keeps report verification usable when the bundled CDN library is blocked.
-      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&format=png&data=' + encodeURIComponent(verifyUrl);
+      const dataUrl = await window.QRCode.toDataURL(verifyUrl, {
+        width: 220, margin: 2, errorCorrectionLevel: 'H', type: 'image/png'
+      });
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) {
+        throw new Error('QR generator returned an invalid PNG image.');
+      }
+      img.src = dataUrl;
+      if (typeof img.decode === 'function') await img.decode();
+      else await waitForImage();
+      return;
+    } catch (generatorError) {
+      // Fallback is used only if the local QR generator or its PNG fails.
+      img.removeAttribute('src');
       try {
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&format=png&data=' + encodeURIComponent(verifyUrl);
         if (typeof img.decode === 'function') await img.decode();
+        else await waitForImage();
       } catch (fallbackError) {
         img.removeAttribute('src');
-        img.alt = 'QR code could not be loaded. Open the report verification link manually.';
+        img.alt = 'QR code could not be loaded. Open the verification link manually.';
         img.title = verifyUrl;
       }
     }
