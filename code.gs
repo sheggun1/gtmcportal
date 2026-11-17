@@ -257,6 +257,8 @@ function route(action, p) {
     case 'adminUnlinkWard':         return adminUnlinkWard(p, p.token);
     case 'parentGetWards':          return parentGetWards(p.token);
     case 'parentGetResult':         return parentGetResult(p, p.token);
+    case 'adminIssueReportVerification': return adminIssueReportVerification_(p, p.token);
+    case 'verifyReportCard':        return verifyReportCard_(p);
     case 'parentAskResultAI':       return parentAskResultAI(p, p.token);
     case 'parentGetDebts':          return parentGetDebts(p, p.token);
     case 'parentGetAnnouncements':  return parentGetAnnouncements(p, p.token);
@@ -1966,6 +1968,13 @@ function setupParentPortalSheets_() {
       principalName: 'The Principal',
       principalSignatureUrl: '',
       schoolStampUrl: '',
+      principalRemarkScale: [
+        {min: 75, remark: 'Excellent performance. Keep up the outstanding work.'},
+        {min: 60, remark: 'A very good result. Aim even higher.'},
+        {min: 50, remark: 'A good result. Continue working hard.'},
+        {min: 40, remark: 'A fair result. More consistent effort is needed.'},
+        {min: 0, remark: 'This result needs improvement. Please work harder and seek support.'}
+      ],
       gradeScale: [
         {min: 80, max: 100, grade: 'A', remark: 'Excellent'},
         {min: 70, max: 79.99, grade: 'B', remark: 'Very Good'},
@@ -2438,12 +2447,27 @@ function unlockDomains(p, token) {
 }
 
 /* ============ PRINCIPAL REMARKS ============ */
-function autoPrincipalRemark_(overallPercent, gradeScale) {
-  if (overallPercent == null) return 'Result pending.';
+function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) {
+  if (overallPercent == null || !isFinite(Number(overallPercent))) return 'Result pending.';
+  const pct = Number(overallPercent);
+  const configured = Array.isArray(principalRemarkScale) && principalRemarkScale.length ? principalRemarkScale.slice() : [
+    {min:75,remark:'Excellent performance. Keep up the outstanding work.'},
+    {min:60,remark:'A very good result. Aim even higher.'},
+    {min:50,remark:'A good result. Continue working hard.'},
+    {min:40,remark:'A fair result. More consistent effort is needed.'},
+    {min:0,remark:'This result needs improvement. Please work harder and seek support.'}
+  ];
+  const band = configured
+    .filter(function (b) { return isFinite(Number(b.min)) && String(b.remark || '').trim(); })
+    .sort(function (a, b) { return Number(b.min) - Number(a.min); })
+    .find(function (b) { return pct >= Number(b.min); });
+  if (band) {
+    return String(band.remark).trim() + ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
+  }
   const sorted = (Array.isArray(gradeScale) ? gradeScale.slice() : [])
     .sort(function (a, b) { return Number(b.min) - Number(a.min); });
-  const band = sorted.find(function (b) { return overallPercent >= Number(b.min); });
-  const grade = band ? String(band.grade) : '?';
+  const gradeBand = sorted.find(function (b) { return pct >= Number(b.min); });
+  const grade = gradeBand ? String(gradeBand.grade) : '?';
   const map = {
     A: 'An excellent result. Keep up this outstanding performance.',
     B: 'A very good result. Aim even higher next term.',
@@ -2453,7 +2477,22 @@ function autoPrincipalRemark_(overallPercent, gradeScale) {
     F: 'A poor result. Significant and focused improvement is needed.'
   };
   return (map[grade] || 'Result available.') +
-    ' (Overall: ' + Math.round(overallPercent * 100) / 100 + '%)';
+    ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
+}
+
+function isLegacyAutoPrincipalRemark_(remark) {
+  const value = String(remark || '');
+  const legacyStarts = [
+    'An excellent result. Keep up this outstanding performance.',
+    'A very good result. Aim even higher next term.',
+    'A good result. There is room for steady improvement.',
+    'A fair result. More effort is required.',
+    'A pass. Consistent study will improve your performance.',
+    'A poor result. Significant and focused improvement is needed.'
+  ];
+  return value.slice(-2) === '%)' && legacyStarts.some(function (prefix) {
+    return value.indexOf(prefix + ' (Overall: ') === 0;
+  });
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
@@ -2505,9 +2544,10 @@ function adminPreviewPrincipalRemark(p, token) {
   if (!className || !studentId || !term || !academicYear) throw new Error('className, studentId, term, academicYear required.');
 
   const overallPercent = computeOverallFor_(className, studentId, term);
-  const override = principalRemarkFor_(studentId, className, term, academicYear);
+  const savedRemark = principalRemarkFor_(studentId, className, term, academicYear);
+  const override = savedRemark && !isLegacyAutoPrincipalRemark_(savedRemark) ? savedRemark : '';
   const template = portalGetTemplate_();
-  const auto = autoPrincipalRemark_(overallPercent, template.gradeScale);
+  const auto = autoPrincipalRemark_(overallPercent, template.gradeScale, template.principalRemarkScale);
 
   return {
     studentId: studentId, className: className, term: term, academicYear: academicYear,
@@ -2583,7 +2623,7 @@ function adminGeneratePrincipalRemarksForClass(p, token) {
     if (existing[st.id]) { skipped++; return; }
     const pct = computeOverallFor_(className, st.id, term);
     if (pct == null) { noScore++; return; }
-    const remark = autoPrincipalRemark_(pct, template.gradeScale);
+    const remark = autoPrincipalRemark_(pct, template.gradeScale, template.principalRemarkScale);
     sh.appendRow([st.id, className, term, academicYear, remark, now, admin.email]);
     created++;
   });
@@ -2599,9 +2639,20 @@ function adminGeneratePrincipalRemarksForClass(p, token) {
 }
 
 /* ============ REPORT TEMPLATE ============ */
+function portalDefaultGradeScale_() {
+  return [
+    {min:80,max:100,grade:'A',remark:'Excellent'},
+    {min:70,max:79.99,grade:'B',remark:'Very Good'},
+    {min:60,max:69.99,grade:'C',remark:'Good'},
+    {min:50,max:59.99,grade:'D',remark:'Credit'},
+    {min:40,max:49.99,grade:'E',remark:'Pass'},
+    {min:0,max:39.99,grade:'F',remark:'Needs Improvement'}
+  ];
+}
+
 function portalGrade_(score, scale) {
-  if (!Array.isArray(scale)) return '';
-  const item = scale.find(function (g) { return Number(score) >= Number(g.min) && Number(score) <= Number(g.max); });
+  const bands = Array.isArray(scale) && scale.length ? scale : portalDefaultGradeScale_();
+  const item = bands.find(function (g) { return Number(score) >= Number(g.min) && Number(score) <= Number(g.max); });
   return item ? String(item.grade || '') : '';
 }
 
@@ -2630,7 +2681,7 @@ function adminSaveReportTemplate(p, token) {
     'showPrincipalRemark','showAttendance','showAIComment','showAnnualAverage',
     'showAffective','showPsychomotor','showTermDates',
     'principalName','principalSignatureUrl','schoolStampUrl',
-    'gradeScale'
+    'gradeScale','principalRemarkScale'
   ];
   const clean = {};
   allowed.forEach(function (k) { if (Object.prototype.hasOwnProperty.call(config, k)) clean[k] = config[k]; });
@@ -2639,23 +2690,40 @@ function adminSaveReportTemplate(p, token) {
   if (clean.principalSignatureUrl && !/^https:\/\//i.test(clean.principalSignatureUrl)) throw new Error('principalSignatureUrl must use HTTPS.');
   if (clean.schoolStampUrl && !/^https:\/\//i.test(clean.schoolStampUrl)) throw new Error('schoolStampUrl must use HTTPS.');
   if (clean.gradeScale && (!Array.isArray(clean.gradeScale) || clean.gradeScale.some(function (g) {
-    return !isFinite(Number(g.min)) || !isFinite(Number(g.max)) || Number(g.min) > Number(g.max) || !g.grade;
+    return !isFinite(Number(g.min)) || !isFinite(Number(g.max)) || Number(g.min) < 0 || Number(g.max) > 100 || Number(g.min) > Number(g.max) || !String(g.grade || '').trim();
   }))) {
-    throw new Error('gradeScale must contain valid min, max and grade values.');
+    throw new Error('gradeScale must contain valid grade bands between 0 and 100.');
+  }
+  if (clean.principalRemarkScale && (!Array.isArray(clean.principalRemarkScale) || clean.principalRemarkScale.some(function (b) {
+    return !isFinite(Number(b.min)) || Number(b.min) < 0 || Number(b.min) > 100 || !String(b.remark || '').trim();
+  }))) {
+    throw new Error('Principal comment bands must have a threshold from 0 to 100 and a comment.');
+  }
+  const existingConfig = portalGetTemplate_() || {};
+  const merged = Object.assign({}, existingConfig, clean);
+  if (!Array.isArray(merged.gradeScale) || !merged.gradeScale.length) {
+    merged.gradeScale = [
+      {min:80,max:100,grade:'A',remark:'Excellent'},
+      {min:70,max:79.99,grade:'B',remark:'Very Good'},
+      {min:60,max:69.99,grade:'C',remark:'Good'},
+      {min:50,max:59.99,grade:'D',remark:'Credit'},
+      {min:40,max:49.99,grade:'E',remark:'Pass'},
+      {min:0,max:39.99,grade:'F',remark:'Needs Improvement'}
+    ];
   }
   const sh = getSheet('ReportTemplate');
   const rows = sh.getDataRange().getValues();
-  const json = JSON.stringify(clean);
+  const json = JSON.stringify(merged);
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === 'config') {
       sh.getRange(i + 1, 2, 1, 3).setValues([[json, new Date(), admin.email]]);
       logAudit(admin.email, 'adminSaveReportTemplate', { keys: Object.keys(clean) });
-      return { success: true, template: clean };
+      return { success: true, template: merged };
     }
   }
   sh.appendRow(['config', json, new Date(), admin.email]);
   logAudit(admin.email, 'adminSaveReportTemplate', { keys: Object.keys(clean) });
-  return { success: true, template: clean };
+  return { success: true, template: merged };
 }
 
 /* ============================================================
@@ -2822,6 +2890,152 @@ function throwIfStudentDebtor_(studentId, className, academicYear) {
   return debt;
 }
 
+
+/* ============ REPORT-CARD AUTHENTICITY VERIFICATION ============ */
+const REPORT_VERIFICATION_HEADERS_ = ['token_hash','snapshot_json','signature','issued_at','active'];
+
+function reportVerificationSecret_() {
+  const props = PropertiesService.getScriptProperties();
+  let secret = props.getProperty('GTMC_REPORT_VERIFY_SECRET');
+  if (!secret) {
+    secret = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('GTMC_REPORT_VERIFY_SECRET', secret);
+  }
+  return secret;
+}
+function reportVerificationHmac_(value) {
+  const bytes = Utilities.computeHmacSha256Signature(String(value), reportVerificationSecret_(), Utilities.Charset.UTF_8);
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, '');
+}
+function reportVerificationHash_(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value), Utilities.Charset.UTF_8)
+    .map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+function reportVerificationEqual_(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+function reportVerificationSheet_() {
+  const ss = openSS();
+  let sh = ss.getSheetByName('ReportVerifications');
+  if (!sh) {
+    sh = ss.insertSheet('ReportVerifications');
+    sh.getRange(1, 1, 1, REPORT_VERIFICATION_HEADERS_.length).setValues([REPORT_VERIFICATION_HEADERS_]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function reportVerificationToken_(identity, issuedAt) {
+  return reportVerificationHmac_('GTMC-REPORT-QR|' + identity + '|' + issuedAt);
+}
+function issueReportVerification_(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+  const identity = JSON.stringify([
+    String(data.studentId), String(data.className), String(data.term), String(data.academicYear)
+  ]);
+  const sh = reportVerificationSheet_();
+  const values = sh.getDataRange().getValues();
+  let rowNumber = 0, issuedAt = '';
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][4] !== true && String(values[i][4]).toLowerCase() !== 'true') continue;
+    try {
+      const existing = JSON.parse(String(values[i][1] || '{}'));
+      if (existing.identity === identity) {
+        rowNumber = i + 1;
+        issuedAt = String(values[i][3] || existing.issuedAt || '');
+        break;
+      }
+    } catch (e) {}
+  }
+  if (!issuedAt) issuedAt = new Date().toISOString();
+  const snapshot = {
+    identity: identity,
+    studentName: String(data.studentName || ''),
+    className: String(data.className || ''),
+    term: String(data.term || ''),
+    academicYear: String(data.academicYear || ''),
+    schoolName: String(data.schoolName || 'Greater Tomorrow Model College'),
+    issuedAt: issuedAt
+  };
+  const snapshotJson = JSON.stringify(snapshot);
+  const token = reportVerificationToken_(identity, issuedAt);
+  const record = [reportVerificationHash_(token), snapshotJson, reportVerificationHmac_(snapshotJson), issuedAt, true];
+  if (rowNumber) sh.getRange(rowNumber, 1, 1, record.length).setValues([record]);
+  else sh.appendRow(record);
+  return 'https://greaterportal.vercel.app/verify.html?code=' + encodeURIComponent(token);
+  } finally { lock.releaseLock(); }
+}
+function adminIssueReportVerification_(p, token) {
+  requireRole(token, ['admin']);
+  const className = String(p.className || '').trim();
+  const studentId = String(p.studentId || '').trim();
+  const term = String(p.term || '').trim();
+  const academicYear = String(p.academicYear || '').trim();
+  if (!className || !studentId || !term || !academicYear) {
+    throw new Error('className, studentId, term and academicYear are required.');
+  }
+  if (CLASSES.indexOf(className) < 0 || TERMS.indexOf(term) < 0) throw new Error('Invalid class or term.');
+  const student = portalFindStudent_(className, studentId);
+  if (!student) throw new Error('Student not found.');
+  const ranking = rankStudent_(studentId, className, term);
+  const template = portalGetTemplate_();
+  const verificationUrl = issueReportVerification_({
+    studentId: studentId, studentName: student.name, className: className, term: term,
+    academicYear: academicYear, schoolName: template.schoolName
+  });
+  return {
+    verificationUrl: verificationUrl,
+    positionArm: ranking.arm,
+    positionClass: ranking.combined,
+    classSize: ranking.classSize,
+    armSize: ranking.armSize
+  };
+}
+function verifyReportCard_(p) {
+  const code = String(p.code || '').trim();
+  if (!/^[A-Za-z0-9_-]{40,60}$/.test(code)) return { verified: false, status: 'INVALID', message: 'This QR code is not valid.' };
+  const tokenHash = reportVerificationHash_(code);
+  const sh = openSS().getSheetByName('ReportVerifications');
+  if (!sh) return { verified: false, status: 'INVALID', message: 'No matching GTMC report-card record was found.' };
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (!reportVerificationEqual_(values[i][0], tokenHash)) continue;
+    if (values[i][4] !== true && String(values[i][4]).toLowerCase() !== 'true') {
+      return { verified: false, status: 'REVOKED', message: 'This report card verification code has been revoked.' };
+    }
+    const snapshotJson = String(values[i][1] || '');
+    if (!reportVerificationEqual_(values[i][2], reportVerificationHmac_(snapshotJson))) {
+      return { verified: false, status: 'INVALID', message: 'The verification record could not be authenticated. Contact the school.' };
+    }
+    let snapshot;
+    try { snapshot = JSON.parse(snapshotJson); } catch (e) {
+      return { verified: false, status: 'INVALID', message: 'The verification record is damaged.' };
+    }
+    const expected = reportVerificationToken_(snapshot.identity, snapshot.issuedAt);
+    if (!reportVerificationEqual_(code, expected)) {
+      return { verified: false, status: 'INVALID', message: 'This QR code could not be verified.' };
+    }
+    return {
+      verified: true,
+      status: 'VERIFIED',
+      schoolName: snapshot.schoolName,
+      studentName: snapshot.studentName,
+      className: snapshot.className,
+      term: snapshot.term,
+      academicYear: snapshot.academicYear,
+      issuedAt: snapshot.issuedAt,
+      reference: tokenHash.slice(-10).toUpperCase(),
+      message: 'GTMC confirms that a report card was issued for the student and period shown below. Compare the printed details with this record.'
+    };
+  }
+  return { verified: false, status: 'INVALID', message: 'No matching GTMC report-card record was found.' };
+}
+
 /* ============ PARENT RESULT (with ranking) ============ */
 function parentGetResult(p, token) {
   const parent = requireRole(token, ['parent']);
@@ -2895,8 +3109,9 @@ function parentGetResult(p, token) {
     psychomotor: domainVisible_('psychomotor') ? String(domVals[3] || '').trim().toUpperCase() : ''
   };
 
-  const override = principalRemarkFor_(studentId, className, term, academicYear);
-  const principalRemark = override || autoPrincipalRemark_(overallAverage, template.gradeScale);
+  const savedRemark = principalRemarkFor_(studentId, className, term, academicYear);
+  const override = savedRemark && !isLegacyAutoPrincipalRemark_(savedRemark) ? savedRemark : '';
+  const principalRemark = override || autoPrincipalRemark_(overallAverage, template.gradeScale, template.principalRemarkScale);
 
   const affective = getDomainAssessments({
     kind: 'affective', className: className, term: term,
@@ -2990,6 +3205,10 @@ function parentGetResult(p, token) {
     positionClass: ranking.combined,
     classSize: ranking.classSize,
     armSize: ranking.armSize,
+    verificationUrl: issueReportVerification_({
+      studentId: studentId, studentName: student.name, className: className, term: term,
+      academicYear: academicYear, schoolName: template.schoolName || 'Greater Tomorrow Model College'
+    }),
 
     template: template
   };
