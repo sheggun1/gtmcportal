@@ -4148,7 +4148,7 @@ function gtmcCardHTML(r, withId) {
   const done = subs.filter(s => s.total != null);
   const got = done.reduce((a, s) => a + Number(s.total), 0), max = subs.length * 100;
   const avg = (done.length === subs.length && subs.length) ? Math.round(got / max * 10000) / 100 : null;
-  const size = r.classSize ?? r.totalStudents ?? r.numberInClass;
+  const size = r.armSize ?? r.classSize ?? r.totalStudents ?? r.numberInClass;
 
   const rate = (o, k) => { const v = Number(o && o[k]); return v >= 1 && v <= 5 ? v : '—'; };
   const dom = (h, items, o) => `<tr><th colspan="2" class="rc-sub">${h}</th></tr>` +
