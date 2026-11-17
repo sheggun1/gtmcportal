@@ -36,7 +36,8 @@
     ['staffLinks','Staff Attendance Links','Staff','Link attendance machine IDs to staff accounts.'],
     ['messageAdmin','Contact Administrator','Staff','Send messages or complaints to the administrator.'],
     ['staffMessages','Staff Messages','Staff','Review staff messages and complaints.'],
-    ['userManagement','User Management','Administration','Manage portal accounts and permissions.']
+    ['userManagement','User Management','Administration','Manage portal accounts and permissions.'],
+    ['boarding','Boarding Management','Administration','Boys and girls boarding sections, sign-out, return and parent notifications.']
   ];
   var FEATURE_MAP={};
   FEATURES.forEach(function(x){FEATURE_MAP[x[0]]=x;});

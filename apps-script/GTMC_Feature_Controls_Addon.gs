@@ -11,7 +11,7 @@ var GTMC_FEATURE_DEFAULTS_ = {
   reportcards:true, template:true, students:true, scores:true, entry:true, history:true,
   results:true, report:true, testPerformance:true, chat:true, library:true,
   myAttendance:true, attendanceSummary:true, staffAttendance:true, staffLinks:true,
-  messageAdmin:true, staffMessages:true, userManagement:true
+  messageAdmin:true, staffMessages:true, userManagement:true, boarding:true
 };
 function gtmcFeatureFlags_() {
   var raw=PropertiesService.getScriptProperties().getProperty('GTMC_FEATURE_FLAGS');
@@ -26,7 +26,7 @@ function gtmcFeatureFlags_() {
 function gtmcFeatureRequireUser_(token) {
   return requireRole(token,[
     'admin','principal','vice_principal','vice_principal_admin','vice_principal_academic',
-    'bursar','registrar','class_teacher','subject_teacher','student','parent'
+    'bursar','registrar','class_teacher','subject_teacher','student','parent','housemaster','housemistress'
   ]);
 }
 function gtmcFeatureSave_(p,token) {
@@ -49,7 +49,9 @@ function gtmcFeatureActionMap_(action) {
     staffReplyPaymentNotification:'staffPayments',
     adminListUsers:'userManagement',adminCreateUser:'userManagement',
     adminUpdateUser:'userManagement',adminSetUserStatus:'userManagement',adminSetUserActive:'userManagement',
-    adminResetUserPassword:'userManagement'
+    adminResetUserPassword:'userManagement',
+    boardingList:'boarding',boardingStudentOptions:'boarding',boardingPerformance:'boarding',boardingAssign:'boarding',boardingEnd:'boarding',
+    boardingRecordExit:'boarding',boardingRecordReturn:'boarding',boardingHistory:'boarding',boardingDashboard:'boarding'
   };
   return map[String(action||'')]||'';
 }
