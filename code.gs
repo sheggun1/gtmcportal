@@ -510,16 +510,45 @@ function gtmcArchiveAuditRows_() {
   return { archived: count, archiveSpreadsheetId: target.id, activeRows: active.getLastRow() - 1 };
 }
 
-function gtmcReadArchivedAuditRows_() {
-  const all = [];
-  gtmcAuditArchiveIds_().forEach(function (id) {
-    const ss = SpreadsheetApp.openById(id);
-    const sh = ss.getSheetByName('Audit');
-    if (sh && sh.getLastRow() > 1) {
-      Array.prototype.push.apply(all, sheetToObjects(sh));
+function gtmcCollectAuditRowsFromSheet_(sheet, p, limit) {
+  const found = [];
+  if (!sheet || sheet.getLastRow() < 2) return found;
+  const headers = sheet.getRange(1, 1, 1, 4).getValues()[0].map(String);
+  const emailFilter = String(p.email || '').toLowerCase();
+  const actionFilter = String(p.action || '').toLowerCase();
+  const from = p.fromDate ? new Date(p.fromDate).getTime() : -Infinity;
+  const to = p.toDate ? new Date(p.toDate).getTime() : Infinity;
+  const last = sheet.getLastRow();
+  const chunkSize = 5000;
+  for (let end = last; end >= 2 && found.length < limit; end -= chunkSize) {
+    const start = Math.max(2, end - chunkSize + 1);
+    const values = sheet.getRange(start, 1, end - start + 1, 4).getValues();
+    for (let i = values.length - 1; i >= 0 && found.length < limit; i--) {
+      const row = values[i], obj = {};
+      headers.forEach(function (h, j) { obj[h] = row[j]; });
+      const time = new Date(obj.timestamp || 0).getTime();
+      if (time < from) return found; // Rows are chronological; older rows cannot match.
+      if (time > to) continue;
+      if (emailFilter && String(obj.email).toLowerCase() !== emailFilter) continue;
+      if (actionFilter && String(obj.action).toLowerCase().indexOf(actionFilter) === -1) continue;
+      found.push(obj);
     }
-  });
-  return all;
+  }
+  return found;
+}
+
+function gtmcGetAuditHistory_(p, limit) {
+  let rows = gtmcCollectAuditRowsFromSheet_(getSheet('Audit'), p, limit);
+  if (rows.length < limit) {
+    const ids = gtmcAuditArchiveIds_();
+    for (let i = ids.length - 1; i >= 0 && rows.length < limit; i--) {
+      const sh = SpreadsheetApp.openById(ids[i]).getSheetByName('Audit');
+      const older = gtmcCollectAuditRowsFromSheet_(sh, p, limit - rows.length);
+      rows = rows.concat(older);
+    }
+  }
+  rows.sort(function (a, b) { return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime(); });
+  return rows.slice(0, limit);
 }
 
 function logAudit(email, action, details) {
@@ -4652,14 +4681,8 @@ function adminReplyParentEnquiry(p, token) {
 
 function adminGetAuditLogs(p, token) {
   requireRole(token, ['admin']);
-  // Search both archived history and the active Audit tab.
-  let rows = gtmcReadArchivedAuditRows_().concat(sheetToObjects(getSheet('Audit')));
-  if (p.email) rows = rows.filter(function (r) { return String(r.email).toLowerCase() === String(p.email).toLowerCase(); });
-  if (p.action) rows = rows.filter(function (r) { return String(r.action).toLowerCase().indexOf(String(p.action).toLowerCase()) !== -1; });
-  if (p.fromDate) { const from = new Date(p.fromDate).getTime(); if (isFinite(from)) rows = rows.filter(function (r) { return new Date(r.timestamp).getTime() >= from; }); }
-  if (p.toDate) { const to = new Date(p.toDate).getTime(); if (isFinite(to)) rows = rows.filter(function (r) { return new Date(r.timestamp).getTime() <= to; }); }
-  rows.sort(function (a, b) { return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime(); });
-  return rows.slice(0, Math.min(Math.max(Number(p.limit) || 200, 1), 1000));
+  const limit = Math.min(Math.max(Number(p.limit) || 200, 1), 1000);
+  return gtmcGetAuditHistory_(p || {}, limit);
 }
 function adminListAcademicArchives(p, token) {
   requireRole(token, ['admin']);
