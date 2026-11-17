@@ -257,6 +257,8 @@ function route(action, p) {
     case 'adminUnlinkWard':         return adminUnlinkWard(p, p.token);
     case 'parentGetWards':          return parentGetWards(p.token);
     case 'parentGetResult':         return parentGetResult(p, p.token);
+    case 'adminIssueReportVerification': return adminIssueReportVerification_(p, p.token);
+    case 'verifyReportCard':        return verifyReportCard_(p);
     case 'parentAskResultAI':       return parentAskResultAI(p, p.token);
     case 'parentGetDebts':          return parentGetDebts(p, p.token);
     case 'parentGetAnnouncements':  return parentGetAnnouncements(p, p.token);
@@ -2888,6 +2890,147 @@ function throwIfStudentDebtor_(studentId, className, academicYear) {
   return debt;
 }
 
+
+/* ============ REPORT-CARD AUTHENTICITY VERIFICATION ============ */
+const REPORT_VERIFICATION_HEADERS_ = ['token_hash','snapshot_json','signature','issued_at','active'];
+
+function reportVerificationSecret_() {
+  const props = PropertiesService.getScriptProperties();
+  let secret = props.getProperty('GTMC_REPORT_VERIFY_SECRET');
+  if (!secret) {
+    secret = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('GTMC_REPORT_VERIFY_SECRET', secret);
+  }
+  return secret;
+}
+function reportVerificationHmac_(value) {
+  const bytes = Utilities.computeHmacSha256Signature(String(value), reportVerificationSecret_(), Utilities.Charset.UTF_8);
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/g, '');
+}
+function reportVerificationHash_(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value), Utilities.Charset.UTF_8)
+    .map(function (b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+function reportVerificationEqual_(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+function reportVerificationSheet_() {
+  const ss = openSS();
+  let sh = ss.getSheetByName('ReportVerifications');
+  if (!sh) {
+    sh = ss.insertSheet('ReportVerifications');
+    sh.getRange(1, 1, 1, REPORT_VERIFICATION_HEADERS_.length).setValues([REPORT_VERIFICATION_HEADERS_]);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function reportVerificationToken_(identity, issuedAt) {
+  return reportVerificationHmac_('GTMC-REPORT-QR|' + identity + '|' + issuedAt);
+}
+function issueReportVerification_(data) {
+  const identity = JSON.stringify([
+    String(data.studentId), String(data.className), String(data.term), String(data.academicYear)
+  ]);
+  const sh = reportVerificationSheet_();
+  const values = sh.getDataRange().getValues();
+  let rowNumber = 0, issuedAt = '';
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][4] !== true && String(values[i][4]).toLowerCase() !== 'true') continue;
+    try {
+      const existing = JSON.parse(String(values[i][1] || '{}'));
+      if (existing.identity === identity) {
+        rowNumber = i + 1;
+        issuedAt = String(values[i][3] || existing.issuedAt || '');
+        break;
+      }
+    } catch (e) {}
+  }
+  if (!issuedAt) issuedAt = new Date().toISOString();
+  const snapshot = {
+    identity: identity,
+    studentName: String(data.studentName || ''),
+    className: String(data.className || ''),
+    term: String(data.term || ''),
+    academicYear: String(data.academicYear || ''),
+    schoolName: String(data.schoolName || 'Greater Tomorrow Model College'),
+    issuedAt: issuedAt
+  };
+  const snapshotJson = JSON.stringify(snapshot);
+  const token = reportVerificationToken_(identity, issuedAt);
+  const record = [reportVerificationHash_(token), snapshotJson, reportVerificationHmac_(snapshotJson), issuedAt, true];
+  if (rowNumber) sh.getRange(rowNumber, 1, 1, record.length).setValues([record]);
+  else sh.appendRow(record);
+  return 'https://greaterportal.vercel.app/verify.html?code=' + encodeURIComponent(token);
+}
+function adminIssueReportVerification_(p, token) {
+  requireRole(token, ['admin']);
+  const className = String(p.className || '').trim();
+  const studentId = String(p.studentId || '').trim();
+  const term = String(p.term || '').trim();
+  const academicYear = String(p.academicYear || '').trim();
+  if (!className || !studentId || !term || !academicYear) {
+    throw new Error('className, studentId, term and academicYear are required.');
+  }
+  if (CLASSES.indexOf(className) < 0 || TERMS.indexOf(term) < 0) throw new Error('Invalid class or term.');
+  const student = portalFindStudent_(className, studentId);
+  if (!student) throw new Error('Student not found.');
+  const ranking = rankStudent_(studentId, className, term);
+  const template = portalGetTemplate_();
+  const verificationUrl = issueReportVerification_({
+    studentId: studentId, studentName: student.name, className: className, term: term,
+    academicYear: academicYear, schoolName: template.schoolName
+  });
+  return {
+    verificationUrl: verificationUrl,
+    positionArm: ranking.arm,
+    positionClass: ranking.combined,
+    classSize: ranking.classSize,
+    armSize: ranking.armSize
+  };
+}
+function verifyReportCard_(p) {
+  const code = String(p.code || '').trim();
+  if (!/^[A-Za-z0-9_-]{40,60}$/.test(code)) return { verified: false, status: 'INVALID', message: 'This QR code is not valid.' };
+  const tokenHash = reportVerificationHash_(code);
+  const sh = reportVerificationSheet_();
+  const values = sh.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (!reportVerificationEqual_(values[i][0], tokenHash)) continue;
+    if (values[i][4] !== true && String(values[i][4]).toLowerCase() !== 'true') {
+      return { verified: false, status: 'REVOKED', message: 'This report card verification code has been revoked.' };
+    }
+    const snapshotJson = String(values[i][1] || '');
+    if (!reportVerificationEqual_(values[i][2], reportVerificationHmac_(snapshotJson))) {
+      return { verified: false, status: 'INVALID', message: 'The verification record could not be authenticated. Contact the school.' };
+    }
+    let snapshot;
+    try { snapshot = JSON.parse(snapshotJson); } catch (e) {
+      return { verified: false, status: 'INVALID', message: 'The verification record is damaged.' };
+    }
+    const expected = reportVerificationToken_(snapshot.identity, snapshot.issuedAt);
+    if (!reportVerificationEqual_(code, expected)) {
+      return { verified: false, status: 'INVALID', message: 'This QR code could not be verified.' };
+    }
+    return {
+      verified: true,
+      status: 'VERIFIED',
+      schoolName: snapshot.schoolName,
+      studentName: snapshot.studentName,
+      className: snapshot.className,
+      term: snapshot.term,
+      academicYear: snapshot.academicYear,
+      issuedAt: snapshot.issuedAt,
+      reference: tokenHash.slice(-10).toUpperCase(),
+      message: 'GTMC confirms that a report card was issued for the student and period shown below. Compare the printed details with this record.'
+    };
+  }
+  return { verified: false, status: 'INVALID', message: 'No matching GTMC report-card record was found.' };
+}
+
 /* ============ PARENT RESULT (with ranking) ============ */
 function parentGetResult(p, token) {
   const parent = requireRole(token, ['parent']);
@@ -3057,6 +3200,10 @@ function parentGetResult(p, token) {
     positionClass: ranking.combined,
     classSize: ranking.classSize,
     armSize: ranking.armSize,
+    verificationUrl: issueReportVerification_({
+      studentId: studentId, studentName: student.name, className: className, term: term,
+      academicYear: academicYear, schoolName: template.schoolName || 'Greater Tomorrow Model College'
+    }),
 
     template: template
   };
