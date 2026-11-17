@@ -15,6 +15,7 @@ function gtmcUserMgmtHeaders_(sh) {
   var values = sh.getDataRange().getValues();
   if (!values.length) throw new Error('Users sheet has no header row.');
   var headers = values[0].map(function(h){ return String(h || '').trim().toLowerCase(); });
+  if(headers.indexOf('boarding_section')<0){ headers.push('boarding_section'); sh.getRange(1,headers.length).setValue('boarding_section'); }
   var required = ['email','name','role','class','subjects','password','active','class_teacher_class'];
   required.forEach(function(k){ if (headers.indexOf(k) < 0) throw new Error('Users sheet is missing the ' + k + ' column.'); });
   return { values: values, headers: headers };
@@ -73,7 +74,7 @@ function adminUpdateUser_(p, token) {
   var roleCol=hm.headers.indexOf('role'), oldRole=String(hm.values[rowNum-1][roleCol]||'');
   if(oldRole.split(',').map(function(x){return x.trim();}).indexOf('admin')>=0 && role!=='admin'){
     var admins=hm.values.slice(1).filter(function(r){return String(r[roleCol]||'').split(',').map(function(x){return x.trim();}).indexOf('admin')>=0 && (r[hm.headers.indexOf('active')]===true || String(r[hm.headers.indexOf('active')]).toLowerCase()==='true');});
-    if(admins.length<=1) throw new Error('The last active administrator cannot be changed.');
+    if(role.split(',').indexOf('admin')<0 && admins.length<=1) throw new Error('The last active administrator cannot be changed.');
   }
   function set(k,v){var c=hm.headers.indexOf(k);if(c>=0)sh.getRange(rowNum,c+1).setValue(v);}
   set('name',String(p.name||'').trim()); set('role',role);
