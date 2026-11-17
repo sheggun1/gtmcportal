@@ -2692,7 +2692,7 @@ function adminSaveReportTemplate(p, token) {
   if (clean.gradeScale && (!Array.isArray(clean.gradeScale) || clean.gradeScale.some(function (g) {
     return !isFinite(Number(g.min)) || !isFinite(Number(g.max)) || Number(g.min) < 0 || Number(g.max) > 100 || Number(g.min) > Number(g.max) || !String(g.grade || '').trim();
   }))) {
-    throw new Error('gradeScale must contain valid grade bands between 0 and 100.');
+    throw new Error('gradeScale must contain valid numeric grade bands between 0 and 100.');
   }
   if (clean.principalRemarkScale && (!Array.isArray(clean.principalRemarkScale) || clean.principalRemarkScale.some(function (b) {
     return !isFinite(Number(b.min)) || Number(b.min) < 0 || Number(b.min) > 100 || !String(b.remark || '').trim();
@@ -2967,7 +2967,11 @@ function issueReportVerification_(data) {
   const record = [reportVerificationHash_(token), snapshotJson, reportVerificationHmac_(snapshotJson), issuedAt, true];
   if (rowNumber) sh.getRange(rowNumber, 1, 1, record.length).setValues([record]);
   else sh.appendRow(record);
-  return 'https://greaterportal.vercel.app/verify.html?code=' + encodeURIComponent(token);
+  const requestedPortalUrl = String(data.portalUrl || '').trim();
+  const safePortalOrigin = /^https:\/\/([a-z0-9-]+\.)*([a-z0-9-]+\.)?vercel\.app$/i.test(requestedPortalUrl)
+    ? requestedPortalUrl.replace(/\/$/, '')
+    : 'https://greaterportal.vercel.app';
+  return safePortalOrigin + '/verify.html?code=' + encodeURIComponent(token);
   } finally { lock.releaseLock(); }
 }
 function adminIssueReportVerification_(p, token) {
@@ -2986,7 +2990,8 @@ function adminIssueReportVerification_(p, token) {
   const template = portalGetTemplate_();
   const verificationUrl = issueReportVerification_({
     studentId: studentId, studentName: student.name, className: className, term: term,
-    academicYear: academicYear, schoolName: template.schoolName
+    academicYear: academicYear, schoolName: template.schoolName,
+    portalUrl: String(p.portalUrl || '')
   });
   return {
     verificationUrl: verificationUrl,
