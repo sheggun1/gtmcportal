@@ -451,6 +451,8 @@ function gtmcCreateAuditArchiveVolume_() {
   const sh = ss.getSheets()[0];
   sh.setName('Audit');
   sh.getRange(1, 1, 1, 4).setValues([['timestamp', 'email', 'action', 'details']]);
+  // Keep the archive grid to four columns so its cell budget is used for audit rows.
+  if (sh.getMaxColumns() > 4) sh.deleteColumns(5, sh.getMaxColumns() - 4);
   sh.setFrozenRows(1);
   ids.push(ss.getId());
   PropertiesService.getScriptProperties().setProperty(GTMC_AUDIT_ARCHIVE_PROP_, JSON.stringify(ids));
@@ -499,6 +501,10 @@ function gtmcArchiveAuditRows_() {
 
   if (!alreadyCopied) {
     const start = dest.getLastRow() + 1;
+    const requiredLastRow = start + sourceRows.length - 1;
+    if (dest.getMaxRows() < requiredLastRow) {
+      dest.insertRowsAfter(dest.getMaxRows(), requiredLastRow - dest.getMaxRows());
+    }
     dest.getRange(start, 1, sourceRows.length, 4).setValues(sourceRows);
     SpreadsheetApp.flush();
     const written = dest.getRange(start, 1, sourceRows.length, 4).getValues();
