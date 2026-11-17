@@ -50,7 +50,7 @@ function gtmcFeatureActionMap_(action) {
     adminListUsers:'userManagement',adminCreateUser:'userManagement',
     adminUpdateUser:'userManagement',adminSetUserStatus:'userManagement',adminSetUserActive:'userManagement',
     adminResetUserPassword:'userManagement',
-    boardingList:'boarding',boardingPerformance:'boarding',boardingAssign:'boarding',boardingEnd:'boarding',
+    boardingList:'boarding',boardingStudentOptions:'boarding',boardingPerformance:'boarding',boardingAssign:'boarding',boardingEnd:'boarding',
     boardingRecordExit:'boarding',boardingRecordReturn:'boarding',boardingHistory:'boarding',boardingDashboard:'boarding'
   };
   return map[String(action||'')]||'';
