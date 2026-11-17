@@ -4137,9 +4137,13 @@ if (S.token && S.user) boot();
   .rc-main{display:grid;grid-template-columns:minmax(0,1fr) 245px;gap:10px;margin-bottom:8px}
   .rc-bar{background:var(--rcp);color:#fff;text-align:center;font-weight:800;font-size:10.5px;letter-spacing:.06em;padding:5px;text-transform:uppercase}
   .rc-scroll{overflow-x:auto}
-  .rc-t{width:100%;border-collapse:collapse;font-size:10.5px}
-  .rc-t th{background:var(--rcp);color:#fff;font-size:9px;padding:4px;border:1px solid #fff;text-align:center;text-transform:uppercase;position:static}
-  .rc-t td{border:1px solid #cbd5e1;padding:3px 5px;text-align:center}
+  .rc-t{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px;font-weight:800}
+  .rc-t th{background:var(--rcp);color:#fff;font-size:10px;font-weight:900;padding:5px 4px;border:1px solid #fff;text-align:center;text-transform:uppercase;position:static}
+  .rc-t td{border:1px solid #cbd5e1;padding:5px 6px;text-align:center;font-size:11.5px;font-weight:800}
+  .rc-subject-table{width:100%;min-width:100%;table-layout:fixed}
+  .rc-subject-table td.l{font-size:12px;font-weight:900;text-align:left;padding-left:8px}
+  .rc-subject-table td:not(.l){font-size:11.5px;font-weight:900}
+  .rc-subject-table th{font-size:10px;font-weight:900}
   .rc-t td.l{text-align:left;text-transform:uppercase}
   .rc-t tbody tr:nth-child(even) td{background:#f8fafc}
   .rc-t tbody tr:hover td{background:inherit}
@@ -4251,7 +4255,7 @@ function gtmcCardHTML(r, withId) {
   <div class="rc-main">
     <div>
       <div class="rc-bar">Cognitive Domain</div>
-      <div class="rc-scroll"><table class="rc-t"><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
+      <div class="rc-scroll"><table class="rc-t rc-subject-table"><colgroup>${cols.map((c, i) => `<col style="width:${i === 0 ? 5 : i === 1 ? 27 : (68 / Math.max(1, cols.length - 2)).toFixed(3)}%">`).join('')}</colgroup><thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>
     </div>
     <div class="rc-side">
       ${domRows ? `<div><div class="rc-bar">Affective / Psychomotor Domain</div><table class="rc-t"><tbody>${domRows}</tbody></table><div class="rc-legend">5 = Excellent &middot; 4 = Very Good &middot; 3 = Good &middot; 2 = Fair &middot; 1 = Needs Improvement</div></div>` : ''}
