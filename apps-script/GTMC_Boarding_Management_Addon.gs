@@ -39,10 +39,11 @@ function gtmcBoardingUser_(token,allowAll){
   throw new Error('You do not have permission to access Boarding Management.');
 }
 function gtmcBoardingStudent_(studentId,className){
-  var rows=sheetToObjects(getSheet('Students'));
-  var s=rows.filter(function(x){return String(x.student_id)===String(studentId)&&String(x.class)===String(className);})[0];
-  if(!s)throw new Error('Student not found in the selected class.');
-  return s;
+  if(CLASSES.indexOf(String(className))<0)throw new Error('Unknown class.');
+  var sh=getSheet(String(className)),last=sh.getLastRow(),found=null;
+  if(last>=4){var data=sh.getRange(4,1,last-3,2).getValues();for(var i=0;i<data.length;i++){if(String(data[i][0])===String(studentId)){found={student_id:String(data[i][0]),name:String(data[i][1]),class:String(className)};break;}}}
+  if(!found)throw new Error('Student not found in the selected class.');
+  return found;
 }
 function gtmcBoardingCharge_(student,section,year,term,actor){
   var fs=sheetToObjects(getSheet('FeeStructures'));
@@ -81,6 +82,12 @@ function gtmcBoardingEnd_(p,token){
   sh.getRange(idx+2,6).setValue('Day Student');sh.getRange(idx+2,12).setValue(new Date());sh.getRange(idx+2,13).setValue(u.email);
   logAudit(u.email,'boardingStatusEnded',{assignmentId:p.assignmentId});
   return {success:true};
+}
+function gtmcBoardingStudentOptions_(p,token){
+  var access=gtmcBoardingUser_(token,true);if(!access.all)throw new Error('Only the VP Administration or an administrator can register boarders.');
+  var cls=String(p.className||'').trim();if(CLASSES.indexOf(cls)<0)throw new Error('Choose a valid class.');
+  var sh=getSheet(cls),last=sh.getLastRow();if(last<4)return [];
+  return sh.getRange(4,1,last-3,2).getValues().filter(function(r){return r[0]!==''&&r[1]!=='';}).map(function(r){return {student_id:String(r[0]),name:String(r[1]),class:cls};});
 }
 function gtmcBoardingList_(p,token){
   var access=gtmcBoardingUser_(token,false),rows=sheetToObjects(getSheet('BoardingAssignments'));
@@ -134,6 +141,7 @@ route=function(action,p){
   p=p||{};
   switch(action){
     case 'boardingList':return gtmcBoardingList_(p,p.token);
+    case 'boardingStudentOptions':return gtmcBoardingStudentOptions_(p,p.token);
     case 'boardingAssign':return gtmcBoardingAssign_(p,p.token);
     case 'boardingEnd':return gtmcBoardingEnd_(p,p.token);
     case 'boardingRecordExit':return gtmcBoardingRecordExit_(p,p.token);
