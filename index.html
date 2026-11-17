@@ -4287,8 +4287,16 @@ function gtmcCardHTML(r, withId) {
   };
   const scoreCell = (s, key, value, comparisonOverride) => {
     const v = n(value);
-    const b = comparisonOverride !== undefined ? n(comparisonOverride) : benchmark(s, key);
     if (v === null) return f(value);
+
+    // Fixed school-wide report-card thresholds (display only; never alter marks).
+    const fixedThresholds = { T1: 5, T2: 5, T3: 5, ca: 15, Exam: 35, total: 50 };
+    const threshold = Object.prototype.hasOwnProperty.call(fixedThresholds, key)
+      ? fixedThresholds[key]
+      : null;
+    const b = threshold !== null
+      ? threshold
+      : (comparisonOverride !== undefined ? n(comparisonOverride) : benchmark(s, key));
     if (b === null) return esc(v);
     const isBelow = v < b;
     const colourClass = isBelow ? 'rc-score-below' : 'rc-score-at-or-above';
