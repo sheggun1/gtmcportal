@@ -20,10 +20,12 @@ function gtmcUserMgmtHeaders_(sh) {
   return { values: values, headers: headers };
 }
 function gtmcUserMgmtRole_(role) {
-  var allowed = ['admin','principal','vice_principal','bursar','registrar','class_teacher','subject_teacher','student'];
-  var r = String(role || '').trim().toLowerCase();
-  if (allowed.indexOf(r) < 0) throw new Error('Choose a supported account role.');
-  return r;
+  var allowed = ['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','bursar','registrar','class_teacher','subject_teacher','student','housemaster','housemistress'];
+  var requested = String(role || '').split(',').map(function(x){return x.trim().toLowerCase();}).filter(Boolean);
+  var unique = requested.filter(function(x,i,a){return a.indexOf(x)===i;});
+  if (!unique.length || unique.some(function(x){return allowed.indexOf(x)<0;})) throw new Error('Choose supported account roles.');
+  if(unique.indexOf('housemaster')>=0 && unique.indexOf('housemistress')>=0) throw new Error('An account cannot manage both boarding sections.');
+  return unique.join(',');
 }
 function adminListUsers_(p, token) {
   gtmcUserMgmtRequireAdmin_(token);
@@ -33,7 +35,7 @@ function adminListUsers_(p, token) {
       email: String(u.email || ''), name: String(u.name || ''),
       role: String(u.role || ''), class: String(u.class || ''),
       class_teacher_class: String(u.class_teacher_class || ''),
-      subjects: String(u.subjects || ''),
+      subjects: String(u.subjects || ''), boarding_section: String(u.boarding_section || ''),
       active: u.active === true || String(u.active).toLowerCase() === 'true'
     };
   }).filter(function(u){ return !!u.email; });
@@ -41,7 +43,7 @@ function adminListUsers_(p, token) {
 function adminCreateUser_(p, token) {
   var admin = gtmcUserMgmtRequireAdmin_(token);
   var name = String(p.name || '').trim(), email = String(p.email || '').trim().toLowerCase();
-  var password = String(p.password || ''), role = gtmcUserMgmtRole_(p.role);
+  var password = String(p.password || ''), role = gtmcUserMgmtRole_(p.roles || p.role);
   if (!name || !email || !password) throw new Error('Full name, email and temporary password are required.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
   if (password.length < 8) throw new Error('Temporary password must contain at least 8 characters.');
@@ -54,6 +56,7 @@ function adminCreateUser_(p, token) {
   put('class',String(p.class || '').trim()); put('subjects',String(p.subjects || '').trim());
   put('password',password); put('active',true);
   put('class_teacher_class',String(p.class_teacher_class || '').trim());
+  put('boarding_section',String(p.boarding_section || (role.split(',').indexOf('housemaster')>=0?'Boys':role.split(',').indexOf('housemistress')>=0?'Girls':'' )).trim());
   sh.appendRow(row);
   logAudit(admin.email,'adminCreateUser',{email:email,role:role});
   return {success:true,email:email,role:role};
@@ -62,7 +65,7 @@ function adminUpdateUser_(p, token) {
   var admin = gtmcUserMgmtRequireAdmin_(token);
   var email = String(p.email || '').trim().toLowerCase();
   if(!email) throw new Error('Account email is required.');
-  var role = gtmcUserMgmtRole_(p.role);
+  var role = gtmcUserMgmtRole_(p.roles || p.role);
   if(email === String(admin.email || '').toLowerCase() && role !== 'admin') throw new Error('You cannot remove your own administrator role.');
   var sh=getSheet('Users'), hm=gtmcUserMgmtHeaders_(sh), emailCol=hm.headers.indexOf('email'), rowNum=-1;
   for(var i=1;i<hm.values.length;i++) if(String(hm.values[i][emailCol]||'').trim().toLowerCase()===email){rowNum=i+1;break;}
@@ -76,6 +79,7 @@ function adminUpdateUser_(p, token) {
   set('name',String(p.name||'').trim()); set('role',role);
   set('class',String(p.class||'').trim()); set('subjects',String(p.subjects||'').trim());
   set('class_teacher_class',String(p.class_teacher_class||'').trim());
+  set('boarding_section',String(p.boarding_section || (role.split(',').indexOf('housemaster')>=0?'Boys':role.split(',').indexOf('housemistress')>=0?'Girls':'' )).trim());
   logAudit(admin.email,'adminUpdateUser',{email:email,role:role});
   return {success:true};
 }
