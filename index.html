@@ -1296,6 +1296,11 @@ async function renderAdmin() {
           <label class="check"><input type="checkbox" id="tplShowTests" checked> Show CA scores</label><label class="check"><input type="checkbox" id="tplShowExam" checked> Show Exam</label><label class="check"><input type="checkbox" id="tplShowTotals" checked> Show Subject Totals</label><label class="check"><input type="checkbox" id="tplShowGrade" checked> Show Grades</label>
           <label class="check"><input type="checkbox" id="tplShowTeacherRemark" checked> Teacher Remarks</label><label class="check"><input type="checkbox" id="tplShowPrincipalRemark" checked> Principal Remarks</label><label class="check"><input type="checkbox" id="tplShowAttendance" checked> Attendance</label><label class="check"><input type="checkbox" id="tplShowAffective" checked> Affective</label><label class="check"><input type="checkbox" id="tplShowPsychomotor" checked> Psychomotor</label><label class="check"><input type="checkbox" id="tplShowTermDates" checked> Term Dates</label><label class="check"><input type="checkbox" id="tplShowAIComment" checked> AI Comment</label><label class="check"><input type="checkbox" id="tplShowAnnualAverage" checked> Annual Average</label>
         </div></div>
+        <div class="card" style="margin-top:12px;background:#fffdf5">
+          <h2>Automatic Principal Comments by Result Percentage</h2>
+          <p class="sub">Enter one rule per line using: <strong>minimum percentage | principal comment</strong>. The highest matching threshold is used. Example: 75 | Excellent performance.</p>
+          <textarea id="tplPrincipalRemarkScale" rows="7" style="width:100%;font-family:inherit" placeholder="75 | Excellent performance. Keep it up.&#10;60 | A very good result. Aim higher.&#10;50 | A good result. Continue working hard.&#10;40 | More effort is required.&#10;0 | Significant improvement is needed."></textarea>
+        </div>
         <div class="row" style="margin-top:14px"><button class="ok" onclick="saveTemplate()">Save Template</button><button class="sec" onclick="previewTemplate()">Preview Template</button><button class="sec" onclick="resetTemplatePreview()">Reset Preview</button></div>
         <div id="tplStatus"></div>
         <div id="tplPreview" class="template-preview" aria-live="polite" style="display:none;margin-top:18px"></div>
@@ -1856,11 +1861,40 @@ async function loadTemplate() {
     sv('tplStamp', t.schoolStampUrl || '');
     sv('tplPrimary', t.primaryColor || '#0756a8');
     sv('tplSecondary', t.secondaryColor || '#ffffff');
+    const defaultPrincipalBands = [
+      {min:75,remark:'Excellent performance. Keep up the outstanding work.'},
+      {min:60,remark:'A very good result. Aim even higher.'},
+      {min:50,remark:'A good result. Continue working hard.'},
+      {min:40,remark:'A fair result. More consistent effort is needed.'},
+      {min:0,remark:'This result needs improvement. Please work harder and seek support.'}
+    ];
+    const principalBands = Array.isArray(t.principalRemarkScale) && t.principalRemarkScale.length ? t.principalRemarkScale : defaultPrincipalBands;
+    const principalEditor = q('tplPrincipalRemarkScale');
+    if (principalEditor) principalEditor.value = principalBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+String(b.remark||'')).join('\\n');
     const checks = {tplShowTests:'showTests',tplShowExam:'showExam',tplShowTotals:'showSubjectTotals',tplShowGrade:'showGrade',tplShowTeacherRemark:'showTeacherRemark',tplShowPrincipalRemark:'showPrincipalRemark',tplShowAttendance:'showAttendance',tplShowAffective:'showAffective',tplShowPsychomotor:'showPsychomotor',tplShowTermDates:'showTermDates',tplShowAIComment:'showAIComment',tplShowAnnualAverage:'showAnnualAverage'};
     Object.entries(checks).forEach(([id,key])=>{const el=q(id);if(el)el.checked=t[key]!==false;});
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
+function parsePrincipalRemarkBands_(raw) {
+  const lines = String(raw || '').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+  if (!lines.length) throw new Error('Enter at least one principal comment threshold.');
+  const bands = lines.map((line,index)=>{
+    const split = line.indexOf('|');
+    if (split < 0) throw new Error('Line '+(index+1)+' must use: percentage | comment');
+    const min = Number(line.slice(0,split).trim());
+    const remark = line.slice(split+1).trim();
+    if (!Number.isFinite(min) || min < 0 || min > 100 || !remark) throw new Error('Line '+(index+1)+' needs a percentage from 0 to 100 and a comment.');
+    return {min,remark};
+  }).sort((a,b)=>b.min-a.min);
+  if (!bands.some(b=>b.min===0)) throw new Error('Add a 0 | comment rule so every result has a principal comment.');
+  const seen = new Set();
+  bands.forEach(b=>{if(seen.has(b.min))throw new Error('Duplicate threshold: '+b.min+'%.');seen.add(b.min);});
+  return bands;
+}
 async function saveTemplate() {
+  let principalRemarkScale;
+  try { principalRemarkScale = parsePrincipalRemarkBands_(q('tplPrincipalRemarkScale').value); }
+  catch (e) { q('tplStatus').innerHTML = '<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">'+esc(e.message)+'</div>'; toast(e.message,'err'); return; }
   const template = {
     schoolName: q('tplSchoolName').value.trim(),
     schoolAddress: q('tplAddress').value.trim(),
@@ -1871,6 +1905,7 @@ async function saveTemplate() {
     schoolStampUrl: q('tplStamp').value.trim(),
     primaryColor: q('tplPrimary').value,
     secondaryColor: q('tplSecondary').value,
+    principalRemarkScale,
     showTests:q('tplShowTests').checked, showExam:q('tplShowExam').checked, showSubjectTotals:q('tplShowTotals').checked, showGrade:q('tplShowGrade').checked,
     showTeacherRemark:q('tplShowTeacherRemark').checked, showPrincipalRemark:q('tplShowPrincipalRemark').checked, showAttendance:q('tplShowAttendance').checked, showAffective:q('tplShowAffective').checked, showPsychomotor:q('tplShowPsychomotor').checked, showTermDates:q('tplShowTermDates').checked, showAIComment:q('tplShowAIComment').checked, showAnnualAverage:q('tplShowAnnualAverage').checked
   };
@@ -2144,8 +2179,15 @@ async function buildReportPayload(className, studentId, studentName, term, acade
 }
 
 function gradeFor(score, scale) {
-  if (!Array.isArray(scale)) return '';
-  const item = scale.find(g => Number(score) >= Number(g.min) && Number(score) <= Number(g.max));
+  const bands = Array.isArray(scale) && scale.length ? scale : [
+    {min:80,max:100,grade:'A'},
+    {min:70,max:79.99,grade:'B'},
+    {min:60,max:69.99,grade:'C'},
+    {min:50,max:59.99,grade:'D'},
+    {min:40,max:49.99,grade:'E'},
+    {min:0,max:39.99,grade:'F'}
+  ];
+  const item = bands.find(g => Number(score) >= Number(g.min) && Number(score) <= Number(g.max));
   return item ? String(item.grade || '') : '';
 }
 
