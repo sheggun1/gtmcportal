@@ -29,7 +29,7 @@ function installBoarding(){
 }
 window.gtmcBoardingLoadClassStudents=async function(){
  const cls=$('brClass')&&$('brClass').value;if(!cls)return;
- try{const rows=await api('getStudents',{className:cls});$('brStudent').innerHTML=rows.map(x=>'<option value="'+escv(x.student_id)+'">'+escv(x.name)+' · '+escv(x.student_id)+'</option>').join('');}catch(e){toast(e.message,'err');}
+ try{const rows=await api('boardingStudentOptions',{className:cls});$('brStudent').innerHTML=rows.map(x=>'<option value="'+escv(x.student_id)+'">'+escv(x.name)+' · '+escv(x.student_id)+'</option>').join('');}catch(e){toast(e.message,'err');}
 };
 window.gtmcBoardingLoad=async function(){
  if(!$('boardingPanel'))return;
