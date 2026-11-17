@@ -1308,6 +1308,11 @@ async function renderAdmin() {
           <label class="check"><input type="checkbox" id="tplShowTests" checked> Show CA scores</label><label class="check"><input type="checkbox" id="tplShowExam" checked> Show Exam</label><label class="check"><input type="checkbox" id="tplShowTotals" checked> Show Subject Totals</label><label class="check"><input type="checkbox" id="tplShowGrade" checked> Show Grades</label>
           <label class="check"><input type="checkbox" id="tplShowTeacherRemark" checked> Teacher Remarks</label><label class="check"><input type="checkbox" id="tplShowPrincipalRemark" checked> Principal Remarks</label><label class="check"><input type="checkbox" id="tplShowAttendance" checked> Attendance</label><label class="check"><input type="checkbox" id="tplShowAffective" checked> Affective</label><label class="check"><input type="checkbox" id="tplShowPsychomotor" checked> Psychomotor</label><label class="check"><input type="checkbox" id="tplShowTermDates" checked> Term Dates</label><label class="check"><input type="checkbox" id="tplShowAIComment" checked> AI Comment</label><label class="check"><input type="checkbox" id="tplShowAnnualAverage" checked> Annual Average</label>
         </div></div>
+        <div class="card" style="margin-top:12px;background:#f7faff">
+          <h2>Grade Scale Settings</h2>
+          <p class="sub">Set the score range, letter grade and grade description. Use one rule per line: <strong>minimum | maximum | grade | description</strong>. The ranges must cover 0–100 without gaps or overlaps.</p>
+          <textarea id="tplGradeScale" rows="7" style="width:100%;font-family:inherit" placeholder="80 | 100 | A | Excellent&#10;70 | 79.99 | B | Very Good&#10;60 | 69.99 | C | Good&#10;50 | 59.99 | D | Credit&#10;40 | 49.99 | E | Pass&#10;0 | 39.99 | F | Needs Improvement"></textarea>
+        </div>
         <div class="card" style="margin-top:12px;background:#fffdf5">
           <h2>Automatic Principal Comments by Result Percentage</h2>
           <p class="sub">Enter one rule per line using: <strong>minimum percentage | principal comment</strong>. The highest matching threshold is used. Example: 75 | Excellent performance.</p>
@@ -1873,6 +1878,17 @@ async function loadTemplate() {
     sv('tplStamp', t.schoolStampUrl || '');
     sv('tplPrimary', t.primaryColor || '#0756a8');
     sv('tplSecondary', t.secondaryColor || '#ffffff');
+    const defaultGradeBands = [
+      {min:80,max:100,grade:'A',remark:'Excellent'},
+      {min:70,max:79.99,grade:'B',remark:'Very Good'},
+      {min:60,max:69.99,grade:'C',remark:'Good'},
+      {min:50,max:59.99,grade:'D',remark:'Credit'},
+      {min:40,max:49.99,grade:'E',remark:'Pass'},
+      {min:0,max:39.99,grade:'F',remark:'Needs Improvement'}
+    ];
+    const gradeBands = Array.isArray(t.gradeScale) && t.gradeScale.length ? t.gradeScale : defaultGradeBands;
+    const gradeEditor = q('tplGradeScale');
+    if (gradeEditor) gradeEditor.value = gradeBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+Number(b.max)+' | '+String(b.grade||'')+' | '+String(b.remark||'')).join('\\n');
     const defaultPrincipalBands = [
       {min:75,remark:'Excellent performance. Keep up the outstanding work.'},
       {min:60,remark:'A very good result. Aim even higher.'},
@@ -1886,6 +1902,28 @@ async function loadTemplate() {
     const checks = {tplShowTests:'showTests',tplShowExam:'showExam',tplShowTotals:'showSubjectTotals',tplShowGrade:'showGrade',tplShowTeacherRemark:'showTeacherRemark',tplShowPrincipalRemark:'showPrincipalRemark',tplShowAttendance:'showAttendance',tplShowAffective:'showAffective',tplShowPsychomotor:'showPsychomotor',tplShowTermDates:'showTermDates',tplShowAIComment:'showAIComment',tplShowAnnualAverage:'showAnnualAverage'};
     Object.entries(checks).forEach(([id,key])=>{const el=q(id);if(el)el.checked=t[key]!==false;});
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
+}
+function parseGradeScaleBands_(raw) {
+  const lines = String(raw || '').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+  if (!lines.length) throw new Error('Enter at least one grade band.');
+  const bands = lines.map((line,index)=>{
+    const parts = line.split('|').map(x=>x.trim());
+    if (parts.length < 3) throw new Error('Grade line '+(index+1)+' must use: minimum | maximum | grade | description');
+    const min = Number(parts[0]), max = Number(parts[1]), grade = parts[2], remark = parts.slice(3).join(' | ').trim();
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max > 100 || min > max || !grade) {
+      throw new Error('Grade line '+(index+1)+' needs valid minimum/maximum scores between 0 and 100 and a grade letter.');
+    }
+    if (Math.round(min*100)!==min*100 || Math.round(max*100)!==max*100) throw new Error('Use no more than two decimal places in grade ranges.');
+    return {min,max,grade,remark};
+  }).sort((a,b)=>a.min-b.min);
+  if (bands[0].min !== 0 || bands[bands.length-1].max !== 100) throw new Error('Grade ranges must start at 0 and end at 100.');
+  for (let i=1;i<bands.length;i++) {
+    if (Math.abs(bands[i-1].max + 0.01 - bands[i].min) > 0.000001) {
+      throw new Error('Grade ranges must be continuous with no gaps or overlaps. Check the boundary between '+bands[i-1].grade+' and '+bands[i].grade+'.');
+    }
+  }
+  const sorted = bands.slice().sort((a,b)=>b.min-a.min);
+  return sorted;
 }
 function parsePrincipalRemarkBands_(raw) {
   const lines = String(raw || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
@@ -1904,9 +1942,14 @@ function parsePrincipalRemarkBands_(raw) {
   return bands;
 }
 async function saveTemplate() {
-  let principalRemarkScale;
-  try { principalRemarkScale = parsePrincipalRemarkBands_(q('tplPrincipalRemarkScale').value); }
-  catch (e) { q('tplStatus').innerHTML = '<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">'+esc(e.message)+'</div>'; toast(e.message,'err'); return; }
+  let principalRemarkScale, gradeScale;
+  try {
+    gradeScale = parseGradeScaleBands_(q('tplGradeScale').value);
+    principalRemarkScale = parsePrincipalRemarkBands_(q('tplPrincipalRemarkScale').value);
+  } catch (e) {
+    q('tplStatus').innerHTML = '<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">'+esc(e.message)+'</div>';
+    toast(e.message,'err'); return;
+  }
   const template = {
     schoolName: q('tplSchoolName').value.trim(),
     schoolAddress: q('tplAddress').value.trim(),
@@ -1917,6 +1960,7 @@ async function saveTemplate() {
     schoolStampUrl: q('tplStamp').value.trim(),
     primaryColor: q('tplPrimary').value,
     secondaryColor: q('tplSecondary').value,
+    gradeScale,
     principalRemarkScale,
     showTests:q('tplShowTests').checked, showExam:q('tplShowExam').checked, showSubjectTotals:q('tplShowTotals').checked, showGrade:q('tplShowGrade').checked,
     showTeacherRemark:q('tplShowTeacherRemark').checked, showPrincipalRemark:q('tplShowPrincipalRemark').checked, showAttendance:q('tplShowAttendance').checked, showAffective:q('tplShowAffective').checked, showPsychomotor:q('tplShowPsychomotor').checked, showTermDates:q('tplShowTermDates').checked, showAIComment:q('tplShowAIComment').checked, showAnnualAverage:q('tplShowAnnualAverage').checked
@@ -4236,13 +4280,36 @@ async function renderReportVerificationQr(root) {
   if (!root) return;
   const images = Array.from(root.querySelectorAll('.rc-verify-qr[data-verify-url]'));
   if (!images.length) return;
-  if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
-    images.forEach(img => { img.alt = 'QR code library unavailable'; });
-    return;
-  }
   await Promise.all(images.map(async img => {
-    try { img.src = await window.QRCode.toDataURL(img.getAttribute('data-verify-url'), { width: 220, margin: 1, errorCorrectionLevel: 'M' }); }
-    catch (e) { img.alt = 'QR code could not be generated'; }
+    const verifyUrl = String(img.getAttribute('data-verify-url') || '').trim();
+    if (!/^https:\\/\\//i.test(verifyUrl)) {
+      img.alt = 'Invalid report verification link';
+      return;
+    }
+    img.width = 220;
+    img.height = 220;
+    img.decoding = 'sync';
+    img.referrerPolicy = 'no-referrer';
+    try {
+      if (window.QRCode && typeof window.QRCode.toDataURL === 'function') {
+        const dataUrl = await window.QRCode.toDataURL(verifyUrl, { width: 220, margin: 2, errorCorrectionLevel: 'H', type: 'image/png' });
+        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/png;base64,')) throw new Error('QR generator returned an invalid image.');
+        img.src = dataUrl;
+        if (typeof img.decode === 'function') await img.decode();
+        return;
+      }
+      throw new Error('QR library unavailable');
+    } catch (error) {
+      // Last-resort image service keeps report verification usable when the bundled CDN library is blocked.
+      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&format=png&data=' + encodeURIComponent(verifyUrl);
+      try {
+        if (typeof img.decode === 'function') await img.decode();
+      } catch (fallbackError) {
+        img.removeAttribute('src');
+        img.alt = 'QR code could not be loaded. Open the report verification link manually.';
+        img.title = verifyUrl;
+      }
+    }
   }));
 }
 async function gtmcAddCardPage(doc, r, first) {
