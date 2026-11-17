@@ -1888,7 +1888,7 @@ async function loadTemplate() {
     ];
     const gradeBands = Array.isArray(t.gradeScale) && t.gradeScale.length ? t.gradeScale : defaultGradeBands;
     const gradeEditor = q('tplGradeScale');
-    if (gradeEditor) gradeEditor.value = gradeBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+Number(b.max)+' | '+String(b.grade||'')+' | '+String(b.remark||'')).join('\\n');
+    if (gradeEditor) gradeEditor.value = gradeBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+Number(b.max)+' | '+String(b.grade||'')+' | '+String(b.remark||'')).join('\n');
     const defaultPrincipalBands = [
       {min:75,remark:'Excellent performance. Keep up the outstanding work.'},
       {min:60,remark:'A very good result. Aim even higher.'},
@@ -1904,7 +1904,7 @@ async function loadTemplate() {
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
 function parseGradeScaleBands_(raw) {
-  const lines = String(raw || '').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+  const lines = String(raw || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   if (!lines.length) throw new Error('Enter at least one grade band.');
   const bands = lines.map((line,index)=>{
     const parts = line.split('|').map(x=>x.trim());
@@ -4282,7 +4282,7 @@ async function renderReportVerificationQr(root) {
   if (!images.length) return;
   await Promise.all(images.map(async img => {
     const verifyUrl = String(img.getAttribute('data-verify-url') || '').trim();
-    if (!/^https:\\/\\//i.test(verifyUrl)) {
+    if (!/^https:\/\/\//i.test(verifyUrl)) {
       img.alt = 'Invalid report verification link';
       return;
     }
