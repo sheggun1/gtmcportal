@@ -4162,7 +4162,8 @@ function gtmcCardHTML(r, withId) {
   const absent = (Number(opened) && Number(present) >= 0 && present !== '' && present != null) ? Number(opened) - Number(present) : null;
 
   const sum = [['Marks<br>Obtainable', max || '—'], ['Marks<br>Obtained', done.length ? got : '—'], ['Average', avg == null ? '—' : avg + '%']];
-  if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className) , esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
+  if (r.positionArm && r.positionArm.position != null) sum.push(['Position in<br>' + esc(r.positionArm.armName || r.student.className), esc(r.positionArm.position) + ' of ' + esc(r.positionArm.outOf)]);
+  if (r.positionClass && r.positionClass.position != null) sum.push(['Position across<br>' + esc(r.positionClass.baseName || 'Class'), esc(r.positionClass.position) + ' of ' + esc(r.positionClass.outOf)]);
   if (size) sum.push(['No. in<br>Class', size]);
   if (r.term !== 'Term1') [['Term 1', r.term1Average], ['Term 2', r.term2Average], ['Term 3', r.term3Average], ['Cumulative', r.cumulativeAverage]]
     .forEach(([l, v]) => { if (v != null) sum.push([l + '<br>Avg', v + '%']); });
@@ -4173,6 +4174,7 @@ function gtmcCardHTML(r, withId) {
   const stamp = t.schoolStampUrl ? `<div><img src="${esc(t.schoolStampUrl)}" alt="" onerror="this.remove()"></div>` : '';
   const rem = (label, txt) => `<div class="rc-rem"><b>${label}:</b> ${esc(txt || '—')}</div>`;
   const rd = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const verificationBlock = r.verificationUrl ? `<div style="display:flex;align-items:center;gap:10px;justify-content:flex-end;border-top:1px solid #dce6f1;margin-top:8px;padding-top:7px"><div style="text-align:right;font-size:8px;line-height:1.35"><b>AUTHENTICITY VERIFICATION</b><br>Scan to verify this report with GTMC<br><span style="color:#63778d">Reference: ${esc(String(r.verificationUrl).split('code=')[1] || '').slice(-10)}</span></div><img class="rc-verify-qr" data-verify-url="${esc(r.verificationUrl)}" alt="GTMC report verification QR code" style="width:76px;height:76px;object-fit:contain"></div>` : '';
 
   return `<div ${withId ? 'id="reportCard" ' : ''}class="rc" style="--rcp:${esc(P)}">
   <div class="rc-head">
@@ -4215,6 +4217,7 @@ function gtmcCardHTML(r, withId) {
   ${t.showTeacherRemark !== false ? rem('Class Teacher', r.teacherRemark) : ''}
   ${t.showPrincipalRemark !== false ? rem('Principal', r.principalRemark) : ''}
   ${(t.showAIComment !== false && r.aiComment) ? rem('Comment', r.aiComment) : ''}
+  ${verificationBlock}
   <div class="rc-foot">Report generated on ${rd}. Please contact the school if you notice any discrepancy.</div>
 </div>`;
 }
@@ -4225,15 +4228,30 @@ renderParentReport = function (r) {
   q('pReportBox').innerHTML =
     (b > 0 ? `<div class="debt-banner"><span>⚠ Outstanding balance: <strong>₦${b.toLocaleString()}</strong> — kindly settle at the school bursary.</span></div>` : '') +
     gtmcCardHTML(r, true);
+  renderReportVerificationQr(q('pReportBox'));
 };
 
 /* ---------- 3. PDFs use the same design as the screen ---------- */
+async function renderReportVerificationQr(root) {
+  if (!root) return;
+  const images = Array.from(root.querySelectorAll('.rc-verify-qr[data-verify-url]'));
+  if (!images.length) return;
+  if (!window.QRCode || typeof window.QRCode.toDataURL !== 'function') {
+    images.forEach(img => { img.alt = 'QR code library unavailable'; });
+    return;
+  }
+  await Promise.all(images.map(async img => {
+    try { img.src = await window.QRCode.toDataURL(img.getAttribute('data-verify-url'), { width: 220, margin: 1, errorCorrectionLevel: 'M' }); }
+    catch (e) { img.alt = 'QR code could not be generated'; }
+  }));
+}
 async function gtmcAddCardPage(doc, r, first) {
   const host = document.createElement('div');
   host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff';
   host.innerHTML = gtmcCardHTML(r, false);
   document.body.appendChild(host);
   try {
+    await renderReportVerificationQr(host);
     const c = await window.html2canvas(host, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, windowWidth: 900 });
     if (!first) doc.addPage();
     const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), m = 18;
@@ -4264,7 +4282,7 @@ async function gtmcExport(each) {
       const st = eligibleStudents[i];
       status.textContent = `Building ${i + 1}/${eligibleStudents.length} — ${st.name}`;
       const r = await buildReportPayload(className, st.student_id, st.name, term, year);
-      r.classSize = students.length;
+      r.classSize = r.classSize || students.length;
       if (each) {
         doc = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
         await gtmcAddCardPage(doc, r, true);
