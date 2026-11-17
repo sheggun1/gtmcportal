@@ -527,7 +527,7 @@ function gtmcCollectAuditRowsFromSheet_(sheet, p, limit) {
   if (!sheet || sheet.getLastRow() < 2) return found;
   const headers = sheet.getRange(1, 1, 1, 4).getValues()[0].map(String);
   const emailFilter = String(p.email || '').toLowerCase();
-  const actionFilter = String(p.action || '').toLowerCase();
+  const actionFilter = String(p.actionFilter || '').toLowerCase();
   const from = p.fromDate ? new Date(p.fromDate).getTime() : -Infinity;
   const to = p.toDate ? new Date(p.toDate).getTime() : Infinity;
   const last = sheet.getLastRow();
