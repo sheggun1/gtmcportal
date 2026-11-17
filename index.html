@@ -2165,7 +2165,7 @@ async function loadAuditLogs() {
   if (status) status.textContent = 'Retrieving audit history…';
   const filters = {
     email: q('auditEmail')?.value.trim() || '',
-    action: q('auditAction')?.value.trim() || '',
+    actionFilter: q('auditAction')?.value.trim() || '',
     fromDate: q('auditFrom')?.value || '',
     toDate: q('auditTo')?.value ? q('auditTo').value + 'T23:59:59' : '',
     limit: 500
