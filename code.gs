@@ -3105,6 +3105,84 @@ function parentGetResult(p, token) {
     ? Math.round(completeTotals.reduce(function (a, r) { return a + r.total; }, 0) / subjectResults.length * 100) / 100
     : null;
 
+  // Display-only class-average benchmarks for the published parent report.
+  // Read peers from the same class sheet and selected term; never alter marks.
+  const scoreBenchmarks = {};
+  const benchmarkBuckets = {};
+  subjects.forEach(function (subject) {
+    benchmarkBuckets[subject] = { T1: [], T2: [], T3: [], Exam: [], total: [], caByMask: {} };
+  });
+  const classLastRow = sh.getLastRow();
+  if (classLastRow >= 4) {
+    const classRows = sh.getRange(4, 1, classLastRow - 3, 2 + cellsPerTerm * TERMS.length).getValues();
+    const termOffset = TERMS.indexOf(term) * cellsPerTerm;
+    classRows.forEach(function (classRow) {
+      if (!String(classRow[0] || '').trim()) return;
+      subjects.forEach(function (subject, subjectIndex) {
+        const base = 2 + termOffset + subjectIndex * FIELDS.length;
+        const vals = FIELDS.map(function (_, fieldIndex) {
+          const raw = classRow[base + fieldIndex];
+          return raw === '' || raw === null || raw === undefined || !isFinite(Number(raw)) ? null : Number(raw);
+        });
+        const bucket = benchmarkBuckets[subject];
+        vals.forEach(function (value, fieldIndex) {
+          if (value !== null) bucket[FIELDS[fieldIndex]].push(value);
+        });
+        const mask = vals.slice(0, 3).map(function (value) { return value === null ? '0' : '1'; }).join('');
+        if (mask.indexOf('1') !== -1) {
+          if (!bucket.caByMask[mask]) bucket.caByMask[mask] = [];
+          bucket.caByMask[mask].push(vals.slice(0, 3).reduce(function (sum, value) { return sum + (value === null ? 0 : value); }, 0));
+        }
+        if (vals.every(function (value) { return value !== null; })) {
+          bucket.total.push(vals.reduce(function (sum, value) { return sum + value; }, 0));
+        }
+      });
+    });
+  }
+  subjects.forEach(function (subject) {
+    const bucket = benchmarkBuckets[subject];
+    scoreBenchmarks[subject] = {};
+    ['T1','T2','T3','Exam','total'].forEach(function (key) {
+      const values = bucket[key];
+      scoreBenchmarks[subject][key] = values.length
+        ? values.reduce(function (sum, value) { return sum + value; }, 0) / values.length
+        : null;
+    });
+    scoreBenchmarks[subject].caByMask = {};
+    Object.keys(bucket.caByMask).forEach(function (mask) {
+      const values = bucket.caByMask[mask];
+      scoreBenchmarks[subject].caByMask[mask] =
+        values.reduce(function (sum, value) { return sum + value; }, 0) / values.length;
+    });
+  });
+  const peerOverallAverages = [];
+  const peerMarksObtained = [];
+  if (classLastRow >= 4) {
+    const classRows = sh.getRange(4, 1, classLastRow - 3, 2 + cellsPerTerm * TERMS.length).getValues();
+    const termOffset = TERMS.indexOf(term) * cellsPerTerm;
+    classRows.forEach(function (classRow) {
+      if (!String(classRow[0] || '').trim()) return;
+      const totals = subjects.map(function (_, subjectIndex) {
+        const base = 2 + termOffset + subjectIndex * FIELDS.length;
+        const values = FIELDS.map(function (_, fieldIndex) {
+          const raw = classRow[base + fieldIndex];
+          return raw === '' || raw === null || raw === undefined || !isFinite(Number(raw)) ? null : Number(raw);
+        });
+        return values.every(function (value) { return value !== null; })
+          ? values.reduce(function (sum, value) { return sum + value; }, 0) : null;
+      });
+      if (totals.length && totals.every(function (value) { return value !== null; })) {
+        const marks = totals.reduce(function (sum, value) { return sum + value; }, 0);
+        peerMarksObtained.push(marks);
+        peerOverallAverages.push(marks / totals.length);
+      }
+    });
+  }
+  const overallAverageBenchmark = peerOverallAverages.length
+    ? peerOverallAverages.reduce(function (sum, value) { return sum + value; }, 0) / peerOverallAverages.length : null;
+  const overallMarksObtainedBenchmark = peerMarksObtained.length
+    ? peerMarksObtained.reduce(function (sum, value) { return sum + value; }, 0) / peerMarksObtained.length : null;
+
   const domStart = domainTermStart_(className, term);
   const domVals = sh.getRange(student.row, domStart, 1, DOMAIN_COLS_PER_TERM).getValues()[0];
   const domains = {
@@ -3189,6 +3267,9 @@ function parentGetResult(p, token) {
     term: term, academicYear: academicYear,
     subjects: subjectResults,
     overallAverage: overallAverage,
+    scoreBenchmarks: scoreBenchmarks,
+    overallAverageBenchmark: overallAverageBenchmark,
+    overallMarksObtainedBenchmark: overallMarksObtainedBenchmark,
     complete: completeTotals.length === subjectResults.length,
     domains: domains,
     principalRemark: principalRemark,
