@@ -3984,8 +3984,7 @@ function notifyAnnouncementAudience_(id, message, targetClasses, audience, creat
   const classes = String(targetClasses || 'ALL').trim() === 'ALL' ? null : String(targetClasses).split(',').map(function (x) { return x.trim(); }).filter(Boolean);
   const link = 'announcement:' + id;
   const notifyParents = ['parents','both','all'].indexOf(aud) !== -1;
-  const notifyTeachers = ['teachers','both','all'].indexOf(aud) !== -1;
-  const notifyStudents = ['students','both','all'].indexOf(aud) !== -1;
+  const notifyStaff = ['staff','teachers','both','all'].indexOf(aud) !== -1;
   if (notifyParents) {
     const seen = {};
     sheetToObjects(getSheet('ParentLinks')).forEach(function (r) {
@@ -3997,8 +3996,7 @@ function notifyAnnouncementAudience_(id, message, targetClasses, audience, creat
       createNotification_(email, '', 'New school announcement', message, 'announcement', link, createdBy);
     });
   }
-  if (notifyTeachers) createNotification_('', 'class_teacher', 'New school announcement', message, 'announcement', link, createdBy);
-  if (notifyStudents) createNotification_('', 'student', 'New school announcement', message, 'announcement', link, createdBy);
+  if (notifyStaff) createNotification_('', 'class_teacher', 'New school announcement', message, 'announcement', link, createdBy);
 }
 
 function adminSaveAnnouncement(p, token) {
@@ -4011,7 +4009,7 @@ function adminSaveAnnouncement(p, token) {
 
   if (!message) throw new Error('Message is required.');
   if (message.length > 2000) throw new Error('Message too long (max 2000 chars).');
-  if (['parents','teachers','students','both','all'].indexOf(audience) === -1) throw new Error('audience must be parents, teachers, students, both or all.')
+  if (['parents','staff','teachers','both'].indexOf(audience) === -1) throw new Error('audience must be parents, staff or both.')
 
   if (targetClasses !== 'ALL') {
     const list = targetClasses.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
@@ -4046,7 +4044,7 @@ function getTeacherAnnouncements(p, token) {
   return sheetToObjects(getSheet('Announcements')).filter(function (r) {
     if (!(r.active === true || String(r.active).toLowerCase() === 'true')) return false;
     const audience = String(r.audience || 'parents').toLowerCase();
-    if (audience !== 'teachers' && audience !== 'both' && audience !== 'all') return false;
+    if (audience !== 'staff' && audience !== 'teachers' && audience !== 'both') return false;
     const targets = String(r.target_classes || 'ALL').trim();
     if (targets !== 'ALL' && (!className || targets.split(',').map(function (x) { return x.trim(); }).indexOf(className) === -1)) return false;
     if (r.expires_at && isFinite(new Date(r.expires_at).getTime()) && new Date(r.expires_at).getTime() < now) return false;
@@ -4083,7 +4081,7 @@ function parentGetAnnouncements(p, token) {
   const rows = sheetToObjects(getSheet('Announcements')).filter(function (r) {
     if (r.active !== true) return false;
     const aud = String(r.audience || 'parents').toLowerCase();
-    if (aud !== 'parents' && aud !== 'both' && aud !== 'students' && aud !== 'all') return false;
+    if (aud !== 'parents' && aud !== 'both') return false;
     const t = String(r.target_classes || 'ALL').trim();
     if (t !== 'ALL' && t.split(',').map(function (s) { return s.trim(); }).indexOf(className) === -1) return false;
     if (r.expires_at) {
