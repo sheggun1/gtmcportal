@@ -566,6 +566,11 @@ function gtmcGetAuditHistory_(p, limit) {
 function logAudit(email, action, details) {
   try {
     const audit = getSheet('Audit');
+    // Provision the separate archive spreadsheet automatically on the first audit event.
+    if (!gtmcAuditArchiveIds_().length) {
+      try { gtmcCreateAuditArchiveVolume_(); }
+      catch (createError) { console.error('GTMC audit archive creation deferred: ' + String(createError && createError.message ? createError.message : createError)); }
+    }
     // Archive first if the next write would cross the configured active-row threshold.
     if (audit.getLastRow() >= GTMC_AUDIT_ARCHIVE_TRIGGER_ROWS_) {
       try { gtmcArchiveAuditRows_(); }
