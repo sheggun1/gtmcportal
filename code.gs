@@ -5229,14 +5229,15 @@ function adminCreateRoleAccount(p, token) {
 }
 
 /* ============ ADMIN USER MANAGEMENT (ADDITIVE) ============ */
-const GTMC_MANAGED_ROLES_ = ['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','registrar','bursar','class_teacher','subject_teacher','student'];
+const GTMC_MANAGED_ROLES_ = ['admin','principal','vice_principal','vice_principal_admin','vice_principal_academic','registrar','bursar','class_teacher','subject_teacher','student','housemaster','housemistress'];
 
 function adminUserSheetInfo_() {
   const sh = getSheet('Users');
   const values = sh.getDataRange().getValues();
   if (!values.length) throw new Error('Users sheet has no header row');
   const headers = values[0].map(function (h) { return String(h || '').trim().toLowerCase(); });
-  ['email','name','role','class','subjects','password','active','class_teacher_class'].forEach(function (key) {
+  if (headers.indexOf('boarding_section') < 0) { headers.push('boarding_section'); sh.getRange(1, headers.length).setValue('boarding_section'); }
+  ['email','name','role','class','subjects','password','active','class_teacher_class','boarding_section'].forEach(function (key) {
     if (headers.indexOf(key) < 0) throw new Error('Users sheet is missing required column: ' + key);
   });
   return { sheet: sh, values: values, headers: headers };
@@ -5258,7 +5259,7 @@ function adminListUsers(p, token) {
       email: String(r[ix('email')] || ''), name: String(r[ix('name')] || ''),
       role: String(r[ix('role')] || ''), roles: String(r[ix('role')] || '').split(',').map(function(x){return x.trim();}).filter(Boolean),
       class: String(r[ix('class')] || ''), subjects: String(r[ix('subjects')] || ''),
-      class_teacher_class: String(r[ix('class_teacher_class')] || ''), active: r[ix('active')] === true || String(r[ix('active')]).toLowerCase() === 'true'
+      class_teacher_class: String(r[ix('class_teacher_class')] || ''), boarding_section: String(r[ix('boarding_section')] || ''), active: r[ix('active')] === true || String(r[ix('active')]).toLowerCase() === 'true'
     };
   });
 }
@@ -5276,7 +5277,9 @@ function adminCreateUser(p, token) {
   const info = adminUserSheetInfo_();
   if (adminUserRow_(info, email)) throw new Error('An account with this email already exists.');
   const sh = info.sheet;
-  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: gtmcPasswordHash_(password), active: true, class_teacher_class: String(p.class_teacher_class || '').trim() };
+  if (roles.indexOf('housemaster') >= 0 && roles.indexOf('housemistress') >= 0) throw new Error('An account cannot manage both boarding sections.');
+  const boardingSection = String(p.boarding_section || (roles.indexOf('housemaster') >= 0 ? 'Boys' : roles.indexOf('housemistress') >= 0 ? 'Girls' : '')).trim();
+  const values = { email: email, name: name, role: Array.from(new Set(roles)).join(','), class: String(p.class || '').trim(), subjects: String(p.subjects || '').trim(), password: gtmcPasswordHash_(password), active: true, class_teacher_class: String(p.class_teacher_class || '').trim(), boarding_section: boardingSection };
   const row = info.headers.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ''; });
   sh.appendRow(row);
   logAudit(admin.email, 'adminCreateUser', { email: email, roles: roles });
@@ -5289,7 +5292,7 @@ function adminUpdateUser(p, token) {
   const info = adminUserSheetInfo_();
   const row = adminUserRow_(info, email);
   if (!row) throw new Error('User account not found.');
-  const allowed = ['name','role','class','subjects','class_teacher_class'];
+  const allowed = ['name','role','class','subjects','class_teacher_class','boarding_section'];
   const updates = {};
   allowed.forEach(function (key) {
     if (Object.prototype.hasOwnProperty.call(p, key)) updates[key] = String(p[key] == null ? '' : p[key]).trim();
@@ -5299,7 +5302,9 @@ function adminUpdateUser(p, token) {
     const roles = updates.role.split(',').map(function(x){return x.trim().toLowerCase();}).filter(Boolean);
     if (!roles.length) throw new Error('At least one role is required.');
     roles.forEach(function(r){if(GTMC_MANAGED_ROLES_.indexOf(r)<0)throw new Error('Unsupported role: '+r);});
+    if (roles.indexOf('housemaster') >= 0 && roles.indexOf('housemistress') >= 0) throw new Error('An account cannot manage both boarding sections.');
     updates.role = Array.from(new Set(roles)).join(',');
+    if (!Object.prototype.hasOwnProperty.call(p, 'boarding_section')) updates.boarding_section = roles.indexOf('housemaster') >= 0 ? 'Boys' : roles.indexOf('housemistress') >= 0 ? 'Girls' : ''; 
   }
   Object.keys(updates).forEach(function (key) { info.sheet.getRange(row, info.headers.indexOf(key) + 1).setValue(updates[key]); });
   logAudit(admin.email, 'adminUpdateUser', { email: email, fields: Object.keys(updates) });
