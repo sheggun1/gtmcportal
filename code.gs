@@ -612,11 +612,15 @@ function gtmcGetAuditHistory_(p, limit) {
 }
 
 function logAudit(email, action, details) {
+  const row = [new Date(), email || 'anon', action, JSON.stringify(details || {})];
   try {
     const target = gtmcGetWritableAuditStorage_();
-    target.sheet.appendRow([new Date(), email || 'anon', action, JSON.stringify(details || {})]);
+    target.sheet.appendRow(row);
   } catch (e) {
-    console.error('GTMC dedicated audit logging issue: ' + String(e && e.message ? e.message : e));
+    // Preserve the audit event in the original workbook if Drive/Sheets provisioning is temporarily unavailable.
+    console.error('GTMC dedicated audit logging issue; using legacy Audit tab: ' + String(e && e.message ? e.message : e));
+    try { getSheet('Audit').appendRow(row); }
+    catch (fallbackError) { console.error('GTMC fallback audit logging failed: ' + String(fallbackError && fallbackError.message ? fallbackError.message : fallbackError)); }
   }
 }
 
