@@ -1870,13 +1870,13 @@ async function loadTemplate() {
     ];
     const principalBands = Array.isArray(t.principalRemarkScale) && t.principalRemarkScale.length ? t.principalRemarkScale : defaultPrincipalBands;
     const principalEditor = q('tplPrincipalRemarkScale');
-    if (principalEditor) principalEditor.value = principalBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+String(b.remark||'')).join('\\n');
+    if (principalEditor) principalEditor.value = principalBands.slice().sort((a,b)=>Number(b.min)-Number(a.min)).map(b=>Number(b.min)+' | '+String(b.remark||'')).join('\n');
     const checks = {tplShowTests:'showTests',tplShowExam:'showExam',tplShowTotals:'showSubjectTotals',tplShowGrade:'showGrade',tplShowTeacherRemark:'showTeacherRemark',tplShowPrincipalRemark:'showPrincipalRemark',tplShowAttendance:'showAttendance',tplShowAffective:'showAffective',tplShowPsychomotor:'showPsychomotor',tplShowTermDates:'showTermDates',tplShowAIComment:'showAIComment',tplShowAnnualAverage:'showAnnualAverage'};
     Object.entries(checks).forEach(([id,key])=>{const el=q(id);if(el)el.checked=t[key]!==false;});
   } catch (e) { q('tplStatus').innerHTML = `<div class="portal-note" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">${esc(e.message)}</div>`; }
 }
 function parsePrincipalRemarkBands_(raw) {
-  const lines = String(raw || '').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+  const lines = String(raw || '').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   if (!lines.length) throw new Error('Enter at least one principal comment threshold.');
   const bands = lines.map((line,index)=>{
     const split = line.indexOf('|');
