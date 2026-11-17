@@ -1918,7 +1918,8 @@ function parseGradeScaleBands_(raw) {
   }).sort((a,b)=>a.min-b.min);
   if (bands[0].min !== 0 || bands[bands.length-1].max !== 100) throw new Error('Grade ranges must start at 0 and end at 100.');
   for (let i=1;i<bands.length;i++) {
-    if (Math.abs(bands[i-1].max + 0.01 - bands[i].min) > 0.000001) {
+    const boundaryGap = bands[i].min - bands[i-1].max;
+    if (Math.abs(boundaryGap - 1) > 0.000001 && Math.abs(boundaryGap - 0.01) > 0.000001) {
       throw new Error('Grade ranges must be continuous with no gaps or overlaps. Check the boundary between '+bands[i-1].grade+' and '+bands[i].grade+'.');
     }
   }
