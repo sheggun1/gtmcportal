@@ -1966,6 +1966,13 @@ function setupParentPortalSheets_() {
       principalName: 'The Principal',
       principalSignatureUrl: '',
       schoolStampUrl: '',
+      principalRemarkScale: [
+        {min: 75, remark: 'Excellent performance. Keep up the outstanding work.'},
+        {min: 60, remark: 'A very good result. Aim even higher.'},
+        {min: 50, remark: 'A good result. Continue working hard.'},
+        {min: 40, remark: 'A fair result. More consistent effort is needed.'},
+        {min: 0, remark: 'This result needs improvement. Please work harder and seek support.'}
+      ],
       gradeScale: [
         {min: 80, max: 100, grade: 'A', remark: 'Excellent'},
         {min: 70, max: 79.99, grade: 'B', remark: 'Very Good'},
@@ -2438,12 +2445,21 @@ function unlockDomains(p, token) {
 }
 
 /* ============ PRINCIPAL REMARKS ============ */
-function autoPrincipalRemark_(overallPercent, gradeScale) {
-  if (overallPercent == null) return 'Result pending.';
+function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) {
+  if (overallPercent == null || !isFinite(Number(overallPercent))) return 'Result pending.';
+  const pct = Number(overallPercent);
+  const configured = Array.isArray(principalRemarkScale) ? principalRemarkScale.slice() : [];
+  const band = configured
+    .filter(function (b) { return isFinite(Number(b.min)) && String(b.remark || '').trim(); })
+    .sort(function (a, b) { return Number(b.min) - Number(a.min); })
+    .find(function (b) { return pct >= Number(b.min); });
+  if (band) {
+    return String(band.remark).trim() + ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
+  }
   const sorted = (Array.isArray(gradeScale) ? gradeScale.slice() : [])
     .sort(function (a, b) { return Number(b.min) - Number(a.min); });
-  const band = sorted.find(function (b) { return overallPercent >= Number(b.min); });
-  const grade = band ? String(band.grade) : '?';
+  const gradeBand = sorted.find(function (b) { return pct >= Number(b.min); });
+  const grade = gradeBand ? String(gradeBand.grade) : '?';
   const map = {
     A: 'An excellent result. Keep up this outstanding performance.',
     B: 'A very good result. Aim even higher next term.',
@@ -2453,7 +2469,7 @@ function autoPrincipalRemark_(overallPercent, gradeScale) {
     F: 'A poor result. Significant and focused improvement is needed.'
   };
   return (map[grade] || 'Result available.') +
-    ' (Overall: ' + Math.round(overallPercent * 100) / 100 + '%)';
+    ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
@@ -2507,7 +2523,7 @@ function adminPreviewPrincipalRemark(p, token) {
   const overallPercent = computeOverallFor_(className, studentId, term);
   const override = principalRemarkFor_(studentId, className, term, academicYear);
   const template = portalGetTemplate_();
-  const auto = autoPrincipalRemark_(overallPercent, template.gradeScale);
+  const auto = autoPrincipalRemark_(overallPercent, template.gradeScale, template.principalRemarkScale);
 
   return {
     studentId: studentId, className: className, term: term, academicYear: academicYear,
@@ -2583,7 +2599,7 @@ function adminGeneratePrincipalRemarksForClass(p, token) {
     if (existing[st.id]) { skipped++; return; }
     const pct = computeOverallFor_(className, st.id, term);
     if (pct == null) { noScore++; return; }
-    const remark = autoPrincipalRemark_(pct, template.gradeScale);
+    const remark = autoPrincipalRemark_(pct, template.gradeScale, template.principalRemarkScale);
     sh.appendRow([st.id, className, term, academicYear, remark, now, admin.email]);
     created++;
   });
@@ -2599,9 +2615,20 @@ function adminGeneratePrincipalRemarksForClass(p, token) {
 }
 
 /* ============ REPORT TEMPLATE ============ */
+function portalDefaultGradeScale_() {
+  return [
+    {min:80,max:100,grade:'A',remark:'Excellent'},
+    {min:70,max:79.99,grade:'B',remark:'Very Good'},
+    {min:60,max:69.99,grade:'C',remark:'Good'},
+    {min:50,max:59.99,grade:'D',remark:'Credit'},
+    {min:40,max:49.99,grade:'E',remark:'Pass'},
+    {min:0,max:39.99,grade:'F',remark:'Needs Improvement'}
+  ];
+}
+
 function portalGrade_(score, scale) {
-  if (!Array.isArray(scale)) return '';
-  const item = scale.find(function (g) { return Number(score) >= Number(g.min) && Number(score) <= Number(g.max); });
+  const bands = Array.isArray(scale) && scale.length ? scale : portalDefaultGradeScale_();
+  const item = bands.find(function (g) { return Number(score) >= Number(g.min) && Number(score) <= Number(g.max); });
   return item ? String(item.grade || '') : '';
 }
 
@@ -2630,7 +2657,7 @@ function adminSaveReportTemplate(p, token) {
     'showPrincipalRemark','showAttendance','showAIComment','showAnnualAverage',
     'showAffective','showPsychomotor','showTermDates',
     'principalName','principalSignatureUrl','schoolStampUrl',
-    'gradeScale'
+    'gradeScale','principalRemarkScale'
   ];
   const clean = {};
   allowed.forEach(function (k) { if (Object.prototype.hasOwnProperty.call(config, k)) clean[k] = config[k]; });
@@ -2639,18 +2666,35 @@ function adminSaveReportTemplate(p, token) {
   if (clean.principalSignatureUrl && !/^https:\/\//i.test(clean.principalSignatureUrl)) throw new Error('principalSignatureUrl must use HTTPS.');
   if (clean.schoolStampUrl && !/^https:\/\//i.test(clean.schoolStampUrl)) throw new Error('schoolStampUrl must use HTTPS.');
   if (clean.gradeScale && (!Array.isArray(clean.gradeScale) || clean.gradeScale.some(function (g) {
-    return !isFinite(Number(g.min)) || !isFinite(Number(g.max)) || Number(g.min) > Number(g.max) || !g.grade;
+    return !isFinite(Number(g.min)) || !isFinite(Number(g.max)) || Number(g.min) < 0 || Number(g.max) > 100 || Number(g.min) > Number(g.max) || !String(g.grade || '').trim();
   }))) {
-    throw new Error('gradeScale must contain valid min, max and grade values.');
+    throw new Error('gradeScale must contain valid grade bands between 0 and 100.');
+  }
+  if (clean.principalRemarkScale && (!Array.isArray(clean.principalRemarkScale) || clean.principalRemarkScale.some(function (b) {
+    return !isFinite(Number(b.min)) || Number(b.min) < 0 || Number(b.min) > 100 || !String(b.remark || '').trim();
+  }))) {
+    throw new Error('Principal comment bands must have a threshold from 0 to 100 and a comment.');
+  }
+  const existingConfig = portalGetTemplate_() || {};
+  const merged = Object.assign({}, existingConfig, clean);
+  if (!Array.isArray(merged.gradeScale) || !merged.gradeScale.length) {
+    merged.gradeScale = [
+      {min:80,max:100,grade:'A',remark:'Excellent'},
+      {min:70,max:79.99,grade:'B',remark:'Very Good'},
+      {min:60,max:69.99,grade:'C',remark:'Good'},
+      {min:50,max:59.99,grade:'D',remark:'Credit'},
+      {min:40,max:49.99,grade:'E',remark:'Pass'},
+      {min:0,max:39.99,grade:'F',remark:'Needs Improvement'}
+    ];
   }
   const sh = getSheet('ReportTemplate');
   const rows = sh.getDataRange().getValues();
-  const json = JSON.stringify(clean);
+  const json = JSON.stringify(merged);
   for (let i = 1; i < rows.length; i++) {
     if (rows[i][0] === 'config') {
       sh.getRange(i + 1, 2, 1, 3).setValues([[json, new Date(), admin.email]]);
       logAudit(admin.email, 'adminSaveReportTemplate', { keys: Object.keys(clean) });
-      return { success: true, template: clean };
+      return { success: true, template: merged };
     }
   }
   sh.appendRow(['config', json, new Date(), admin.email]);
@@ -2896,7 +2940,7 @@ function parentGetResult(p, token) {
   };
 
   const override = principalRemarkFor_(studentId, className, term, academicYear);
-  const principalRemark = override || autoPrincipalRemark_(overallAverage, template.gradeScale);
+  const principalRemark = override || autoPrincipalRemark_(overallAverage, template.gradeScale, template.principalRemarkScale);
 
   const affective = getDomainAssessments({
     kind: 'affective', className: className, term: term,
