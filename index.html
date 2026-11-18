@@ -567,11 +567,19 @@ function fmtMin_(m) {
 function normAidClient_(v) { return String(v == null ? '' : v).trim().replace(/^0+/, '') || '0'; }
 
 async function loadClasses() {
-  if (S.cache.classes) return S.cache.classes;
-  const response = await api('getClasses');
-  const list = Array.isArray(response) ? response : (response && Array.isArray(response.classes) ? response.classes : []);
-  S.cache.classes = list.map(c => typeof c === 'string' ? c : c && (c.class || c.className || c.name)).filter(Boolean).map(c => String(c).trim()).filter(Boolean);
+  if (!S.cache.classes) {
+    const response = await api('getClasses');
+    const list = Array.isArray(response) ? response : (response && Array.isArray(response.classes) ? response.classes : []);
+    S.cache.classes = list.map(c => typeof c === 'string' ? c : c && (c.class || c.className || c.name)).filter(Boolean).map(c => String(c).trim()).filter(Boolean);
+  }
   if (!S.cache.classes.length) throw new Error('No active classes were returned by the backend. Check the Classes sheet and redeploy the Apps Script if needed.');
+
+  if (hasRole('class_teacher') && hasRole('subject_teacher')) {
+    const assigned = String((S.user && S.user.class) || '').split(/[,;\n]/).map(x => x.trim().toLowerCase()).filter(Boolean);
+    const ownClass = String((S.user && S.user.class_teacher_class) || '').trim().toLowerCase();
+    if (ownClass && !assigned.includes(ownClass)) assigned.push(ownClass);
+    return S.cache.classes.filter(cls => assigned.includes(cls.toLowerCase()));
+  }
   return S.cache.classes;
 }
 async function loadSubjects(className) {
@@ -4824,12 +4832,12 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     const input=$('gtmcAISearch');if(input)input.addEventListener('input',()=>gtmcRenderStudentRows(window.__GTMC_AI_ROWS||[]));
     const cls=$('gtmcAIClass');
     if(cls){
-      const fixed=hasRole('class_teacher')?getClassTeacherClass():'';
+      const fixed=hasRole('class_teacher')&&!hasRole('subject_teacher')?getClassTeacherClass():'';
       loadClasses().then(list=>{
         let allowed=list;
         if(fixed)allowed=[fixed];
-        const mine=String((S.user&&S.user.classes)||'').split(',').map(x=>x.trim()).filter(Boolean);
-        if(!fixed&&hasRole('subject_teacher')&&mine.length)allowed=allowed.filter(x=>mine.includes(x));
+        const mine=String((S.user&&(S.user.class||S.user.classes))||'').split(/[,;\n]/).map(x=>x.trim()).filter(Boolean);
+        if(!fixed&&hasRole('subject_teacher')&&mine.length)allowed=allowed.filter(x=>mine.some(m=>m.toLowerCase()===x.toLowerCase()));
         cls.innerHTML=allowed.map(x=>'<option value="'+safe(x)+'">'+safe(x)+'</option>').join('');
         if(!allowed.length)cls.innerHTML='<option value="">No class available</option>';
         if(allowed.length)gtmcRunInsights();
