@@ -1128,11 +1128,31 @@ function splitAssignmentList_(value) {
 }
 function assertTeacherClassSubjectAccess_(user, className, subject) {
   if (hasRole_(user, 'admin')) return true;
-  if (!hasRole_(user, 'class_teacher') && !hasRole_(user, 'subject_teacher')) {
+  const isClassTeacher = hasRole_(user, 'class_teacher');
+  const isSubjectTeacher = hasRole_(user, 'subject_teacher');
+  if (!isClassTeacher && !isSubjectTeacher) {
     throw new Error('Permission denied for teacher score access.');
   }
-  assertClassTeacherOwnClass_(user, className, 'You can only access your assigned class.');
-  if (hasRole_(user, 'subject_teacher')) {
+
+  // Combined-role teachers use their class-teacher assignment only in the
+  // class-teacher portal. In the subject-teacher workflow, allow every class
+  // listed in Users.class, while retaining the assigned-subject restriction.
+  if (isClassTeacher && isSubjectTeacher) {
+    const assignedClasses = splitAssignmentList_(user.class);
+    const ownClass = getAssignedTeacherClass_(user).toLowerCase();
+    if (ownClass && assignedClasses.indexOf(ownClass) === -1) assignedClasses.push(ownClass);
+    const requestedClass = String(className || '').trim().toLowerCase();
+    if (!assignedClasses.length) {
+      throw new Error('No classes have been assigned to your subject-teacher account. Contact the administrator.');
+    }
+    if (assignedClasses.indexOf(requestedClass) === -1) {
+      throw new Error('You can only access classes assigned to you as a subject teacher.');
+    }
+  } else if (isClassTeacher) {
+    assertClassTeacherOwnClass_(user, className, 'You can only access your assigned class.');
+  }
+
+  if (isSubjectTeacher) {
     const assigned = splitAssignmentList_(user.subjects);
     if (!assigned.length) throw new Error('No subjects are assigned to this account. Contact the administrator.');
     if (subject && assigned.indexOf(String(subject).trim().toLowerCase()) === -1) {
@@ -4452,23 +4472,25 @@ function getClassScores(p, token) {
   const boardingAllowedIds = (hasRole_(user, 'housemaster') || hasRole_(user, 'housemistress'))
     ? gtmcBoardingStudentIdsForClass_(className, token) : null;
 
-  // A class teacher who also has the subject_teacher role must be able
-  // to review every subject in their assigned class. Subject filtering
-  // applies only to accounts that are subject teachers exclusively.
-  assertClassTeacherOwnClass_(user, className, 'You can only access your assigned class.');
+  // Apply the same class/subject assignment rules used by score entry.
+  if (hasRole_(user, 'class_teacher') || hasRole_(user, 'subject_teacher')) {
+    assertTeacherClassSubjectAccess_(user, className, '');
+  }
 
-  const isSubjectTeacherOnly =
+  // A combined-role teacher reviewing their own class as class teacher may
+  // see all subjects. When reviewing another assigned class as a subject
+  // teacher, only their assigned subjects are included.
+  const isSubjectTeacherForClass =
     hasRole_(user, 'subject_teacher') &&
     !hasRole_(user, 'admin') &&
-    !hasRole_(user, 'class_teacher');
+    (!hasRole_(user, 'class_teacher') ||
+      String(className).trim().toLowerCase() !== getAssignedTeacherClass_(user).toLowerCase());
 
-  const assignedSubjects = isSubjectTeacherOnly
-    ? splitAssignmentList_(user.subjects).map(function (s) {
-        return String(s).trim().toLowerCase();
-      })
+  const assignedSubjects = isSubjectTeacherForClass
+    ? splitAssignmentList_(user.subjects)
     : [];
 
-  if (isSubjectTeacherOnly && !assignedSubjects.length) {
+  if (isSubjectTeacherForClass && !assignedSubjects.length) {
     throw new Error('No subjects are assigned to this account.');
   }
 
@@ -4493,7 +4515,7 @@ function getClassScores(p, token) {
     const perSubject = {};
 
     subjects.forEach(function (subj, i) {
-      if (isSubjectTeacherOnly &&
+      if (isSubjectTeacherForClass &&
           assignedSubjects.indexOf(String(subj).trim().toLowerCase()) === -1) {
         return;
       }
