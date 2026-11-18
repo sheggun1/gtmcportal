@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Greater Tomorrow Model College Portal",
+  "short_name": "GTMC Portal",
+  "description": "Official Greater Tomorrow Model College portal.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f1f6fc",
+  "theme_color": "#0756a8",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/school-crest.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
