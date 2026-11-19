@@ -2378,7 +2378,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
       affective: dom.days ? dom.days.affective_letter : '',
       psychomotor: dom.days ? dom.days.psychomotor_letter : ''
     },
-    principalRemark: principalRemarkFromTemplate_(overallAverage, template) || (pr && pr.remark) || '',
+    principalRemark: (pr && pr.remark) || principalRemarkFromTemplate_(overallAverage, template) || '',
     affective: dom.affective || {},
     psychomotor: dom.psychomotor || {},
     teacherRemark: (bundle.remarks || {})[studentId] || '',
