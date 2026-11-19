@@ -94,3 +94,7 @@ body{font-weight:600;background:var(--gtmc-workspace);color:#132f4f}
 #appView button:not(.secondary):not(.outline):not([class*="light"]){background-color:#0b3d91;color:#fff}
 #appView button.secondary,#appView button.outline{background:#fff!important;color:#0b3d91!important;border:1px solid #0b3d91!important}
 #appView .badge,#appView .status-badge{font-weight:800}
+
+/* Dark mode is disabled: enforce the classic light palette and hide legacy controls. */
+#gtmcDarkToggle{display:none!important}
+body.gtmc-dark{--bg:#f4f6f9;--surface:#fff;--surface-2:#fff;--ink:#111827;--muted:#596579;--line:#d5dce5;background:#f4f6f9!important;color:#111827!important}
