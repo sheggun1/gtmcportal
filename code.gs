@@ -2743,6 +2743,27 @@ function computeOverallFor_(className, studentId, term) {
   return Math.round(totals.reduce(function (a, b) { return a + b; }, 0) / totals.length * 100) / 100;
 }
 
+function ensurePrincipalRemarkSourceColumn_() {
+  const sh = getSheet('PrincipalRemarks');
+  const last = Math.max(sh.getLastColumn(), 7);
+  const headers = sh.getRange(1, 1, 1, last).getValues()[0].map(function (h) { return String(h || '').trim(); });
+  let idx = headers.indexOf('source');
+  if (idx < 0) { idx = headers.length; sh.getRange(1, idx + 1).setValue('source'); }
+  return idx + 1;
+}
+
+function principalRemarkRecord_(studentId, className, term, academicYear) {
+  const sh = getSheet('PrincipalRemarks');
+  ensurePrincipalRemarkSourceColumn_();
+  const rows = sh.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(studentId) && String(rows[i][1]) === String(className) && String(rows[i][2]) === String(term) && String(rows[i][3]) === String(academicYear)) {
+      return { row: i + 1, remark: String(rows[i][4] || ''), source: String(rows[i][7] || '').toUpperCase() };
+    }
+  }
+  return null;
+}
+
 function adminPreviewPrincipalRemark(p, token) {
   requireRole(token, ['admin', 'class_teacher']);
   const className = String(p.className || '').trim();
@@ -2752,10 +2773,12 @@ function adminPreviewPrincipalRemark(p, token) {
   if (!className || !studentId || !term || !academicYear) throw new Error('className, studentId, term, academicYear required.');
 
   const overallPercent = computeOverallFor_(className, studentId, term);
-  const savedRemark = principalRemarkFor_(studentId, className, term, academicYear);
-  const override = savedRemark && !isLegacyAutoPrincipalRemark_(savedRemark) ? savedRemark : '';
+  const saved = principalRemarkRecord_(studentId, className, term, academicYear);
+  const savedRemark = saved ? saved.remark : '';
   const template = portalGetTemplate_();
   const auto = autoPrincipalRemark_(overallPercent, template.gradeScale, template.principalRemarkScale);
+  const isAuto = saved && (saved.source === 'AUTO' || isLegacyAutoPrincipalRemark_(savedRemark));
+  const override = savedRemark && !isAuto ? savedRemark : '';
 
   return {
     studentId: studentId, className: className, term: term, academicYear: academicYear,
@@ -2790,7 +2813,8 @@ function adminSetPrincipalRemark(p, token) {
     return { success: true, studentId: studentId, cleared: true };
   }
 
-  const values = [studentId, className, term, academicYear, remark, new Date(), admin.email];
+  ensurePrincipalRemarkSourceColumn_();
+  const values = [studentId, className, term, academicYear, remark, new Date(), admin.email, 'MANUAL'];
   if (rowNum > 0) sh.getRange(rowNum, 1, 1, values.length).setValues([values]);
   else sh.appendRow(values);
   logAudit(admin.email, 'adminSetPrincipalRemark', { studentId: studentId, action: 'set' });
@@ -2816,33 +2840,39 @@ function adminGeneratePrincipalRemarksForClass(p, token) {
 
   const template = portalGetTemplate_();
   const sh = getSheet('PrincipalRemarks');
+  ensurePrincipalRemarkSourceColumn_();
   const rows = sh.getDataRange().getValues();
   const existing = {};
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][1]) !== className) continue;
-    if (String(rows[i][2]) !== term) continue;
-    if (String(rows[i][3]) !== academicYear) continue;
-    existing[String(rows[i][0])] = true;
+    if (String(rows[i][1]) !== className || String(rows[i][2]) !== term || String(rows[i][3]) !== academicYear) continue;
+    existing[String(rows[i][0])] = { row: i + 1, remark: String(rows[i][4] || ''), source: String(rows[i][7] || '').toUpperCase() };
   }
 
-  let created = 0, skipped = 0, noScore = 0;
+  let created = 0, updated = 0, skipped = 0, noScore = 0;
   const now = new Date();
   students.forEach(function (st) {
-    if (existing[st.id]) { skipped++; return; }
     const pct = computeOverallFor_(className, st.id, term);
     if (pct == null) { noScore++; return; }
     const remark = autoPrincipalRemark_(pct, template.gradeScale, template.principalRemarkScale);
-    sh.appendRow([st.id, className, term, academicYear, remark, now, admin.email]);
-    created++;
+    const old = existing[st.id];
+    if (old) {
+      const isAuto = old.source === 'AUTO' || isLegacyAutoPrincipalRemark_(old.remark);
+      if (!isAuto) { skipped++; return; }
+      sh.getRange(old.row, 5, 1, 4).setValues([[remark, now, admin.email, 'AUTO']]);
+      updated++;
+    } else {
+      sh.appendRow([st.id, className, term, academicYear, remark, now, admin.email, 'AUTO']);
+      created++;
+    }
   });
 
   logAudit(admin.email, 'adminGeneratePrincipalRemarksForClass', {
     className: className, term: term, academicYear: academicYear,
-    created: created, skipped: skipped, noScore: noScore, total: students.length
+    created: created, updated: updated, skipped: skipped, noScore: noScore, total: students.length
   });
   return {
     success: true, className: className, term: term, academicYear: academicYear,
-    total: students.length, created: created, skipped: skipped, noScore: noScore
+    total: students.length, created: created, updated: updated, skipped: skipped, noScore: noScore
   };
 }
 
