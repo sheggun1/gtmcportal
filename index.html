@@ -4935,12 +4935,16 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     window.__GTMC_PARENT_EXPORT=subs.map(x=>[x.subject,x.score,x.grade,x.remark]);
   };
   function addDarkMode(){
+    // Dark mode is intentionally disabled; the portal uses the approved blue/black/white theme.
+    document.body.classList.remove('gtmc-dark');
+    const existing=$('gtmcDarkToggle');if(existing)existing.remove();
+    return;
     const top=document.querySelector('.topbar .user');if(!top||$('gtmcDarkToggle'))return;
     const b=document.createElement('button');b.id='gtmcDarkToggle';b.className='sec sm';b.textContent=document.body.classList.contains('gtmc-dark')?'Light mode':'Dark mode';
     b.onclick=()=>{document.body.classList.toggle('gtmc-dark');localStorage.setItem('gtmc_dark',document.body.classList.contains('gtmc-dark')?'1':'0');b.textContent=document.body.classList.contains('gtmc-dark')?'Light mode':'Dark mode';};
     top.insertBefore(b,top.firstChild);
   }
-  if(localStorage.getItem('gtmc_dark')==='1')document.body.classList.add('gtmc-dark');
+  document.body.classList.remove('gtmc-dark');
   const oldAdmin=window.renderAdmin;
   if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addDarkMode();};
   const oldCT=window.renderClassTeacher;
