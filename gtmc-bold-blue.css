@@ -68,3 +68,30 @@ body{font-weight:600;background:var(--gtmc-workspace);color:#132f4f}
 @media print{
  #reportCard .rc-name{font-size:22px!important;font-weight:950!important}
 }
+
+/* Classic high-contrast blue / black / white palette */
+:root{
+ --gtmc-brand-blue:#0b3d91;--gtmc-brand-blue2:#0849a8;--gtmc-brand-bright:#155eef;
+ --gtmc-brand-ink:#071a33;--gtmc-workspace:#f4f6f9;
+}
+#appView .sidebar{background:#082f70!important;color:#fff!important;border-right:2px solid #061d46!important}
+#appView .sidebar .group-title{color:#fff!important;opacity:1!important;font-weight:900!important}
+#appView .nav-item,#appView .nav-item *{color:#fff!important}
+#appView .nav-item{background:transparent!important}
+#appView .nav-item:hover{background:#124b9d!important;color:#fff!important}
+#appView .nav-item.active{background:#155eef!important;color:#fff!important;border-color:#fff!important}
+#appView .nav-item.active *{color:#fff!important}
+#appView .topbar{background:#fff!important;color:#111!important}
+#appView .topbar *{color:#111!important}
+#appView .topbar .brand-text .name{color:#0b3d91!important}
+#appView main.content{background:#f4f6f9!important;color:#111!important}
+#appView .page-head h1,#appView .panel .card h2,#appView .panel h2,#appView .panel h3{color:#071a33!important}
+#appView .panel .card,#appView .panel .card *:not(button):not(a){color:#111!important}
+#appView .panel .card{background:#fff!important;border-color:#d5dce5!important}
+#appView .panel .card button,#appView .panel .card a{color:#fff!important}
+#appView input,#appView select,#appView textarea{background:#fff!important;color:#111!important;border-color:#7b8796!important}
+#appView input::placeholder,#appView textarea::placeholder{color:#596579!important;opacity:1!important}
+#appView button{contrast-color:#fff}
+#appView button:not(.secondary):not(.outline):not([class*="light"]){background-color:#0b3d91;color:#fff}
+#appView button.secondary,#appView button.outline{background:#fff!important;color:#0b3d91!important;border:1px solid #0b3d91!important}
+#appView .badge,#appView .status-badge{font-weight:800}
