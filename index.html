@@ -2378,7 +2378,7 @@ async function buildReportPayload(className, studentId, studentName, term, acade
       affective: dom.days ? dom.days.affective_letter : '',
       psychomotor: dom.days ? dom.days.psychomotor_letter : ''
     },
-    principalRemark: (pr && pr.remark) || principalRemarkFromTemplate_(overallAverage, template),
+    principalRemark: principalRemarkFromTemplate_(overallAverage, template) || (pr && pr.remark) || '',
     affective: dom.affective || {},
     psychomotor: dom.psychomotor || {},
     teacherRemark: (bundle.remarks || {})[studentId] || '',
@@ -2556,7 +2556,7 @@ function pdfRenderPage(doc, r) {
   doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont(undefined, 'bold');
   doc.text("CLASS TEACHER'S REMARK:", margin, y);
   doc.setFont(undefined, 'normal');
-  const trLines = doc.splitTextToSize(r.teacherRemark || '—', pageW - margin*2 - 110);
+  const trLines = doc.splitTextToSize(r.principalRemark || '—', pageW - margin*2 - 110);
   doc.text(trLines, margin + 105, y);
   y += Math.max(14, trLines.length * 10 + 4);
 
@@ -4495,7 +4495,7 @@ function gtmcCardHTML(r, withId) {
   ${sc.length ? `<div class="rc-bar">Grade Scale</div><table class="rc-t rc-grades"><tbody><tr>${sc.map(g => `<td><b>${esc(g.grade)}</b><br><small>${Number(g.min)}&ndash;${Number(g.max)}</small>${g.remark ? `<br><small>${esc(g.remark)}</small>` : ''}</td>`).join('')}</tr></tbody></table>` : ''}
   <div class="rc-bar">Performance Summary</div>
   <table class="rc-t" style="margin-bottom:6px"><thead><tr>${sum.map(s => `<th>${s[0]}</th>`).join('')}</tr></thead><tbody><tr>${sum.map(s => `<td class="c" style="font-size:13px">${s[1]}</td>`).join('')}</tr></tbody></table>
-  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.teacherRemark) : ''}
+  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.principalRemark) : ''}
   ${t.showPrincipalRemark !== false ? rem('Principal', r.principalRemark) : ''}
   
   ${verificationBlock}
