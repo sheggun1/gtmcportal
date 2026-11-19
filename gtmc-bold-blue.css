@@ -88,10 +88,9 @@ body{font-weight:600;background:var(--gtmc-workspace);color:#132f4f}
 #appView .page-head h1,#appView .panel .card h2,#appView .panel h2,#appView .panel h3{color:#071a33!important}
 #appView .panel .card,#appView .panel .card *:not(button):not(a){color:#111!important}
 #appView .panel .card{background:#fff!important;border-color:#d5dce5!important}
-#appView .panel .card button,#appView .panel .card a{color:#fff!important}
+#appView .panel .card button{color:#fff!important}\n#appView .panel .card a{color:#0b3d91!important}
 #appView input,#appView select,#appView textarea{background:#fff!important;color:#111!important;border-color:#7b8796!important}
 #appView input::placeholder,#appView textarea::placeholder{color:#596579!important;opacity:1!important}
-#appView button{contrast-color:#fff}
 #appView button:not(.secondary):not(.outline):not([class*="light"]){background-color:#0b3d91;color:#fff}
 #appView button.secondary,#appView button.outline{background:#fff!important;color:#0b3d91!important;border:1px solid #0b3d91!important}
 #appView .badge,#appView .status-badge{font-weight:800}
