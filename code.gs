@@ -2689,18 +2689,12 @@ function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) 
 }
 
 function isLegacyAutoPrincipalRemark_(remark) {
-  const value = String(remark || '');
-  const legacyStarts = [
-    'An excellent result. Keep up this outstanding performance.',
-    'A very good result. Aim even higher next term.',
-    'A good result. There is room for steady improvement.',
-    'A fair result. More effort is required.',
-    'A pass. Consistent study will improve your performance.',
-    'A poor result. Significant and focused improvement is needed.'
-  ];
-  return value.slice(-2) === '%)' && legacyStarts.some(function (prefix) {
-    return value.indexOf(prefix + ' (Overall: ') === 0;
-  });
+  const value = String(remark || '').trim();
+  // Older auto-generated remarks appended the overall percentage, including
+  // custom remarks from the configured scale. This signature lets the refresh
+  // generator update those legacy automatic comments while preserving manual
+  // remarks that do not carry this suffix.
+  return /\\s\\(Overall:\\s*\\d+(?:\\.\\d+)?%\\)$/.test(value);
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
