@@ -1,0 +1,70 @@
+/* GTMC Bold Blue universal interface refresh */
+:root{
+ --gtmc-brand-blue:#073b8c;--gtmc-brand-blue2:#064db4;--gtmc-brand-bright:#1467ed;
+ --gtmc-brand-ink:#092f70;--gtmc-workspace:#f5f8fc;--gtmc-sidebar-width:258px;
+}
+body,#appView, #appView *{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}
+body{font-weight:600;background:var(--gtmc-workspace);color:#132f4f}
+#appView .body-layout{grid-template-columns:var(--gtmc-sidebar-width) minmax(0,1fr);background:var(--gtmc-workspace)}
+#appView .sidebar{
+ background:linear-gradient(180deg,#073b8c 0%,#052d72 58%,#041f56 100%);
+ border-right:1px solid #062966;padding:18px 12px 22px;color:#fff;
+ scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;
+}
+#appView .sidebar .group{margin-bottom:18px}
+#appView .sidebar .group-title{color:#c4dcff;font-weight:850;font-size:11px;letter-spacing:.12em;padding:0 12px 9px}
+#appView .nav-item{color:#f5f9ff;font-weight:750;font-size:13.5px;min-height:42px;padding:10px 12px;margin:3px 0;border-radius:9px}
+#appView .nav-item .dot{background:rgba(255,255,255,.5)}
+#appView .nav-item:hover{background:rgba(255,255,255,.12);color:#fff}
+#appView .nav-item.active{background:linear-gradient(100deg,#1467ed,#0753c7);color:#fff;border-color:#3981ff;box-shadow:inset 3px 0 0 #fff,0 3px 10px rgba(0,20,80,.2)}
+#appView .nav-item.active .dot{background:#fff}
+#appView .topbar{background:#fff;border-bottom:2px solid #d8e6f7}
+#appView .topbar .brand-text .name{font-size:14px;font-weight:900;color:#083b8c}
+#appView main.content{background:var(--gtmc-workspace);padding:clamp(16px,2.2vw,28px)}
+#appView .page-head h1{font-weight:900;color:#073b8c}
+#appView .panel .card h2{font-weight:850}
+#appView .panel:not([data-panel="report"]):not([data-panel="results"]):not([data-panel="reportcards"]):not([data-panel="template"]):not([data-panel="publish"]):not([data-panel="submissions"]):not([data-panel="broadsheet"]):not([data-panel="performance"]):not([data-panel="testPerformance"]):not([data-panel="entry"]):not([data-panel="history"]):not([data-panel="scores"]):not([data-panel="domains"]):not([data-panel="remarks"]):not([data-panel="teacherRemarks"]):not([data-panel="leadershipDashboard"]):not([data-panel="dashboard"]) .card{border-radius:10px;box-shadow:0 2px 8px rgba(5,45,112,.06)}
+#appView input,#appView select,#appView textarea{font-weight:600}
+#appView button{font-weight:750}
+#reportCard .rc-name{font-size:clamp(22px,3vw,30px)!important;line-height:1.12!important;font-weight:950!important;letter-spacing:-.025em!important;color:#073b8c!important;text-align:center!important}
+#reportCard .rc-ctr>div:first-child{margin-bottom:4px}
+#reportCard .rc-head{align-items:center}
+#reportCard .rc-title{font-weight:900!important}
+#reportCard th{font-weight:850!important}
+#reportCard td{font-weight:650}
+#reportCard .rc-name{ -webkit-print-color-adjust:exact;print-color-adjust:exact}
+.gtmc-mobile-menu-btn{display:none!important}
+.gtmc-sidebar-backdrop{display:none}
+@media(max-width:900px){
+ #appView .body-layout{grid-template-columns:minmax(0,1fr)}
+ #appView .sidebar{
+   position:fixed;z-index:90;left:0;top:0;bottom:0;width:min(84vw,320px);max-height:none;
+   display:block;overflow-y:auto;overflow-x:hidden;padding:18px 12px;
+   transform:translateX(-105%);transition:transform .22s ease;
+   box-shadow:10px 0 30px rgba(0,18,58,.3);border:0;
+ }
+ #appView .sidebar.gtmc-drawer-open{transform:translateX(0)}
+ #appView .sidebar .group{display:block;flex:none;margin:0 0 17px}
+ #appView .sidebar .group-title{display:block}
+ #appView .nav-item{display:flex;flex:initial;white-space:normal;border-radius:9px}
+ #appView .nav-item.active{background:linear-gradient(100deg,#1467ed,#0753c7);border-color:#3981ff;box-shadow:inset 3px 0 0 #fff}
+ .gtmc-sidebar-backdrop.gtmc-visible{display:block;position:fixed;inset:0;z-index:80;background:rgba(4,18,46,.56)}
+ .gtmc-mobile-menu-btn{display:inline-flex!important;align-items:center;justify-content:center;background:#073b8c;color:#fff;border:0;border-radius:8px;width:42px;height:42px;padding:0;margin-right:10px;font-size:22px;flex-shrink:0}
+ #appView .topbar{justify-content:flex-start;gap:8px}
+ #appView .topbar .brand{min-width:0;flex:1}
+ #appView .topbar .user{margin-left:auto}
+}
+@media(max-width:560px){
+ #appView .topbar{padding:8px 10px;min-height:60px}
+ #appView .topbar .brand-logo{width:36px;height:36px;flex-basis:36px}
+ #appView .topbar .brand-text .name{font-size:11px;max-width:155px}
+ #appView .topbar .brand-text .tag{font-size:9px}
+ #appView .topbar .user .who .uname{font-size:11px}
+ #appView .topbar .user .who .urole{font-size:9px}
+ #appView main.content{padding:14px}
+ #reportCard .rc-name{font-size:21px!important}
+}
+@media(prefers-reduced-motion:reduce){#appView .sidebar{transition:none}}
+@media print{
+ #reportCard .rc-name{font-size:22px!important;font-weight:950!important}
+}
