@@ -2402,10 +2402,23 @@ async function buildReportPayload(className, studentId, studentName, term, acade
 
 function principalRemarkFromTemplate_(average, template) {
   if (average === null || average === undefined || !Number.isFinite(Number(average))) return '';
-  const bands = Array.isArray(template && template.principalRemarkScale) ? template.principalRemarkScale : [];
   const score = Number(average);
-  const match = bands.slice().sort((a,b) => Number(b.min) - Number(a.min)).find(b => score >= Number(b.min));
-  return match ? String(match.remark || '') : '';
+  const bands = Array.isArray(template && template.principalRemarkScale) ? template.principalRemarkScale : [];
+  const match = bands.slice().filter(b => Number.isFinite(Number(b.min)) && String(b.remark || '').trim())
+    .sort((a,b) => Number(b.min) - Number(a.min)).find(b => score >= Number(b.min));
+  if (match) return String(match.remark || '').trim();
+  const grades = Array.isArray(template && template.gradeScale) ? template.gradeScale : [];
+  const gradeBand = grades.slice().sort((a,b) => Number(b.min) - Number(a.min)).find(b => score >= Number(b.min));
+  const grade = String(gradeBand && gradeBand.grade || '').toUpperCase();
+  const fallback = {
+    A: 'Excellent performance. Keep up the outstanding work.',
+    B: 'Very good performance. Aim even higher.',
+    C: 'Good performance. There is room for steady improvement.',
+    D: 'Fair performance. More effort is required.',
+    E: 'Satisfactory performance. Consistent study will help you improve.',
+    F: 'Performance needs improvement. Focused effort and support are needed.'
+  };
+  return fallback[grade] || 'A performance comment could not be generated. Please check the comment rules and result data.';
 }
 
 function gradeFor(score, scale) {
