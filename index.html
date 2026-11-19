@@ -2569,7 +2569,7 @@ function pdfRenderPage(doc, r) {
   doc.setFontSize(9); doc.setTextColor(0,0,0); doc.setFont(undefined, 'bold');
   doc.text("CLASS TEACHER'S REMARK:", margin, y);
   doc.setFont(undefined, 'normal');
-  const trLines = doc.splitTextToSize(r.principalRemark || '—', pageW - margin*2 - 110);
+  const trLines = doc.splitTextToSize(r.teacherRemark || '—', pageW - margin*2 - 110);
   doc.text(trLines, margin + 105, y);
   y += Math.max(14, trLines.length * 10 + 4);
 
