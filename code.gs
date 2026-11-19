@@ -2694,7 +2694,7 @@ function isLegacyAutoPrincipalRemark_(remark) {
   // custom remarks from the configured scale. This signature lets the refresh
   // generator update those legacy automatic comments while preserving manual
   // remarks that do not carry this suffix.
-  return /\\s\\(Overall:\\s*\\d+(?:\\.\\d+)?%\\)$/.test(value);
+  return /\s\(Overall:\s*\d+(?:\.\d+)?%\)$/.test(value);
 }
 
 function principalRemarkFor_(studentId, className, term, academicYear) {
