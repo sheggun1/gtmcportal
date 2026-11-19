@@ -2672,23 +2672,20 @@ function autoPrincipalRemark_(overallPercent, gradeScale, principalRemarkScale) 
     .filter(function (b) { return isFinite(Number(b.min)) && String(b.remark || '').trim(); })
     .sort(function (a, b) { return Number(b.min) - Number(a.min); })
     .find(function (b) { return pct >= Number(b.min); });
-  if (band) {
-    return String(band.remark).trim() + ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
-  }
+  if (band) return String(band.remark).trim();
   const sorted = (Array.isArray(gradeScale) ? gradeScale.slice() : [])
     .sort(function (a, b) { return Number(b.min) - Number(a.min); });
   const gradeBand = sorted.find(function (b) { return pct >= Number(b.min); });
-  const grade = gradeBand ? String(gradeBand.grade) : '?';
+  const grade = gradeBand ? String(gradeBand.grade).toUpperCase() : '';
   const map = {
-    A: 'An excellent result. Keep up this outstanding performance.',
-    B: 'A very good result. Aim even higher next term.',
-    C: 'A good result. There is room for steady improvement.',
-    D: 'A fair result. More effort is required.',
-    E: 'A pass. Consistent study will improve your performance.',
-    F: 'A poor result. Significant and focused improvement is needed.'
+    A: 'Excellent performance. Keep up the outstanding work.',
+    B: 'Very good performance. Aim even higher.',
+    C: 'Good performance. There is room for steady improvement.',
+    D: 'Fair performance. More effort is required.',
+    E: 'Satisfactory performance. Consistent study will help you improve.',
+    F: 'Performance needs improvement. Focused effort and support are needed.'
   };
-  return (map[grade] || 'Result available.') +
-    ' (Overall: ' + Math.round(pct * 100) / 100 + '%)';
+  return map[grade] || 'A performance comment could not be generated. Please check the comment rules and result data.';
 }
 
 function isLegacyAutoPrincipalRemark_(remark) {
