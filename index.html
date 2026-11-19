@@ -4508,7 +4508,7 @@ function gtmcCardHTML(r, withId) {
   ${sc.length ? `<div class="rc-bar">Grade Scale</div><table class="rc-t rc-grades"><tbody><tr>${sc.map(g => `<td><b>${esc(g.grade)}</b><br><small>${Number(g.min)}&ndash;${Number(g.max)}</small>${g.remark ? `<br><small>${esc(g.remark)}</small>` : ''}</td>`).join('')}</tr></tbody></table>` : ''}
   <div class="rc-bar">Performance Summary</div>
   <table class="rc-t" style="margin-bottom:6px"><thead><tr>${sum.map(s => `<th>${s[0]}</th>`).join('')}</tr></thead><tbody><tr>${sum.map(s => `<td class="c" style="font-size:13px">${s[1]}</td>`).join('')}</tr></tbody></table>
-  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.principalRemark) : ''}
+  ${t.showTeacherRemark !== false ? rem('Class Teacher', r.teacherRemark) : ''}
   ${t.showPrincipalRemark !== false ? rem('Principal', r.principalRemark) : ''}
   
   ${verificationBlock}
