@@ -4240,8 +4240,8 @@ async function loadClassPerformance(){
   const rankRows=(rows,key)=>{const valid=rows.filter(x=>x.average!==null).sort((a,b)=>b.average-a.average);let rank=0,last=null;valid.forEach((r,i)=>{if(last===null||r.average!==last)rank=i+1;r[key]=rank;last=r.average;});rows.forEach(r=>{if(r.average===null)r[key]='—';});};
   rankRows(armRows,'armPosition');
   rankRows(allRows,'wholePosition');
-  const wholeById=new Map(allRows.map(r=>[String(r.student_id),r]));
-  armRows.forEach(r=>{const whole=wholeById.get(String(r.student_id));r.wholePosition=whole?whole.wholePosition:'—';});
+  const wholeById=new Map(allRows.map(r=>[String(r.className)+'::'+String(r.student_id),r]));
+  armRows.forEach(r=>{const whole=wholeById.get(String(r.className)+'::'+String(r.student_id));r.wholePosition=whole?whole.wholePosition:'—';});
   const subjectRows=subjects.map(sub=>{const vals=selected.students.map(st=>getVal((selected.scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,vals,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,missing:selected.students.length-vals.length};});
   const overall=subjectRows.flatMap(r=>r.vals),completeStudents=armRows.filter(x=>x.average!==null).length,wholeRanked=allRows.filter(x=>x.average!==null).length;
   stats.innerHTML=[['Students in arm',selected.students.length],['Arms compared',sameGradeClasses.length],['Subjects',subjects.length],['Ranked across class',wholeRanked]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
