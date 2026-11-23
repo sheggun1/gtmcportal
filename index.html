@@ -625,6 +625,7 @@ function applyLogoFallback() {
   });
 }
 
+function gtmcSessionMeta_(){const ua=navigator.userAgent||'',device=/iPad|Tablet/i.test(ua)?'tablet':(/Android|iPhone|iPod/i.test(ua)?'mobile':'desktop'),browser=/Edg\//.test(ua)?'Edge':(/Firefox\//.test(ua)?'Firefox':(/Chrome\//.test(ua)?'Chrome':(/Safari\//.test(ua)?'Safari':'Other'))),platform=/Android/i.test(ua)?'Android':(/iPhone|iPad|iPod/i.test(ua)?'iOS':(/Windows/i.test(ua)?'Windows':(/Mac/i.test(ua)?'macOS':'Other')));return {device,browser,platform};}
 async function doLogin() {
   const email = q('loginEmail').value.trim();
   const password = q('loginPassword').value;
@@ -635,11 +636,11 @@ async function doLogin() {
   let staffErr = null;
   try {
     try {
-      const r = await api('login', { email, password });
+      const r = await api('login', { email, password, sessionMeta:gtmcSessionMeta_() });
       saveSession(r.token, r.user); boot(); return;
     } catch (e) { staffErr = e; }
     try {
-      const r = await api('parentLogin', { email, password });
+      const r = await api('parentLogin', { email, password, sessionMeta:gtmcSessionMeta_() });
       saveSession(r.token, r.user); boot(); return;
     } catch (e2) { err.textContent = (staffErr && staffErr.message) || e2.message; }
   } finally { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Sign In'; }
@@ -665,6 +666,7 @@ async function isOfficer() {
 
 async function boot() {
   if (!S.token || !S.user) { logout(); return; }
+  if(!window.__gtmcSessionHeartbeat){window.__gtmcSessionHeartbeat=setInterval(()=>{if(S.token&&S.user&&document.visibilityState==='visible')api('sessionActivity',{}).catch(()=>{});},300000);}
   q('loginView').style.display = 'none';
   q('appView').style.display = 'flex';
   q('userLabel').textContent = S.user.name || S.user.email;
@@ -5000,8 +5002,24 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     }catch(e){box.innerHTML='<div class="empty">'+safe(e.message)+'</div>';}
   };
   window.gtmcExportPWAInstallations=function(){const rows=window.__GTMC_PWA_INSTALL_ROWS||[];downloadCSV('GTMC_PWA_Installations.csv',[['Name','Email','Role','Installed At','Device','Browser','Platform']].concat(rows.map(r=>[r.name,r.email,r.role,r.installedAt,r.deviceType,r.browser,r.platform])));};
+  function addSessionPanel(){
+    if(!hasRole('admin'))return;
+    const main=$('main');if(!main||main.querySelector('[data-panel="gtmcSessions"]'))return;
+    main.insertAdjacentHTML('beforeend','<div class="panel" data-panel="gtmcSessions" id="gtmcSessions"><div class="page-head"><h1>User & Session Management</h1><p>Recent active sessions, last activity and administrator-controlled logout.</p></div><div class="card"><div class="row"><button onclick="gtmcLoadSessions()">Refresh sessions</button></div><div id="gtmcSessionStats" class="grid cols-4" style="margin-top:12px"></div><div id="gtmcSessionTable" class="empty">Tap Refresh to load sessions.</div></div></div>');
+    addNav('gtmcSessions','Active Users & Sessions','Administration');
+  }
+  window.gtmcLoadSessions=async function(){
+    const box=$('gtmcSessionTable');if(!box)return;box.innerHTML='<div class="empty">Loading session list…</div>';
+    try{const data=await api('adminGetUserSessions');const rows=data||[];window.__GTMC_SESSION_ROWS=rows;
+      const online=rows.filter(r=>r.online&&!r.revoked),recent=rows.filter(r=>!r.revoked&&r.lastActive&&Date.now()-new Date(r.lastActive).getTime()<24*3600000);
+      $('gtmcSessionStats').innerHTML='<div class="card stat-card"><div class="sub">Currently active (15 min)</div><div class="stat-number">'+online.length+'</div></div><div class="card stat-card"><div class="sub">Active in 24 hours</div><div class="stat-number">'+recent.length+'</div></div><div class="card stat-card"><div class="sub">Active sessions</div><div class="stat-number">'+rows.filter(r=>!r.revoked).length+'</div></div><div class="card stat-card"><div class="sub">All sessions recorded</div><div class="stat-number">'+rows.length+'</div></div>';
+      box.innerHTML=rows.length?'<div class="table-wrap"><table><thead><tr><th>Status</th><th>User</th><th>Role</th><th>Device</th><th>Last active</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+(r.revoked?'Logged out':(r.online?'🟢 Online':'Recent / inactive'))+'</td><td>'+safe(r.name||r.email)+'<br><small>'+safe(r.email)+'</small></td><td>'+safe(r.role)+'</td><td>'+safe(r.device)+' · '+safe(r.browser)+' · '+safe(r.platform)+'</td><td>'+safe(String(r.lastActive||r.loginTime||''))+'</td><td>'+(r.revoked?'—':'<button class="sec sm" onclick="gtmcForceLogout(\''+safe(r.hash)+'\')">Force logout</button><button class="sec sm" onclick="gtmcLogoutAll(\''+safe(r.email)+'\')">Logout all devices</button>')+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty">No session records yet.</div>';
+    }catch(e){box.innerHTML='<div class="empty">'+safe(e.message)+'</div>';}
+  };
+  window.gtmcForceLogout=async function(hash){if(!confirm('End this session immediately?'))return;try{await api('adminRevokeUserSession',{hash});toast('Session ended.','ok');gtmcLoadSessions();}catch(e){toast(e.message,'err');}};
+  window.gtmcLogoutAll=async function(email){if(!confirm('Log this user out from every device?'))return;try{const r=await api('adminRevokeAllUserSessions',{email});toast('Ended '+r.revoked+' session(s).','ok');gtmcLoadSessions();}catch(e){toast(e.message,'err');}};
   const oldAdmin=window.renderAdmin;
-  if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addPWAInstallPanel();addDarkMode();};
+  if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addPWAInstallPanel();addSessionPanel();addDarkMode();};
   const oldCT=window.renderClassTeacher;
   if(typeof oldCT==='function')window.renderClassTeacher=async function(){await Promise.resolve(oldCT.apply(this,arguments));addStaffPanel();addDarkMode();};
   const oldST=window.renderSubjectTeacher;
