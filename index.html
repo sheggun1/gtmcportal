@@ -4215,19 +4215,41 @@ async function askPerformanceAI(isTeacher) {
 async function loadClassPerformance(){
  const cls=q('perfClass')?.value,term=q('perfTerm')?.value,assessment=q('perfAssessment')?.value,stats=q('perfStats'),sb=q('perfSubjectBox'),pb=q('perfStudentBox');if(!cls)return;
  if(q('perfAIBox'))q('perfAIBox').innerHTML='<div class="empty">Run AI analysis after the scores load.</div>';
- sb.innerHTML=pb.innerHTML='<div class="empty">Loading analysis…</div>';
+ sb.innerHTML=pb.innerHTML='<div class="empty">Loading analysis and class positions…</div>';
  try{
-  const [students,subjects,scoreMap]=await Promise.all([api('getStudents',{className:cls}),loadSubjects(cls),api('getClassScores',{className:cls,term})]);
-  window.__GTMC_PERF_SCOREMAP=scoreMap;
+  const classes=await loadClasses();
+  const gradeKey=(name)=>{const m=String(name||'').match(/^(JSS|SS)\s*([123])/i);return m?(m[1].toUpperCase()+m[2]):String(name||'').toUpperCase();};
+  const sameGradeClasses=classes.filter(c=>gradeKey(c)===gradeKey(cls));
+  if(!sameGradeClasses.includes(cls))sameGradeClasses.push(cls);
+  const subjects=await loadSubjects(cls);
+  const armData=await Promise.all(sameGradeClasses.map(async arm=>{
+    const [students,scoreMap]=await Promise.all([api('getStudents',{className:arm}),api('getClassScores',{className:arm,term})]);
+    return {className:arm,students:Array.isArray(students)?students:[],scoreMap:scoreMap||{}};
+  }));
+  const selected=armData.find(x=>x.className===cls);
+  if(!selected)throw new Error('The selected class data could not be loaded.');
+  window.__GTMC_PERF_SCOREMAP=selected.scoreMap;
   const getVal=(r)=>{if(assessment==='total'){const keys=['T1','T2','T3','Exam'];return keys.every(k=>r[k]!==''&&r[k]!==null&&r[k]!==undefined&&Number.isFinite(Number(r[k])))?keys.reduce((a,k)=>a+Number(r[k]),0):null;}const v=r[assessment];return v===''||v===null||v===undefined||!Number.isFinite(Number(v))?null:Number(v);};
-  const subjectRows=subjects.map(sub=>{const vals=students.map(st=>getVal((scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,vals,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,missing:students.length-vals.length};});
-  const vals=students.map(st=>{const per=subjects.map(sub=>getVal((scoreMap[st.student_id]||{})[sub]||{}));const good=per.filter(v=>v!==null);return {...st,average:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,completed:good.length,totalSubjects:subjects.length};});
-  const overall=subjectRows.flatMap(r=>r.vals),completeStudents=vals.filter(x=>x.average!==null);
-  stats.innerHTML=[['Students',students.length],['Subjects',subjects.length],['Scores entered',overall.length],['Missing score cells',students.length*subjects.length-overall.length]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
-  sb.innerHTML=`<div class="table-wrap"><table id="performanceTable"><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores Entered</th><th>Missing</th></tr></thead><tbody>${subjectRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.high)}</td><td>${fmtScore(r.low)}</td><td>${r.vals.length}/${students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
-  vals.sort((a,b)=>a.average===null?1:b.average===null?-1:b.average-a.average);let rank=0,last=null;vals.forEach((r,i)=>{if(r.average!==null){if(last===null||r.average!==last)rank=i+1;r.rank=rank;last=r.average;}else r.rank='—';});
-  pb.innerHTML=`<div class="table-wrap"><table id="performanceStudentsTable"><thead><tr><th>Position*</th><th>Student</th><th>Average</th><th>Subjects Complete</th><th>Status</th></tr></thead><tbody>${vals.map(r=>`<tr><td>${r.rank}</td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.average)}</td><td>${r.completed}/${r.totalSubjects}</td><td><span class="status-pill ${r.completed===r.totalSubjects?'status-ok':'status-warn'}">${r.completed===r.totalSubjects?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub" style="margin-top:8px">*Ranking shown here is an analysis of the selected assessment and is not a substitute for the official school ranking.</p>`;
-  pb.insertAdjacentHTML('beforeend', `<h2 style="margin-top:18px">Student Ranking in Each Subject</h2>${buildSubjectRankingsHtml(students,subjects,getVal)}`);
+  const makeRows=(arm)=>arm.students.map(st=>{
+    const per=subjects.map(sub=>getVal((arm.scoreMap[st.student_id]||{})[sub]||{}));
+    const good=per.filter(v=>v!==null);
+    return {...st,className:arm.className,average:good.length===subjects.length&&subjects.length?good.reduce((a,b)=>a+b,0)/good.length:null,completed:good.length,totalSubjects:subjects.length};
+  });
+  const allRows=armData.flatMap(makeRows);
+  const armRows=makeRows(selected);
+  const rankRows=(rows,key)=>{const valid=rows.filter(x=>x.average!==null).sort((a,b)=>b.average-a.average);let rank=0,last=null;valid.forEach((r,i)=>{if(last===null||r.average!==last)rank=i+1;r[key]=rank;last=r.average;});rows.forEach(r=>{if(r.average===null)r[key]='—';});};
+  rankRows(armRows,'armPosition');
+  rankRows(allRows,'wholePosition');
+  const wholeById=new Map(allRows.map(r=>[String(r.student_id),r]));
+  armRows.forEach(r=>{const whole=wholeById.get(String(r.student_id));r.wholePosition=whole?whole.wholePosition:'—';});
+  const subjectRows=subjects.map(sub=>{const vals=selected.students.map(st=>getVal((selected.scoreMap[st.student_id]||{})[sub]||{})).filter(v=>v!==null);return {sub,vals,avg:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null,high:vals.length?Math.max(...vals):null,low:vals.length?Math.min(...vals):null,missing:selected.students.length-vals.length};});
+  const overall=subjectRows.flatMap(r=>r.vals),completeStudents=armRows.filter(x=>x.average!==null).length,wholeRanked=allRows.filter(x=>x.average!==null).length;
+  stats.innerHTML=[['Students in arm',selected.students.length],['Arms compared',sameGradeClasses.length],['Subjects',subjects.length],['Ranked across class',wholeRanked]].map(([l,v])=>`<div class="card stat-card"><div class="sub">${l}</div><div class="stat-number">${v}</div></div>`).join('');
+  sb.innerHTML=`<div class="table-wrap"><table id="performanceTable"><thead><tr><th>Subject</th><th>Average</th><th>Highest</th><th>Lowest</th><th>Scores Entered</th><th>Missing</th></tr></thead><tbody>${subjectRows.map(r=>`<tr><td><strong>${esc(r.sub)}</strong></td><td>${fmtScore(r.avg)}</td><td>${fmtScore(r.high)}</td><td>${fmtScore(r.low)}</td><td>${r.vals.length}/${selected.students.length}</td><td>${r.missing}</td></tr>`).join('')}</tbody></table></div>`;
+  armRows.sort((a,b)=>a.average===null?1:b.average===null?-1:b.average-a.average);
+  const assessmentLabel=({total:'Overall Total',T1:'CA 1',T2:'CA 2',T3:'CA 3',Exam:'Examination'})[assessment]||assessment;
+  pb.innerHTML=`<div class="portal-note">${esc(assessmentLabel)} · ${esc(term)} · Class arm: ${esc(cls)} · Whole class group: ${esc(gradeKey(cls))} · Rankings compare students with complete scores in all ${subjects.length} selected subjects. Equal averages receive the same position.</div><div class="table-wrap"><table id="performanceStudentsTable"><thead><tr><th>Class-arm position</th><th>Whole-class position</th><th>Student</th><th>Average</th><th>Subjects Complete</th><th>Status</th></tr></thead><tbody>${armRows.map(r=>`<tr><td><strong>${r.armPosition}</strong></td><td><strong>${r.wholePosition}</strong></td><td class="br-name">${esc(r.name||'')}</td><td>${fmtScore(r.average)}</td><td>${r.completed}/${r.totalSubjects}</td><td><span class="status-pill ${r.completed===r.totalSubjects?'status-ok':'status-warn'}">${r.completed===r.totalSubjects?'Complete':'Incomplete'}</span></td></tr>`).join('')}</tbody></table></div><p class="sub" style="margin-top:8px">Positions are analysis rankings for the selected assessment, not official published report-card positions. Incomplete records are not ranked. Comparison includes these arms: ${sameGradeClasses.map(esc).join(', ')}.</p>`;
+  pb.insertAdjacentHTML('beforeend', `<h2 style="margin-top:18px">Student Ranking in Each Subject (selected arm)</h2>${buildSubjectRankingsHtml(selected.students,subjects,getVal)}`);
  }catch(e){stats.innerHTML='';sb.innerHTML=pb.innerHTML=`<div class="empty">${esc(e.message)}</div>`;}
 }
 async function parentLoadTestPerformance(){
