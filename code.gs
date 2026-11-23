@@ -296,6 +296,10 @@ function route(action, p) {
     case 'adminGetDebts':           return adminGetDebts(p, p.token);
     case 'adminSaveDebt':           return adminSaveDebt(p, p.token);
     case 'recordPWAInstall': return recordPWAInstall(p, p.token);
+    case 'sessionActivity': return gtmcSessionActivity_(p.token);
+    case 'adminGetUserSessions': return adminGetUserSessions_(p.token);
+    case 'adminRevokeUserSession': return adminRevokeUserSession_(p.token,p.hash);
+    case 'adminRevokeAllUserSessions': return adminRevokeAllUserSessions_(p.token,p.email);
     case 'adminGetPWAInstallations': return adminGetPWAInstallations(p, p.token);
     case 'adminGetAnnouncements':   return adminGetAnnouncements(p, p.token);
     case 'getTeacherAnnouncements': return getTeacherAnnouncements(p, p.token);
@@ -919,10 +923,8 @@ function login(email, password) {
   if (String(u.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('Users','email',u.email,'password',password);
 
   const token = Utilities.getUuid();
-  CacheService.getScriptCache().put('sess_' + token, JSON.stringify({
-    email: u.email, name: u.name, role: String(u.role || ''),
-    class: u.class || '', class_teacher_class: u.class_teacher_class || '', subjects: u.subjects || ''
-  }), SESSION_SECONDS);
+  const sessionUser={email:u.email,name:u.name,role:String(u.role||''),class:u.class||'',class_teacher_class:u.class_teacher_class||'',subjects:u.subjects||''};
+  gtmcRegisterSession_(token,sessionUser,p&&p.sessionMeta||{});
 
   logAudit(u.email, 'login', {});
   return {
@@ -935,17 +937,70 @@ function login(email, password) {
   };
 }
 
+function gtmcSessionHash_(token) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(token),Utilities.Charset.UTF_8).map(function(b){return ('0'+(b&255).toString(16)).slice(-2);}).join('');
+}
+function gtmcSessionRegistry_() {
+  const ss=openSS();let sh=ss.getSheetByName('UserSessions');
+  if(!sh){sh=ss.insertSheet('UserSessions');sh.appendRow(['Token Hash','Session ID','Email','Name','Role','Device','Browser','Platform','Login Time','Last Active','Revoked','Revoked Reason']);}
+  return sh;
+}
+function gtmcRegisterSession_(token,user,meta) {
+  const cache=CacheService.getScriptCache(), hash=gtmcSessionHash_(token);
+  const version=cache.get('sessver_'+String(user.email||'').toLowerCase())||'0';
+  const session=Object.assign({},user,{sessionVersion:version,sessionHash:hash});
+  cache.put('sess_'+token,JSON.stringify(session),SESSION_SECONDS);
+  const sh=gtmcSessionRegistry_();
+  sh.appendRow([hash,Utilities.getUuid(),String(user.email||''),String(user.name||''),roleList_(user).join(','),String(meta.device||'unknown'),String(meta.browser||'unknown'),String(meta.platform||'unknown'),new Date(),new Date(),false,'']);
+}
 function verifyToken(token) {
   if (!token) throw new Error('No token');
-  const raw = CacheService.getScriptCache().get('sess_' + token);
+  const cache=CacheService.getScriptCache(), raw=cache.get('sess_'+token);
   if (!raw) throw new Error('Session expired — please log in again');
-  return JSON.parse(raw);
+  const user=JSON.parse(raw), hash=user.sessionHash||gtmcSessionHash_(token);
+  if(cache.get('revoked_'+hash))throw new Error('Your session has been revoked. Please log in again.');
+  const current=cache.get('sessver_'+String(user.email||'').toLowerCase())||'0';
+  if(String(user.sessionVersion||'0')!==String(current))throw new Error('Your session was ended by an administrator. Please log in again.');
+  return user;
 }
 function logoutSession_(token) {
   if (!token) throw new Error('No token');
-  verifyToken(token);
+  const user=verifyToken(token), hash=user.sessionHash||gtmcSessionHash_(token);
   CacheService.getScriptCache().remove('sess_' + token);
+  CacheService.getScriptCache().put('revoked_'+hash,'1',SESSION_SECONDS);
+  gtmcMarkSessionRevoked_(hash,'User logout');
   return { success: true };
+}
+function gtmcMarkSessionRevoked_(hash,reason){
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
+  for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue(reason||'');break;}
+}
+function gtmcSessionActivity_(token){
+  const user=verifyToken(token),hash=user.sessionHash||gtmcSessionHash_(token),sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
+  for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash&&!rows[i][10]){
+    sh.getRange(i+1,10).setValue(new Date());return {updated:true};
+  }
+  return {updated:false};
+}
+function adminGetUserSessions_(token){
+  requireRole(token,['admin']);
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),now=Date.now();
+  return rows.slice(1).filter(r=>r[0]).map(r=>({hash:String(r[0]),sessionId:String(r[1]),email:String(r[2]),name:String(r[3]),role:String(r[4]),device:String(r[5]),browser:String(r[6]),platform:String(r[7]),loginTime:r[8],lastActive:r[9],revoked:Boolean(r[10]),revokedReason:String(r[11]||''),online:!r[10]&&r[9]&&now-(new Date(r[9]).getTime())<15*60*1000}));
+}
+function adminRevokeUserSession_(token,hash){
+  requireRole(token,['admin']);hash=String(hash||'');
+  if(!/^[a-f0-9]{64}$/.test(hash))throw new Error('Invalid session reference');
+  const cache=CacheService.getScriptCache();cache.put('revoked_'+hash,'1',SESSION_SECONDS);
+  gtmcMarkSessionRevoked_(hash,'Force logout by administrator');
+  return {revoked:true};
+}
+function adminRevokeAllUserSessions_(token,email){
+  requireRole(token,['admin']);email=String(email||'').trim().toLowerCase();
+  if(!email)throw new Error('User email required');
+  const cache=CacheService.getScriptCache();cache.put('sessver_'+email,Utilities.getUuid(),SESSION_SECONDS);
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
+  let count=0;for(let i=1;i<rows.length;i++)if(String(rows[i][2]).toLowerCase()===email&&!rows[i][10]){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue('Logout all devices by administrator');count++;}
+  return {revoked:count};
 }
 
 function requireRole(token, roles) {
@@ -2217,7 +2272,7 @@ function parentLogin(email, password) {
   if (String(account.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('ParentAccounts','email',account.email,'password',password);
   const token = Utilities.getUuid();
   const session = { email: account.email, name: account.name, role: 'parent' };
-  CacheService.getScriptCache().put('sess_' + token, JSON.stringify(session), SESSION_SECONDS);
+  gtmcRegisterSession_(token,session,p&&p.sessionMeta||{});
   logAudit(account.email, 'parentLogin', {});
   return { token: token, user: session };
 }
