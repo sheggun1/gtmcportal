@@ -3683,6 +3683,25 @@ function parentAskResultAI(p, token) {
   const parent = requireRole(token, ['parent']);
   const question = String(p.question || '').trim();
   if (!question || question.length > 1200) throw new Error('Enter a question of up to 1,200 characters.');
+  if (p.generalMode === true) {
+    const className = String(p.className || '').trim();
+    const studentId = String(p.studentId || '').trim();
+    if (!className || !studentId) throw new Error('Select a linked ward first.');
+    portalAssertLinkedParent_(parent, className, studentId);
+    const prompt = [
+      'You are the academic assistance chatbot for Greater Tomorrow Model Schools.',
+      'The parent is asking a general academic, school learning, or study-guidance question without loading a report card.',
+      'Do not claim access to this student’s scores, ranking, attendance, teacher comments, or private records.',
+      'Answer using general educational knowledge and helpful parent guidance. If the question requires school-specific policy or unavailable student data, clearly say that you do not have that information here.',
+      'Be supportive, concise, and practical. Never invent school policies or student information.',
+      'Linked ward class: ' + className,
+      'Parent question: ' + question
+    ].join('\\n');
+    const answer = geminiGenerateText_(prompt, 700, false);
+    if (!answer || !answer.trim()) throw new Error('Gemini did not return an answer. Please try again.');
+    logAudit(parent.email, 'parentAskGeneralAI', { studentId: studentId, className: className });
+    return { answer: answer.trim() };
+  }
   const result = parentGetResult(p, token);
   // Gemini API credentials are read securely from Apps Script Script Properties.
 
