@@ -165,7 +165,7 @@ function route(action, p) {
   if (p && p.token) {
     const sessionUser = verifyToken(p.token);
     if (hasRole_(sessionUser, 'parent') && [
-      'me','parentGetWards','parentGetResult','parentAskResultAI','parentGetDebts',
+      'recordPWAInstall','me','parentGetWards,'parentGetResult','parentAskResultAI','parentGetDebts',
       'parentGetAnnouncements','parentGetTestBreakdown','getDomainSettings',
       'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','parentSubmitPaymentNotification','parentGetPaymentNotifications','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'
     ].indexOf(action) === -1) {
@@ -5594,7 +5594,7 @@ function recordPWAInstall(p, token) {
   if (!installId || installId.length > 100) throw new Error('Invalid installation identifier.');
   const sh = gtmcInstallSheet_(), values = sh.getDataRange().getValues();
   const email = String(user.email || user.username || ''), now = new Date();
-  for (let i=1;i<values.length;i++) if (String(values[i][0]) === installId) {
+  for (let i=1;i<values.length;i++) if (String(values[i][0]) === installId && String(values[i][2]||'') === email) {
     sh.getRange(i+1,9).setValue(now); return {recorded:true,existing:true};
   }
   sh.appendRow([installId,now,email,String(user.name||''),roleList_(user).join(','),String(p.deviceType||'unknown'),String(p.browser||'unknown'),String(p.platform||'unknown'),now]);
