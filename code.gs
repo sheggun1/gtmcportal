@@ -950,8 +950,7 @@ function gtmcRegisterSession_(token,user,meta) {
   const version=cache.get('sessver_'+String(user.email||'').toLowerCase())||'0';
   const session=Object.assign({},user,{sessionVersion:version,sessionHash:hash});
   cache.put('sess_'+token,JSON.stringify(session),SESSION_SECONDS);
-  const sh=gtmcSessionRegistry_();
-  sh.appendRow([hash,Utilities.getUuid(),String(user.email||''),String(user.name||''),roleList_(user).join(','),String(meta.device||'unknown'),String(meta.browser||'unknown'),String(meta.platform||'unknown'),new Date(),new Date(),false,'']);
+  const sh=gtmcSessionRegistry_(),lock=LockService.getScriptLock();lock.waitLock(10000);try{sh.appendRow([hash,Utilities.getUuid(),String(user.email||''),String(user.name||''),roleList_(user).join(','),String(meta.device||'unknown'),String(meta.browser||'unknown'),String(meta.platform||'unknown'),new Date(),new Date(),false,'']);}finally{lock.releaseLock();}
 }
 function verifyToken(token) {
   if (!token) throw new Error('No token');
@@ -972,20 +971,16 @@ function logoutSession_(token) {
   return { success: true };
 }
 function gtmcMarkSessionRevoked_(hash,reason){
-  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
-  for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue(reason||'');break;}
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),lock=LockService.getScriptLock();lock.waitLock(10000);try{for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue(reason||'');break;}}finally{lock.releaseLock();}
 }
 function gtmcSessionActivity_(token){
-  const user=verifyToken(token),hash=user.sessionHash||gtmcSessionHash_(token),sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
-  for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash&&!rows[i][10]){
-    sh.getRange(i+1,10).setValue(new Date());return {updated:true};
-  }
+  const user=verifyToken(token),hash=user.sessionHash||gtmcSessionHash_(token),sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),lock=LockService.getScriptLock();lock.waitLock(10000);try{for(let i=1;i<rows.length;i++)if(String(rows[i][0])===hash&&!rows[i][10]){sh.getRange(i+1,10).setValue(new Date());return {updated:true};}}finally{lock.releaseLock();}
   return {updated:false};
 }
 function adminGetUserSessions_(token){
   requireRole(token,['admin']);
-  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),now=Date.now();
-  return rows.slice(1).filter(r=>r[0]).map(r=>({hash:String(r[0]),sessionId:String(r[1]),email:String(r[2]),name:String(r[3]),role:String(r[4]),device:String(r[5]),browser:String(r[6]),platform:String(r[7]),loginTime:r[8],lastActive:r[9],revoked:Boolean(r[10]),revokedReason:String(r[11]||''),online:!r[10]&&r[9]&&now-(new Date(r[9]).getTime())<15*60*1000}));
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),now=Date.now(),cutoff=now-90*24*60*60*1000;
+  return rows.slice(1).filter(r=>r[0]&&r[8]&&new Date(r[8]).getTime()>=cutoff).map(r=>({hash:String(r[0]),sessionId:String(r[1]),email:String(r[2]),name:String(r[3]),role:String(r[4]),device:String(r[5]),browser:String(r[6]),platform:String(r[7]),loginTime:r[8],lastActive:r[9],revoked:Boolean(r[10]),revokedReason:String(r[11]||''),online:!r[10]&&r[9]&&now-(new Date(r[9]).getTime())<20*60*1000}));
 }
 function adminRevokeUserSession_(token,hash){
   requireRole(token,['admin']);hash=String(hash||'');
@@ -998,8 +993,7 @@ function adminRevokeAllUserSessions_(token,email){
   requireRole(token,['admin']);email=String(email||'').trim().toLowerCase();
   if(!email)throw new Error('User email required');
   const cache=CacheService.getScriptCache();cache.put('sessver_'+email,Utilities.getUuid(),SESSION_SECONDS);
-  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues();
-  let count=0;for(let i=1;i<rows.length;i++)if(String(rows[i][2]).toLowerCase()===email&&!rows[i][10]){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue('Logout all devices by administrator');count++;}
+  const sh=gtmcSessionRegistry_(),rows=sh.getDataRange().getValues(),lock=LockService.getScriptLock();let count=0;lock.waitLock(10000);try{for(let i=1;i<rows.length;i++)if(String(rows[i][2]).toLowerCase()===email&&!rows[i][10]){sh.getRange(i+1,11).setValue(true);sh.getRange(i+1,12).setValue('Logout all devices by administrator');count++;}}finally{lock.releaseLock();}
   return {revoked:count};
 }
 
