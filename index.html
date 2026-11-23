@@ -666,7 +666,7 @@ async function isOfficer() {
 
 async function boot() {
   if (!S.token || !S.user) { logout(); return; }
-  if(!window.__gtmcSessionHeartbeat){window.__gtmcSessionHeartbeat=setInterval(()=>{if(S.token&&S.user&&document.visibilityState==='visible')api('sessionActivity',{}).catch(()=>{});},300000);}
+  if(!window.__gtmcSessionHeartbeat){window.__gtmcSessionHeartbeat=setInterval(()=>{if(S.token&&S.user&&document.visibilityState==='visible')api('sessionActivity',{}).catch(()=>{});},600000);}
   q('loginView').style.display = 'none';
   q('appView').style.display = 'flex';
   q('userLabel').textContent = S.user.name || S.user.email;
