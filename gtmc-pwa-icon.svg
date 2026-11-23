@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<rect width="512" height="512" rx="104" fill="#0756a8"/>
-<path d="M70 180 256 80 442 180 256 280 70 180Z" fill="#f2dfaa" stroke="#fff" stroke-width="12" stroke-linejoin="round"/>
-<path d="M122 224v100c0 36 60 68 134 68s134-32 134-68V224L256 296 122 224Z" fill="#fff"/>
-<path d="M170 337V278l86 47 86-47v59c-43 31-129 31-172 0Z" fill="#0756a8"/>
-<path d="M425 183v104" stroke="#f2dfaa" stroke-width="14" stroke-linecap="round"/>
-<circle cx="425" cy="304" r="23" fill="#f2dfaa"/>
-<text x="256" y="452" font-size="56" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle" fill="#fff">GTMC</text>
-</svg>
