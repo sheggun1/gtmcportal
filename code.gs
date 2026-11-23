@@ -295,6 +295,8 @@ function route(action, p) {
 
     case 'adminGetDebts':           return adminGetDebts(p, p.token);
     case 'adminSaveDebt':           return adminSaveDebt(p, p.token);
+    case 'recordPWAInstall': return recordPWAInstall(p, p.token);
+    case 'adminGetPWAInstallations': return adminGetPWAInstallations(p, p.token);
     case 'adminGetAnnouncements':   return adminGetAnnouncements(p, p.token);
     case 'getTeacherAnnouncements': return getTeacherAnnouncements(p, p.token);
     case 'adminSaveAnnouncement':   return adminSaveAnnouncement(p, p.token);
@@ -5576,3 +5578,32 @@ route=function(action,p){
     default:return __gtmcBoardingOriginalRoute_(action,p);
   }
 };
+
+
+
+// PWA installation analytics: minimal metadata, no invasive device fingerprinting.
+function gtmcInstallSheet_() {
+  const ss = getSpreadsheet();
+  let sh = ss.getSheetByName('PWAInstallations');
+  if (!sh) { sh = ss.insertSheet('PWAInstallations'); sh.appendRow(['Install ID','Installed At','User Email','User Name','Role','Device Type','Browser','Platform','Last Seen']); }
+  return sh;
+}
+function recordPWAInstall(p, token) {
+  const user = verifyToken(token);
+  const installId = String(p.installId || '').trim();
+  if (!installId || installId.length > 100) throw new Error('Invalid installation identifier.');
+  const sh = gtmcInstallSheet_(), values = sh.getDataRange().getValues();
+  const email = String(user.email || user.username || ''), now = new Date();
+  for (let i=1;i<values.length;i++) if (String(values[i][0]) === installId) {
+    sh.getRange(i+1,9).setValue(now); return {recorded:true,existing:true};
+  }
+  sh.appendRow([installId,now,email,String(user.name||''),roleList_(user).join(','),String(p.deviceType||'unknown'),String(p.browser||'unknown'),String(p.platform||'unknown'),now]);
+  logAudit(email,'pwa_install_recorded',{installId:installId,deviceType:p.deviceType||'unknown'});
+  return {recorded:true,existing:false};
+}
+function adminGetPWAInstallations(p, token) {
+  requireRole(token,['admin']);
+  const sh=gtmcInstallSheet_(), data=sh.getDataRange().getValues();
+  const rows=data.slice(1).filter(r=>r[0]).map(r=>({installId:String(r[0]),installedAt:r[1],email:String(r[2]||''),name:String(r[3]||''),role:String(r[4]||''),deviceType:String(r[5]||''),browser:String(r[6]||''),platform:String(r[7]||''),lastSeen:r[8]}));
+  return {total:rows.length,rows:rows};
+}
