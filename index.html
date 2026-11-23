@@ -4984,8 +4984,24 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     top.insertBefore(b,top.firstChild);
   }
   document.body.classList.remove('gtmc-dark');
+  function addPWAInstallPanel(){
+    if(!hasRole('admin'))return;
+    const main=$('main');if(!main||main.querySelector('[data-panel="pwaInstallDashboard"]'))return;
+    main.insertAdjacentHTML('beforeend','<div class="panel" data-panel="pwaInstallDashboard" id="pwaInstallDashboard"><div class="page-head"><h1>Portal Installation & Usage</h1><p>Confirmed installs and account-linked installation details. Device information is approximate.</p></div><div class="card"><div class="row"><button onclick="gtmcLoadPWAInstallDashboard()">Refresh</button><button class="sec" onclick="gtmcExportPWAInstallations()">Export CSV</button></div><div id="pwaInstallStats" class="grid cols-4" style="margin-top:14px"></div><div id="pwaInstallRows" class="empty">Tap Refresh to load installation records.</div></div></div>');
+    addNav('pwaInstallDashboard','PWA Installations','Administration');
+  }
+  window.gtmcLoadPWAInstallDashboard=async function(){
+    const stats=$('pwaInstallStats'),box=$('pwaInstallRows');if(!box)return;
+    box.innerHTML='<div class="empty">Loading installation records…</div>';
+    try{
+      const data=await api('adminGetPWAInstallations');const rows=data.rows||[];window.__GTMC_PWA_INSTALL_ROWS=rows;
+      stats.innerHTML='<div class="stat-card card"><div class="sub">Confirmed installs</div><div class="stat-number">'+(data.total||0)+'</div></div><div class="stat-card card"><div class="sub">Parents</div><div class="stat-number">'+rows.filter(r=>/parent/i.test(r.role)).length+'</div></div><div class="stat-card card"><div class="sub">Staff/Admin</div><div class="stat-number">'+rows.filter(r=>!/parent|student/i.test(r.role)).length+'</div></div><div class="stat-card card"><div class="sub">Students</div><div class="stat-number">'+rows.filter(r=>/student/i.test(r.role)).length+'</div></div>';
+      box.innerHTML=rows.length?'<div class="table-wrap"><table><thead><tr><th>User</th><th>Role</th><th>Installed</th><th>Device</th><th>Browser</th><th>Platform</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+safe(r.name||r.email)+'<br><small>'+safe(r.email)+'</small></td><td>'+safe(r.role)+'</td><td>'+safe(String(r.installedAt||''))+'</td><td>'+safe(r.deviceType)+'</td><td>'+safe(r.browser)+'</td><td>'+safe(r.platform)+'</td></tr>').join('')+'</tbody></table></div>':'<div class="empty">No confirmed installations recorded yet.</div>';
+    }catch(e){box.innerHTML='<div class="empty">'+safe(e.message)+'</div>';}
+  };
+  window.gtmcExportPWAInstallations=function(){const rows=window.__GTMC_PWA_INSTALL_ROWS||[];downloadCSV('GTMC_PWA_Installations.csv',[['Name','Email','Role','Installed At','Device','Browser','Platform']].concat(rows.map(r=>[r.name,r.email,r.role,r.installedAt,r.deviceType,r.browser,r.platform])));};
   const oldAdmin=window.renderAdmin;
-  if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addDarkMode();};
+  if(typeof oldAdmin==='function')window.renderAdmin=async function(){await Promise.resolve(oldAdmin.apply(this,arguments));addStaffPanel();addPWAInstallPanel();addDarkMode();};
   const oldCT=window.renderClassTeacher;
   if(typeof oldCT==='function')window.renderClassTeacher=async function(){await Promise.resolve(oldCT.apply(this,arguments));addStaffPanel();addDarkMode();};
   const oldST=window.renderSubjectTeacher;
@@ -5052,9 +5068,14 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
     }
   });
   window.addEventListener('appinstalled',()=>{
-    const panel=document.getElementById('gtmcInstallPrompt');
-    if(panel)panel.remove();
-    installEvent=null;
+    const panel=document.getElementById('gtmcInstallPrompt');if(panel)panel.remove();installEvent=null;
+    try{
+      const installId=localStorage.getItem('gtmc_pwa_install_id')||('gtmc-'+crypto.randomUUID());localStorage.setItem('gtmc_pwa_install_id',installId);
+      const ua=navigator.userAgent||'',deviceType=/iPad|Tablet/i.test(ua)?'tablet':(/Android|iPhone|iPod/i.test(ua)?'mobile':'desktop');
+      const browser=/Edg\//.test(ua)?'Edge':(/Firefox\//.test(ua)?'Firefox':(/Chrome\//.test(ua)?'Chrome':(/Safari\//.test(ua)?'Safari':'Other')));
+      const platform=/Android/i.test(ua)?'Android':(/iPhone|iPad|iPod/i.test(ua)?'iOS':(/Windows/i.test(ua)?'Windows':(/Mac/i.test(ua)?'macOS':'Other')));
+      if(typeof api==='function')api('recordPWAInstall',{installId,deviceType,browser,platform}).catch(err=>console.warn('PWA install record failed',err));
+    }catch(err){console.warn('PWA install tracking unavailable',err);}
   });
   window.addEventListener('load',()=>{
     if(isStandalone()||!isPhone()||dismissedUntil()>Date.now())return;
