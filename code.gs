@@ -3628,7 +3628,8 @@ function adminSetAssessmentPublication(p, token) {
 }
 
 /* Parent-safe assessment-specific ranking: returns only the requesting student's position/counts.
-   A student is ranked when every subject has a score for that published assessment. */
+   Rank each student using the average of subject scores currently entered for this published assessment.
+   Missing subject scores are excluded from that student's average rather than blocking the ranking. */
 function rankClassAssessment_(className, term, academicYear, assessment) {
   const pubRows = sheetToObjects(assessmentPublicationSheet_()).filter(function(r) {
     return String(r.class).trim().toUpperCase() === String(className).trim().toUpperCase() &&
@@ -3654,13 +3655,18 @@ function rankClassAssessment_(className, term, academicYear, assessment) {
   for (let i = 0; i < ids.length; i++) {
     const id = String(ids[i][0] || '').trim();
     if (!id || !String(ids[i][1] || '').trim()) continue;
-    let sum = 0, complete = true;
+    let sum = 0, scoredSubjects = 0;
     for (let s = 0; s < subjects.length; s++) {
       const v = values[i][s * FIELDS.length + fieldIndex];
-      if (v === '' || v === null || v === undefined || !isFinite(Number(v))) { complete = false; break; }
+      if (v === '' || v === null || v === undefined || String(v).trim() === '' || !isFinite(Number(v))) continue;
       sum += Number(v);
+      scoredSubjects++;
     }
-    if (complete) rows.push({studentId:id, average:Math.round(sum / subjects.length * 100) / 100});
+    if (scoredSubjects > 0) rows.push({
+      studentId: id,
+      average: Math.round(sum / scoredSubjects * 100) / 100,
+      scoredSubjects: scoredSubjects
+    });
   }
   rows.sort(function(x,y){return y.average-x.average;});
   let lastScore=null,lastPosition=0;
