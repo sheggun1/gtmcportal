@@ -165,7 +165,7 @@ function route(action, p) {
   if (p && p.token) {
     const sessionUser = verifyToken(p.token);
     if (hasRole_(sessionUser, 'parent') && [
-      'recordPWAInstall','me','parentGetWards,'parentGetResult','parentAskResultAI','parentGetDebts',
+      'recordPWAInstall','sessionActivity','me','parentGetWards','parentGetResult','parentAskResultAI','parentGetDebts',
       'parentGetAnnouncements','parentGetTestBreakdown','getDomainSettings',
       'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','parentSubmitPaymentNotification','parentGetPaymentNotifications','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'
     ].indexOf(action) === -1) {
@@ -193,7 +193,7 @@ function route(action, p) {
   switch (action) {
     case 'getLoginAppearance': return gtmcGetLoginAppearance_();
     case 'adminSaveLoginAppearance': return gtmcSaveLoginAppearance_(p, p.token);
-    case 'login':               return login(p.email, p.password);
+    case 'login':               return login(p.email, p.password, p.sessionMeta);
     case 'me':                  return verifyToken(p.token);
     case 'logout':               return logoutSession_(p.token);
     case 'getClasses':          return getClasses(p.token);
@@ -250,7 +250,7 @@ function route(action, p) {
     case 'getAICommentDrafts':      return getAICommentDrafts(p, p.token);
     case 'approveAIComment':        return approveAIComment(p, p.token);
 
-    case 'parentLogin':             return parentLogin(p.email, p.password);
+    case 'parentLogin':             return parentLogin(p.email, p.password, p.sessionMeta);
     case 'adminCreateParent':       return adminCreateParent(p, p.token);
     case 'adminGetParentAccounts':  return adminGetParentAccounts(p, p.token);
     case 'adminLinkWard':           return adminLinkWard(p, p.token);
@@ -915,7 +915,7 @@ function assertClassTeacherOwnClass_(user, className, message) {
 }
 
 /* ============ AUTH ============ */
-function login(email, password) {
+function login(email, password, sessionMeta) {
   if (!email || !password) throw new Error('Email and password required');
   const users = sheetToObjects(getSheet('Users'));
   const u = users.find(function (x) { return String(x.email).toLowerCase() === String(email).toLowerCase() && gtmcPasswordMatches_(password,x.password) && x.active !== false && String(x.active).toLowerCase() !== 'false'; });
@@ -924,7 +924,7 @@ function login(email, password) {
 
   const token = Utilities.getUuid();
   const sessionUser={email:u.email,name:u.name,role:String(u.role||''),class:u.class||'',class_teacher_class:u.class_teacher_class||'',subjects:u.subjects||''};
-  gtmcRegisterSession_(token,sessionUser,p&&p.sessionMeta||{});
+  gtmcRegisterSession_(token,sessionUser,sessionMeta||{});
 
   logAudit(u.email, 'login', {});
   return {
@@ -2256,7 +2256,7 @@ function setupParentPortalSheets_() {
   }
 }
 
-function parentLogin(email, password) {
+function parentLogin(email, password, sessionMeta) {
   if (!email || !password) throw new Error('Email and password are required.');
   const normalized = String(email).trim().toLowerCase();
   const sh = getSheet('ParentAccounts');
@@ -2272,7 +2272,7 @@ function parentLogin(email, password) {
   if (String(account.password || '').indexOf('sha256$') !== 0) gtmcStorePassword_('ParentAccounts','email',account.email,'password',password);
   const token = Utilities.getUuid();
   const session = { email: account.email, name: account.name, role: 'parent' };
-  gtmcRegisterSession_(token,session,p&&p.sessionMeta||{});
+  gtmcRegisterSession_(token,session,sessionMeta||{});
   logAudit(account.email, 'parentLogin', {});
   return { token: token, user: session };
 }
