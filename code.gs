@@ -5583,7 +5583,7 @@ route=function(action,p){
 
 // PWA installation analytics: minimal metadata, no invasive device fingerprinting.
 function gtmcInstallSheet_() {
-  const ss = getSpreadsheet();
+  const ss = openSS();
   let sh = ss.getSheetByName('PWAInstallations');
   if (!sh) { sh = ss.insertSheet('PWAInstallations'); sh.appendRow(['Install ID','Installed At','User Email','User Name','Role','Device Type','Browser','Platform','Last Seen']); }
   return sh;
