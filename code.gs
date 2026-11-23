@@ -3627,6 +3627,72 @@ function adminSetAssessmentPublication(p, token) {
   return {success:true,className:className,term:term,academicYear:academicYear,assessment:assessment,published:published};
 }
 
+/* Parent-safe assessment-specific ranking: returns only the requesting student's position/counts.
+   A student is ranked when every subject has a score for that published assessment. */
+function rankClassAssessment_(className, term, academicYear, assessment) {
+  const pubRows = sheetToObjects(assessmentPublicationSheet_()).filter(function(r) {
+    return String(r.class).trim().toUpperCase() === String(className).trim().toUpperCase() &&
+      String(r.term).trim().toUpperCase() === String(term).trim().toUpperCase() &&
+      String(r.academic_year).trim() === String(academicYear).trim() &&
+      normalizeAssessment_(r.assessment) === assessment;
+  });
+  const latest = pubRows.slice(-1)[0];
+  if (!latest || !(latest.published === true || String(latest.published).toLowerCase() === 'true')) return [];
+  const fieldIndex = FIELDS.indexOf(assessment);
+  if (fieldIndex < 0) return [];
+  const sh = getSheet(className), last = sh.getLastRow();
+  if (last < 4) return [];
+  const subjects = subjectsForClass(className);
+  if (!subjects.length) return [];
+  const termIndex = TERMS.indexOf(term);
+  if (termIndex < 0) return [];
+  const cellsPerTerm = subjects.length * FIELDS.length;
+  const startCol = 3 + termIndex * cellsPerTerm;
+  const ids = sh.getRange(4, 1, last - 3, 2).getValues();
+  const values = sh.getRange(4, startCol, last - 3, cellsPerTerm).getValues();
+  const rows = [];
+  for (let i = 0; i < ids.length; i++) {
+    const id = String(ids[i][0] || '').trim();
+    if (!id || !String(ids[i][1] || '').trim()) continue;
+    let sum = 0, complete = true;
+    for (let s = 0; s < subjects.length; s++) {
+      const v = values[i][s * FIELDS.length + fieldIndex];
+      if (v === '' || v === null || v === undefined || !isFinite(Number(v))) { complete = false; break; }
+      sum += Number(v);
+    }
+    if (complete) rows.push({studentId:id, average:Math.round(sum / subjects.length * 100) / 100});
+  }
+  rows.sort(function(x,y){return y.average-x.average;});
+  let lastScore=null,lastPosition=0;
+  rows.forEach(function(r,i){
+    if(lastScore!==null && r.average===lastScore) r.position=lastPosition;
+    else {r.position=i+1;lastPosition=r.position;lastScore=r.average;}
+  });
+  return rows;
+}
+function rankParentAssessment_(studentId, className, term, academicYear, assessment) {
+  const arms = armsOfClass_(className);
+  let armRows = [], combined = [];
+  arms.forEach(function(arm){
+    const rows = rankClassAssessment_(arm,term,academicYear,assessment);
+    if(arm===className) armRows=rows;
+    rows.forEach(function(r){combined.push({studentId:r.studentId,className:arm,average:r.average});});
+  });
+  combined.sort(function(x,y){return y.average-x.average;});
+  let lastScore=null,lastPosition=0;
+  combined.forEach(function(r,i){
+    if(lastScore!==null && r.average===lastScore) r.position=lastPosition;
+    else {r.position=i+1;lastPosition=r.position;lastScore=r.average;}
+  });
+  const armHit=armRows.find(function(r){return r.studentId===String(studentId);});
+  const classHit=combined.find(function(r){return r.studentId===String(studentId)&&r.className===className;});
+  return {
+    arm:armHit?{position:armHit.position,outOf:armRows.length,average:armHit.average}:null,
+    combined:classHit?{position:classHit.position,outOf:combined.length,average:classHit.average}:null,
+    armSize:armRows.length,classSize:combined.length
+  };
+}
+
 /* ============ PARENT: TEST BREAKDOWN (v13) ============ */
 // Single round-trip returning all three published terms for one student.
 function parentGetTestBreakdown(p, token) {
@@ -3683,6 +3749,10 @@ function parentGetTestBreakdown(p, token) {
       : null;
 
     const ranking = rankStudent_(studentId, className, term);
+    const assessmentPositions = {};
+    ['T1','T2','T3','Exam'].forEach(function(a) {
+      if (assessmentPublished[a]) assessmentPositions[a] = rankParentAssessment_(studentId,className,term,academicYear,a);
+    });
 
     terms[term] = {
       published: true,
@@ -3693,7 +3763,8 @@ function parentGetTestBreakdown(p, token) {
       positionArm: ranking.arm,
       positionClass: ranking.combined,
       armSize: ranking.armSize,
-      classSize: ranking.classSize
+      classSize: ranking.classSize,
+      assessmentPositions: assessmentPositions
     };
   });
 
