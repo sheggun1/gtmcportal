@@ -4848,7 +4848,7 @@ body.gtmc-dark .gtmc-kpi,body.gtmc-dark .stat-box{background:#1d2d43;color:#e6ee
   }
   function addNav(id,label,group){
     const side=$('sidebar'),main=$('main');
-    if(!side||!main||main.querySelector('[data-panel="'+id+'"]'))return;
+    if(!side||!main||side.querySelector('.nav-item[data-tab="'+id+'"]'))return;
     const g=document.createElement('div');g.className='group';
     g.innerHTML='<div class="group-title">'+safe(group)+'</div><div class="nav-item" data-tab="'+id+'"><span class="dot"></span><span>'+safe(label)+'</span></div>';
     side.appendChild(g);
