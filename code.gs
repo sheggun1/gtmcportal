@@ -278,6 +278,7 @@ function route(action, p) {
     case 'adminPublishResult':      return adminPublishResult(p, p.token);
     case 'adminUnpublishResult':    return adminUnpublishResult(p, p.token);
     case 'adminGetPublicationStatus': return adminGetPublicationStatus(p, p.token);
+    case 'adminGetAllPublicationRecords': return adminGetAllPublicationRecords(p, p.token);
 
     case 'getDomains':              return getDomains(p, p.token);
     case 'saveDomainScore':         return saveDomainScore(p, p.token);
@@ -2479,6 +2480,53 @@ function adminGetPublicationStatus(p, token) {
       publishedAt: r.published_at, publishedBy: r.published_by
     };
   });
+}
+
+function adminGetAllPublicationRecords(p, token) {
+  requireRole(token, ['admin']);
+  const resultRows = sheetToObjects(getSheet('ResultPublication')).map(function (r) {
+    return {
+      type: 'Result',
+      studentId: String(r.student_id || ''),
+      className: String(r.class || ''),
+      term: String(r.term || ''),
+      academicYear: String(r.academic_year || ''),
+      published: r.published === true || String(r.published).toLowerCase() === 'true',
+      publishedAt: r.published_at || '',
+      publishedBy: String(r.published_by || '')
+    };
+  });
+  const assessmentRows = sheetToObjects(assessmentPublicationSheet_()).map(function (r) {
+    return {
+      type: 'Assessment',
+      assessment: normalizeAssessment_(r.assessment),
+      className: String(r.class || ''),
+      term: String(r.term || ''),
+      academicYear: String(r.academic_year || ''),
+      published: r.published === true || String(r.published).toLowerCase() === 'true',
+      publishedAt: r.published_at || '',
+      publishedBy: String(r.published_by || '')
+    };
+  });
+  const records = resultRows.concat(assessmentRows);
+  records.sort(function (a, b) {
+    const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  return {
+    results: resultRows,
+    assessments: assessmentRows,
+    records: records,
+    summary: {
+      resultRecords: resultRows.length,
+      publishedResults: resultRows.filter(function (r) { return r.published; }).length,
+      unpublishedResults: resultRows.filter(function (r) { return !r.published; }).length,
+      assessmentRecords: assessmentRows.length,
+      publishedAssessments: assessmentRows.filter(function (r) { return r.published; }).length,
+      unpublishedAssessments: assessmentRows.filter(function (r) { return !r.published; }).length
+    }
+  };
 }
 
 function adminPublishClass(p, token) {
