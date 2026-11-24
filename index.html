@@ -1227,6 +1227,21 @@ async function renderAdmin() {
       </div>
     </div>
 
+    <div class="panel" data-panel="subjectEnrolment">
+      <div class="gtmc-module-hero" data-module="subjectEnrolment"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>ACADEMICS</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Subject Enrolment Report</h1><p>See the student count for each subject by class, or compare enrolment across the school.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Organised. Connected. Informed.</span></div></div>
+      <div class="card">
+        <h2>Report Filters</h2>
+        <div class="grid cols-3">
+          <div><label>View</label><select id="seView" onchange="loadSubjectEnrolmentReport()"><option value="class">One class</option><option value="school">All classes</option></select></div>
+          <div><label>Class / Arm</label><select id="seClass"></select></div>
+          <div><label>Level</label><select id="seLevel" onchange="loadSubjectEnrolmentReport()"><option value="">All levels</option><option value="JSS">Junior Secondary (JSS)</option><option value="SS">Senior Secondary (SS)</option></select></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="blue" onclick="loadSubjectEnrolmentReport()">Generate Report</button><button class="sec" onclick="exportSubjectEnrolmentCSV()">Export Excel-compatible CSV</button><button class="sec" onclick="printSubjectEnrolmentReport()">Print / Save PDF</button></div>
+        <div id="seSummary" class="portal-note" style="margin-top:12px">Choose report filters, then generate.</div>
+      </div>
+      <div class="card"><div id="seReportBox"><div class="empty">Report has not been generated.</div></div></div>
+    </div>
+
     <div class="panel" data-panel="domains">
       <div class="card">
         <h2>Affective &amp; Psychomotor Domains</h2>
@@ -1516,6 +1531,8 @@ async function renderAdmin() {
       { id: 'parents', label: 'Parent Portal' },
     ]},
     { title: 'Academics', tabs: [
+      { id: 'subjectEnrolment', label: 'Subject Enrolment' },
+
       { id: 'submissions', label: 'Submissions' },
       { id: 'performance', label: 'Test Performance' },
       { id: 'broadsheet', label: 'Broadsheet' },
@@ -1546,6 +1563,7 @@ async function renderAdmin() {
   buildNav(navItems, 'dashboard');
 
   assignNavOnload('dashboard', 'loadAdminDashboard');
+  assignNavOnload('subjectEnrolment', 'loadSubjectEnrolmentReport');
   assignNavOnload('submissions', 'loadSubmissions');
   assignNavOnload('performance', 'loadClassPerformance');
   assignNavOnload('broadsheet', 'initBroadsheet');
@@ -5146,3 +5164,74 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
+
+
+// === ADMIN SUBJECT ENROLMENT REPORT ==========================================
+let GTMC_SUBJECT_ENROLMENT_DATA = null;
+async function loadSubjectEnrolmentReport() {
+  const box = q('seReportBox'), summary = q('seSummary');
+  if (!box || !summary) return;
+  const classes = (window.__gtmcClasses || []).filter(Boolean);
+  const view = q('seView')?.value || 'class';
+  const selectedClass = q('seClass')?.value || classes[0] || '';
+  const level = q('seLevel')?.value || '';
+  if (q('seClass')) q('seClass').disabled = view === 'school';
+  box.innerHTML = '<div class="empty">Loading student enrolment counts…</div>';
+  summary.textContent = 'Loading class registers and subject lists…';
+  try {
+    const targetClasses = classes.filter(c => !level || (String(c).startsWith('JSS') ? 'JSS' : 'SS') === level)
+      .filter(c => view === 'school' || c === selectedClass);
+    const classData = await Promise.all(targetClasses.map(async className => {
+      const [students, subjects] = await Promise.all([api('getStudents', { className }), loadSubjects(className)]);
+      return { className, count: students.length, subjects: Array.isArray(subjects) ? subjects : [] };
+    }));
+    const subjectNames = Array.from(new Set(classData.flatMap(x => x.subjects))).sort((a,b)=>a.localeCompare(b));
+    const rows = subjectNames.map(subject => {
+      const perClass = {};
+      let total = 0;
+      classData.forEach(c => { const count = c.subjects.includes(subject) ? c.count : 0; perClass[c.className] = count; total += count; });
+      return { subject, total, perClass };
+    });
+    GTMC_SUBJECT_ENROLMENT_DATA = { classes: classData, rows, view, selectedClass, level };
+    const totalStudents = classData.reduce((n,c)=>n+c.count,0);
+    summary.textContent = view === 'class'
+      ? selectedClass + ': ' + (classData[0]?.count || 0) + ' active student(s), ' + rows.length + ' subjects listed.'
+      : 'School-wide view: ' + totalStudents + ' students across ' + classData.length + ' class(es), ' + rows.length + ' subjects. Counts are based on class registers and the portal curriculum subject lists.';
+    if (!rows.length) { box.innerHTML = '<div class="empty">No subject enrolment data available for the selected filters.</div>'; return; }
+    if (view === 'class') {
+      const c = classData[0];
+      box.innerHTML = '<h3>' + esc(c.className) + ' · ' + c.count + ' students</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Student count</th></tr></thead><tbody>' +
+        rows.filter(r => c.subjects.includes(r.subject)).map(r => '<tr><td>'+esc(r.subject)+'</td><td>'+r.total+'</td></tr>').join('') +
+        '</tbody></table></div>';
+    } else {
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Total</th>' + classData.map(c=>'<th>'+esc(c.className)+'</th>').join('') + '</tr></thead><tbody>' +
+        rows.map(r=>'<tr><td>'+esc(r.subject)+'</td><td><strong>'+r.total+'</strong></td>'+classData.map(c=>'<td>'+ (r.perClass[c.className] || 0) +'</td>').join('')+'</tr>').join('') +
+        '</tbody></table></div>';
+    }
+  } catch (e) {
+    GTMC_SUBJECT_ENROLMENT_DATA = null;
+    summary.textContent = 'Report failed to load.';
+    box.innerHTML = '<div class="empty">Unable to generate report: '+esc(e.message)+'</div>';
+  }
+}
+function exportSubjectEnrolmentCSV() {
+  const d = GTMC_SUBJECT_ENROLMENT_DATA;
+  if (!d) return toast('Generate the report first.', 'err');
+  const headers = ['Subject','Total Students', ...d.classes.map(c=>c.className)];
+  const lines = [headers, ...d.rows.map(r=>[r.subject,r.total,...d.classes.map(c=>r.perClass[c.className]||0)])];
+  const csv = lines.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href=url; a.download='GTMC_Subject_Enrolment_Report.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function printSubjectEnrolmentReport() {
+  const d = GTMC_SUBJECT_ENROLMENT_DATA;
+  if (!d) return toast('Generate the report first.', 'err');
+  const report = q('seReportBox');
+  if (!report) return;
+  const title = 'GTMC Subject Enrolment Report';
+  const w = window.open('', '_blank');
+  if (!w) return toast('Please allow pop-ups to print this report.', 'err');
+  w.document.write('<!doctype html><html><head><title>'+title+'</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:20px;color:#222}h1{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #888;padding:6px;text-align:left}th{background:#eee} @media print{body{padding:0}}</style></head><body><h1>'+title+'</h1><p>'+esc(q('seSummary').textContent)+'</p>'+report.innerHTML+'</body></html>');
+  w.document.close(); w.focus(); w.print();
+}
