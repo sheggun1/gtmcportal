@@ -141,7 +141,8 @@ const META_SCHEMA = {
   FeeReceipts: { headers: ['receipt_no','payment_id','student_id','student_name','class','academic_year','term','amount','allocated_category','payment_method','reference','issued_at','issued_by','status'] },
   FinancialSettings: { headers: ['key','value','updated_at','updated_by'] },
   PaymentNotifications: { headers: ['id','parent_email','parent_name','student_id','student_name','class','academic_year','term','fee_category','payment_date','payment_time','amount','sender_name','reference','note','status','reply','replied_by','replied_at','created_at','updated_at','ledger_payment_id'] },
-  LibraryResources: { headers: ['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by'] }
+  LibraryResources: { headers: ['id','title','author','subject','class','category','url','description','active','created_at','created_by','updated_at','updated_by'] },
+  PasswordChangeRequests: { headers: ['request_id','requested_at','email','name','role_or_class','requested_password','status','decided_by','decided_at','admin_remarks'] }
 };
 
 /* ============ ROUTER ============ */
@@ -167,31 +168,36 @@ function route(action, p) {
     if (hasRole_(sessionUser, 'parent') && [
       'recordPWAInstall','sessionActivity','me','parentGetWards','parentGetResult','parentAskResultAI','parentGetDebts',
       'parentGetAnnouncements','parentGetTestBreakdown','getDomainSettings',
-      'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','parentSubmitPaymentNotification','parentGetPaymentNotifications','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'
+      'parentSubmitEnquiry','parentGetEnquiries','parentGetFeeStatement','parentSubmitPaymentNotification','parentGetPaymentNotifications','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead','submitPasswordChangeRequest'
     ].indexOf(action) === -1) {
       throw new Error('Permission denied for parent account.');
     }
     const isLeadershipAccount = roleList_(sessionUser).some(function(r) { return ['principal','vice_principal','vice_principal_admin','vice_principal_academic'].indexOf(r) !== -1; });
     const isBursarAccount = hasRole_(sessionUser, 'bursar');
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && isBursarAccount &&
-        ['me','leadershipGetDashboard','getClasses','getStudents','libraryList','getFeatureFlags','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','leadershipGetDashboard','getClasses','getStudents','libraryList','getFeatureFlags','submitPasswordChangeRequest','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Combined Principal/Bursar accounts are limited to leadership summaries and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && isLeadershipAccount && !isBursarAccount &&
-        ['me','leadershipGetDashboard','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','leadershipGetDashboard','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead','submitPasswordChangeRequest'].indexOf(action) === -1) {
       throw new Error('Leadership accounts are restricted to aggregate academic summaries and notifications.');
     }
     if (!hasRole_(sessionUser, 'admin') && isBursarAccount && !isLeadershipAccount &&
-        ['me','getClasses','getStudents','libraryList','getFeatureFlags','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','getClasses','getStudents','libraryList','getFeatureFlags','submitPasswordChangeRequest','staffGetPaymentNotifications','staffReplyPaymentNotification','adminSaveFeeStructure','adminGetFeeStructures','adminAssignStudentCharge','adminCancelStudentCharge','adminGetStudentFeeStatement','adminRecordFeePayment','adminReverseFeePayment','adminGetFeeOverview','adminGetFeeReceipt','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
       throw new Error('Bursar accounts are restricted to student directory and financial functions.');
     }
     if (!hasRole_(sessionUser, 'admin') && hasRole_(sessionUser, 'registrar') &&
-        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead'].indexOf(action) === -1) {
+        ['me','getClasses','getStudents','addStudent','addStudentsBulk','deleteStudent','findStudentMatches','copyStudentFromClass','libraryList','getFeatureFlags','getMyNotifications','markNotificationRead','submitPasswordChangeRequest'].indexOf(action) === -1) {
       throw new Error('Registrar accounts are restricted to student admission, registration and directory functions.');
     }
   }
   switch (action) {
     case 'getLoginAppearance': return gtmcGetLoginAppearance_();
+    case 'getPasswordSupportWhatsApp': return gtmcGetPasswordSupportWhatsApp_();
+    case 'submitPasswordChangeRequest': return gtmcSubmitPasswordChangeRequest_(p,p.token);
+    case 'adminGetPasswordRequests': return gtmcAdminGetPasswordRequests_(p,p.token);
+    case 'adminDecidePasswordRequests': return gtmcAdminDecidePasswordRequests_(p,p.token);
+    case 'adminSavePasswordSupportWhatsApp': return gtmcAdminSavePasswordSupportWhatsApp_(p,p.token);
     case 'adminSaveLoginAppearance': return gtmcSaveLoginAppearance_(p, p.token);
     case 'login':               return login(p.email, p.password, p.sessionMeta);
     case 'me':                  return verifyToken(p.token);
@@ -5518,6 +5524,67 @@ function adminSetUserActive(p, token) {
   logAudit(admin.email, active ? 'adminActivateUser' : 'adminDeactivateUser', { email: email });
   return { success: true, email: email, active: active };
 }
+/* ============ PASSWORD CHANGE REQUESTS ============ */
+function gtmcPasswordRequestSheet_() {
+  var sh=openSS().getSheetByName('PasswordChangeRequests');
+  var headers=META_SCHEMA.PasswordChangeRequests.headers;
+  if(!sh){sh=openSS().insertSheet('PasswordChangeRequests');sh.getRange(1,1,1,headers.length).setValues([headers]);}
+  var existing=sh.getRange(1,1,1,Math.max(sh.getLastColumn(),headers.length)).getValues()[0].map(function(x){return String(x||'').trim();});
+  headers.forEach(function(h){if(existing.indexOf(h)<0){existing.push(h);sh.getRange(1,existing.length).setValue(h);}});
+  return sh;
+}
+function gtmcPasswordRequestRows_(){
+  var sh=gtmcPasswordRequestSheet_(),d=sh.getDataRange().getValues(),h=d[0].map(String);
+  return d.slice(1).map(function(r){var o={};h.forEach(function(k,i){o[k]=r[i];});return o;}).filter(function(o){return String(o.request_id||'');});
+}
+function gtmcGetPasswordSupportWhatsApp_(){return {phone:String(PropertiesService.getScriptProperties().getProperty('GTMC_PASSWORD_SUPPORT_WHATSAPP')||'').replace(/[^0-9]/g,'')};}
+function gtmcAdminSavePasswordSupportWhatsApp_(p,t){
+  var admin=requireRole(t,['admin']),phone=String(p.phone||'').replace(/[^0-9]/g,'');
+  if(phone.length<10||phone.length>15)throw new Error('Enter a valid WhatsApp number in international format without + (example: 234803xxxxxxx).');
+  PropertiesService.getScriptProperties().setProperty('GTMC_PASSWORD_SUPPORT_WHATSAPP',phone);
+  logAudit(admin.email,'adminSavePasswordSupportWhatsApp',{configured:true});return {phone:phone};
+}
+function gtmcSubmitPasswordChangeRequest_(p,t){
+  var u=verifyToken(t),email=String(u.email||'').trim().toLowerCase(),current=String(p.currentPassword||''),next=String(p.newPassword||'');
+  if(!current||!next)throw new Error('Current and new password are required.');
+  if(next.length<6)throw new Error('New password must contain at least 6 characters.');
+  if(current===next)throw new Error('New password must differ from current password.');
+  var isParent=roleList_(u).indexOf('parent')>=0,accountSheet,accountRow,accountHeaders,stored;
+  if(isParent){accountSheet=getSheet('ParentAccounts');var pdata=accountSheet.getDataRange().getValues();accountHeaders=pdata[0].map(function(x){return String(x||'').toLowerCase();});var eCol=accountHeaders.indexOf('email'),pCol=accountHeaders.indexOf('password');accountRow=0;for(var pi=1;pi<pdata.length;pi++)if(String(pdata[pi][eCol]||'').toLowerCase()===email){accountRow=pi+1;stored=String(pdata[pi][pCol]||'');break;}if(!accountRow)throw new Error('Parent account not found.');
+  }else{var info=adminUserSheetInfo_(),row=adminUserRow_(info,email);if(!row)throw new Error('Your account was not found in Users.');var passCol=info.headers.indexOf('password');stored=String(info.sheet.getRange(row,passCol+1).getValue()||'');accountSheet=info.sheet;accountRow=row;accountHeaders=info.headers;}
+  if(!gtmcPasswordMatches_(current,stored))throw new Error('Current password is incorrect.');
+  var sh=gtmcPasswordRequestSheet_(),rows=gtmcPasswordRequestRows_();
+  if(rows.some(function(r){return String(r.email||'').toLowerCase()===email&&String(r.status||'')==='Pending';}))throw new Error('You already have a pending password-change request.');
+  var id='PWD-'+Date.now()+'-'+Utilities.getUuid().slice(0,8),now=new Date(),roleClass=String(u.role||'')+(u.class?' / '+u.class:'');
+  sh.appendRow([id,now,email,String(u.name||email),roleClass,next,'Pending','','','']);
+  logAudit(email,'submitPasswordChangeRequest',{requestId:id});return {requestId:id,status:'Pending',message:'Your request has been sent to the administrator for approval.'};
+}
+function gtmcAdminGetPasswordRequests_(p,t){
+  requireRole(t,['admin']);var rows=gtmcPasswordRequestRows_(),status=String(p.status||'');
+  if(status)rows=rows.filter(function(r){return String(r.status||'')===status;});
+  return rows.sort(function(a,b){return new Date(b.requested_at||0)-new Date(a.requested_at||0);}).map(function(r){return {requestId:String(r.request_id||''),requestedAt:r.requested_at||'',email:String(r.email||''),name:String(r.name||''),roleOrClass:String(r.role_or_class||''),requestedPassword:String(r.requested_password||''),status:String(r.status||''),decidedBy:String(r.decided_by||''),decidedAt:r.decided_at||'',adminRemarks:String(r.admin_remarks||'')};});
+}
+function gtmcAdminDecidePasswordRequests_(p,t){
+  var admin=requireRole(t,['admin']),ids=(Array.isArray(p.requestIds)?p.requestIds:[]).map(String),decision=String(p.decision||''),remarks=String(p.remarks||'').slice(0,500);
+  if(!ids.length)throw new Error('Select at least one request.');
+  if(['Approved','Rejected'].indexOf(decision)<0)throw new Error('Choose Approve or Reject.');
+  var sh=gtmcPasswordRequestSheet_(),data=sh.getDataRange().getValues(),h=data[0].map(String),col={};h.forEach(function(x,i){col[x]=i;});
+  var lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{var done=0,skipped=0,now=new Date();ids.forEach(function(id){
+    var ri=-1;for(var i=1;i<data.length;i++)if(String(data[i][col.request_id])===id){ri=i;break;}
+    if(ri<0||String(data[ri][col.status])!=='Pending'){skipped++;return;}
+    var email=String(data[ri][col.email]||'').trim().toLowerCase(),password=String(data[ri][col.requested_password]||'');
+    if(decision==='Approved'){var isParent=String(data[ri][col.role_or_class]||'').toLowerCase().indexOf('parent')>=0,accountSheet,userRow,headers;
+      if(isParent){accountSheet=getSheet('ParentAccounts');var pdata=accountSheet.getDataRange().getValues();headers=pdata[0].map(function(x){return String(x||'').toLowerCase();});userRow=0;for(var pi=1;pi<pdata.length;pi++)if(String(pdata[pi][headers.indexOf('email')]||'').toLowerCase()===email){userRow=pi+1;break;}}
+      else{var info=adminUserSheetInfo_();accountSheet=info.sheet;headers=info.headers;userRow=adminUserRow_(info,email);}
+      if(!userRow||password.length<6){skipped++;return;}accountSheet.getRange(userRow,headers.indexOf('password')+1).setValue(gtmcPasswordHash_(password));
+      var cache=CacheService.getScriptCache(),key='sessver_'+email,ver=Number(cache.get(key)||0)+1;cache.put(key,String(ver),21600);
+    }
+    sh.getRange(ri+1,col.status+1).setValue(decision);sh.getRange(ri+1,col.decided_by+1).setValue(admin.email);sh.getRange(ri+1,col.decided_at+1).setValue(now);sh.getRange(ri+1,col.admin_remarks+1).setValue(remarks);
+    done++;logAudit(admin.email,'adminPasswordRequestDecision',{requestId:id,decision:decision,email:email});
+  });return {approvedOrRejected:done,skipped:skipped,decision:decision};}finally{lock.releaseLock();}
+}
+
 function adminResetUserPassword(p, token) {
   const admin = requireRole(token, ['admin']);
   const email = String(p.email || '').trim().toLowerCase();
