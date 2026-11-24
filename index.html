@@ -1588,7 +1588,7 @@ async function renderAdmin() {
 
   const classes = await loadClasses();
   window.__gtmcClasses = classes;
-  ['tClass','tClassTeacherClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass','assPubClass'].forEach(id => {
+  ['seClass','tClass','tClassTeacherClass','pubClass','remClass','trClass','linkClass','dmnClass','dbClass','pdfClass','perfClass','brClass','assPubClass'].forEach(id => {
     const el = q(id); if (el) { const old = el.value; el.innerHTML = '<option value="">Choose class</option>' + classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join(''); if (classes.includes(old)) el.value = old; else if (classes.length) el.value = classes[0]; }
   });
   q('annClasses').innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
