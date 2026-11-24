@@ -92,7 +92,9 @@
     font-size:10px; color:var(--muted); font-weight:700;
     letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; }
   .login-card input { margin-bottom:12px; }
-  .password-reveal-row { margin:-5px 0 12px; text-align:right; }
+  .password-reveal-row { margin:-5px 0 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; text-align:left; }
+  .password-reveal-row label { display:inline-flex; align-items:center; gap:7px; margin:0; color:var(--ink); font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; cursor:pointer; }
+  .password-reveal-row input[type=checkbox] { width:17px; height:17px; margin:0; padding:0; accent-color:var(--blue); cursor:pointer; }
   .password-reveal { padding:0!important;background:transparent!important;border:0!important;color:var(--blue)!important;font-size:12px!important;font-weight:700!important;text-decoration:underline;cursor:pointer; }
   .login-card button.primary-btn { width:100%; margin-top:6px; padding:12px; font-size:15px; font-weight:700;
     background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%); letter-spacing:.03em; }
@@ -1274,6 +1276,7 @@ async function renderAdmin() {
         <div class="grid cols-3">
           <div><label>View</label><select id="seView" onchange="loadSubjectEnrolmentReport()"><option value="class">One class</option><option value="school">All classes</option></select></div>
           <div><label>Class / Arm</label><select id="seClass"></select></div>
+          <div><label>Term</label><select id="seTerm" onchange="loadSubjectEnrolmentReport()"><option value="Term1">First Term</option><option value="Term2">Second Term</option><option value="Term3">Third Term</option></select></div>
           <div><label>Level</label><select id="seLevel" onchange="loadSubjectEnrolmentReport()"><option value="">All levels</option><option value="JSS">Junior Secondary (JSS)</option><option value="SS">Senior Secondary (SS)</option></select></div>
         </div>
         <div class="row" style="margin-top:12px"><button class="blue" onclick="loadSubjectEnrolmentReport()">Generate Report</button><button class="sec" onclick="exportSubjectEnrolmentCSV()">Export Excel-compatible CSV</button><button class="sec" onclick="printSubjectEnrolmentReport()">Print / Save PDF</button></div>
