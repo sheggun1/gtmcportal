@@ -1330,6 +1330,21 @@ async function renderAdmin() {
         <div class="row" style="margin-top:12px"><button class="blue" onclick="loadAssessmentPublicationStatus()">Check Status</button><button class="ok" onclick="setAssessmentPublication(true)">Publish Assessment</button><button class="danger" onclick="setAssessmentPublication(false)">Unpublish Assessment</button></div>
         <div id="assPubStatus" class="portal-note">Choose a class, term, assessment and year.</div>
       </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div><h2>All Publication Records</h2><p class="sub">Admin view of published and unpublished student results and individual assessments across all classes.</p></div>
+          <button class="blue" onclick="loadAllPublicationRecords()">Refresh Records</button>
+        </div>
+        <div id="publicationSummary" class="grid cols-3" style="margin:12px 0">
+          <div class="portal-note">Results: —</div><div class="portal-note">Assessments: —</div><div class="portal-note">Publication status: —</div>
+        </div>
+        <div class="grid cols-3" style="margin-bottom:12px">
+          <div><label>Record type</label><select id="publicationTypeFilter" onchange="filterPublicationRecords()"><option value="">All types</option><option value="Result">Results</option><option value="Assessment">Assessments</option></select></div>
+          <div><label>Status</label><select id="publicationStatusFilter" onchange="filterPublicationRecords()"><option value="">All statuses</option><option value="true">Published</option><option value="false">Unpublished</option></select></div>
+          <div><label>Search</label><input id="publicationSearch" placeholder="Class, student, term, year…" oninput="filterPublicationRecords()"></div>
+        </div>
+        <div id="publicationRecordsBox"><div class="empty">Loading publication records…</div></div>
+      </div>
     </div>
 
     <div class="panel" data-panel="remarks">
@@ -1618,6 +1633,7 @@ async function renderAdmin() {
   assignNavOnload('teacherRemarks', 'loadTeacherRemarksTab');
   assignNavOnload('calendar', 'loadSchoolCalendar');
   assignNavOnload('template', 'loadTemplate');
+  assignNavOnload('publish', 'loadAllPublicationRecords');
   assignNavOnload('parents', 'loadParentAccounts');
   assignNavOnload('debtors', 'loadDebtsForClass');
   assignNavOnload('announcements', 'loadAnnouncementsAdmin');
@@ -4210,6 +4226,64 @@ async function downloadCurrentReportPDF() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = oldText || '⬇ Download Result PDF (A4)'; }
   }
+}
+
+let ADMIN_PUBLICATION_RECORDS = [];
+
+function loadAllPublicationRecords() {
+  const box = q('publicationRecordsBox');
+  if (box) box.innerHTML = '<div class="empty">Loading all publication records…</div>';
+  return api('adminGetAllPublicationRecords', {}).then(function (data) {
+    ADMIN_PUBLICATION_RECORDS = Array.isArray(data.records) ? data.records : [];
+    const summary = data.summary || {};
+    const summaryBox = q('publicationSummary');
+    if (summaryBox) summaryBox.innerHTML = `
+      <div class="portal-note"><strong>Results</strong><br>${Number(summary.publishedResults || 0)} published · ${Number(summary.unpublishedResults || 0)} unpublished<br><small>${Number(summary.resultRecords || 0)} records</small></div>
+      <div class="portal-note"><strong>Assessments</strong><br>${Number(summary.publishedAssessments || 0)} published · ${Number(summary.unpublishedAssessments || 0)} unpublished<br><small>${Number(summary.assessmentRecords || 0)} records</small></div>
+      <div class="portal-note"><strong>Total publication records</strong><br>${ADMIN_PUBLICATION_RECORDS.length}<br><small>Across all classes, terms and years</small></div>`;
+    filterPublicationRecords();
+  }).catch(function (e) {
+    if (box) box.innerHTML = '<div class="empty">Could not load publication records: ' + esc(e.message) + '</div>';
+    toast(e.message, 'err');
+  });
+}
+
+function filterPublicationRecords() {
+  const box = q('publicationRecordsBox');
+  if (!box) return;
+  const type = q('publicationTypeFilter')?.value || '';
+  const status = q('publicationStatusFilter')?.value || '';
+  const needle = (q('publicationSearch')?.value || '').trim().toLowerCase();
+  const rows = ADMIN_PUBLICATION_RECORDS.filter(function (r) {
+    if (type && r.type !== type) return false;
+    if (status !== '' && String(!!r.published) !== status) return false;
+    return !needle || [r.type, r.className, r.term, r.academicYear, r.studentId, r.assessment, r.publishedBy]
+      .join(' ').toLowerCase().includes(needle);
+  });
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty">No publication records match these filters.</div>';
+    return;
+  }
+  const dateText = function (value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? esc(value) : esc(d.toLocaleString());
+  };
+  box.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Type</th><th>Class</th><th>Term</th><th>Academic Year</th><th>Student / Assessment</th><th>Status</th><th>Last Updated</th><th>Published By</th></tr></thead>
+    <tbody>${rows.map(function (r) {
+      const item = r.type === 'Result' ? (r.studentId || '—') : (r.assessment || '—');
+      return `<tr>
+        <td><strong>${esc(r.type)}</strong></td>
+        <td>${esc(r.className || '—')}</td>
+        <td>${esc(r.term || '—')}</td>
+        <td>${esc(r.academicYear || '—')}</td>
+        <td>${esc(item)}</td>
+        <td><span class="status-pill ${r.published ? 'status-ok' : 'status-warn'}">${r.published ? 'Published' : 'Unpublished'}</span></td>
+        <td>${dateText(r.publishedAt)}</td>
+        <td>${esc(r.publishedBy || '—')}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div><div class="sub" style="margin-top:8px">Showing ${rows.length} of ${ADMIN_PUBLICATION_RECORDS.length} records.</div>`;
 }
 
 async function loadAssessmentPublicationStatus(){
