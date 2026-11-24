@@ -1807,6 +1807,11 @@ const SKIP = ["Users","Submissions","Students","Scores","Subjects","Classes","Au
 
 function doGet(e) {
   const params = (e && e.parameter) ? e.parameter : {};
+  if (params.page === 'slipcreator') {
+    return HtmlService.createHtmlOutputFromFile('SlipCreator')
+      .setTitle('GTMC Parent Login Slip Generator');
+  }
+
   if (params.action) {
     // All application actions must use POST. This prevents credentials, session
     // tokens and write parameters from being placed in URLs, browser history or logs.
@@ -5799,4 +5804,26 @@ function adminGetPWAInstallations(p, token) {
   const sh=gtmcInstallSheet_(), data=sh.getDataRange().getValues();
   const rows=data.slice(1).filter(r=>r[0]).map(r=>({installId:String(r[0]),installedAt:r[1],email:String(r[2]||''),name:String(r[3]||''),role:String(r[4]||''),deviceType:String(r[5]||''),browser:String(r[6]||''),platform:String(r[7]||''),lastSeen:r[8]}));
   return {total:rows.length,rows:rows};
+}
+
+/** SlipCreator live-data bridge. Requires an authenticated portal admin token. */
+function slipCreatorGetParentData(token) {
+  requireRole(token, ['admin']);
+  const parents = adminGetParentAccounts({}, token);
+  return parents.map(function (parent) {
+    return {
+      email: String(parent.email || ''),
+      name: String(parent.name || ''),
+      active: parent.active === true,
+      wards: (parent.wards || []).map(function (ward) {
+        const student = portalFindStudent_(String(ward.className || ''), String(ward.studentId || ''));
+        return {
+          studentId: String(ward.studentId || ''),
+          className: String(ward.className || ''),
+          relationship: String(ward.relationship || ''),
+          studentName: student ? String(student.name || '') : ''
+        };
+      })
+    };
+  });
 }
