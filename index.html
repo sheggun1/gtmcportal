@@ -1338,10 +1338,11 @@ async function renderAdmin() {
         <div id="publicationSummary" class="grid cols-3" style="margin:12px 0">
           <div class="portal-note">Results: —</div><div class="portal-note">Assessments: —</div><div class="portal-note">Publication status: —</div>
         </div>
-        <div class="grid cols-3" style="margin-bottom:12px">
+        <div class="grid cols-4" style="margin-bottom:12px">
+          <div><label>Class</label><select id="publicationClassFilter" onchange="filterPublicationRecords()"><option value="">All classes</option></select></div>
           <div><label>Record type</label><select id="publicationTypeFilter" onchange="filterPublicationRecords()"><option value="">All types</option><option value="Result">Results</option><option value="Assessment">Assessments</option></select></div>
           <div><label>Status</label><select id="publicationStatusFilter" onchange="filterPublicationRecords()"><option value="">All statuses</option><option value="true">Published</option><option value="false">Unpublished</option></select></div>
-          <div><label>Search</label><input id="publicationSearch" placeholder="Class, student, term, year…" oninput="filterPublicationRecords()"></div>
+          <div><label>Search</label><input id="publicationSearch" placeholder="Student, term, year…" oninput="filterPublicationRecords()"></div>
         </div>
         <div id="publicationRecordsBox"><div class="empty">Loading publication records…</div></div>
       </div>
@@ -4235,6 +4236,13 @@ function loadAllPublicationRecords() {
   if (box) box.innerHTML = '<div class="empty">Loading all publication records…</div>';
   return api('adminGetAllPublicationRecords', {}).then(function (data) {
     ADMIN_PUBLICATION_RECORDS = Array.isArray(data.records) ? data.records : [];
+    const classFilter = q('publicationClassFilter');
+    if (classFilter) {
+      const selectedClass = classFilter.value || '';
+      const classes = [...new Set(ADMIN_PUBLICATION_RECORDS.map(r => String(r.className || '').trim()).filter(Boolean))].sort();
+      classFilter.innerHTML = '<option value="">All classes</option>' + classes.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('');
+      if (classes.includes(selectedClass)) classFilter.value = selectedClass;
+    }
     const summary = data.summary || {};
     const summaryBox = q('publicationSummary');
     if (summaryBox) summaryBox.innerHTML = `
@@ -4251,10 +4259,12 @@ function loadAllPublicationRecords() {
 function filterPublicationRecords() {
   const box = q('publicationRecordsBox');
   if (!box) return;
+  const className = q('publicationClassFilter')?.value || '';
   const type = q('publicationTypeFilter')?.value || '';
   const status = q('publicationStatusFilter')?.value || '';
   const needle = (q('publicationSearch')?.value || '').trim().toLowerCase();
   const rows = ADMIN_PUBLICATION_RECORDS.filter(function (r) {
+    if (className && String(r.className || '') !== className) return false;
     if (type && r.type !== type) return false;
     if (status !== '' && String(!!r.published) !== status) return false;
     return !needle || [r.type, r.className, r.term, r.academicYear, r.studentId, r.assessment, r.publishedBy]
