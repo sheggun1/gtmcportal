@@ -92,7 +92,9 @@
     font-size:10px; color:var(--muted); font-weight:700;
     letter-spacing:.12em; text-transform:uppercase; white-space:nowrap; }
   .login-card input { margin-bottom:12px; }
-  .password-reveal-row { margin:-5px 0 12px; text-align:right; }
+  .password-reveal-row { margin:-5px 0 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; text-align:left; }
+  .password-reveal-row label { display:inline-flex; align-items:center; gap:7px; margin:0; color:var(--ink); font-size:12px; font-weight:700; letter-spacing:0; text-transform:none; cursor:pointer; }
+  .password-reveal-row input[type=checkbox] { width:17px; height:17px; margin:0; padding:0; accent-color:var(--blue); cursor:pointer; }
   .password-reveal { padding:0!important;background:transparent!important;border:0!important;color:var(--blue)!important;font-size:12px!important;font-weight:700!important;text-decoration:underline;cursor:pointer; }
   .login-card button.primary-btn { width:100%; margin-top:6px; padding:12px; font-size:15px; font-weight:700;
     background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dark) 100%); letter-spacing:.03em; }
@@ -1274,6 +1276,7 @@ async function renderAdmin() {
         <div class="grid cols-3">
           <div><label>View</label><select id="seView" onchange="loadSubjectEnrolmentReport()"><option value="class">One class</option><option value="school">All classes</option></select></div>
           <div><label>Class / Arm</label><select id="seClass"></select></div>
+          <div><label>Term</label><select id="seTerm" onchange="loadSubjectEnrolmentReport()"><option value="Term1">First Term</option><option value="Term2">Second Term</option><option value="Term3">Third Term</option></select></div>
           <div><label>Level</label><select id="seLevel" onchange="loadSubjectEnrolmentReport()"><option value="">All levels</option><option value="JSS">Junior Secondary (JSS)</option><option value="SS">Senior Secondary (SS)</option></select></div>
         </div>
         <div class="row" style="margin-top:12px"><button class="blue" onclick="loadSubjectEnrolmentReport()">Generate Report</button><button class="sec" onclick="exportSubjectEnrolmentCSV()">Export Excel-compatible CSV</button><button class="sec" onclick="printSubjectEnrolmentReport()">Print / Save PDF</button></div>
@@ -5213,42 +5216,43 @@ async function loadSubjectEnrolmentReport() {
   const view = q('seView')?.value || 'class';
   const selectedClass = q('seClass')?.value || classes[0] || '';
   const level = q('seLevel')?.value || '';
+  const term = q('seTerm')?.value || 'Term1';
   if (q('seClass')) q('seClass').disabled = view === 'school';
-  box.innerHTML = '<div class="empty">Loading student enrolment counts…</div>';
-  summary.textContent = 'Loading class registers and subject lists…';
+  box.innerHTML = '<div class="empty">Checking assessment entries…</div>';
+  summary.textContent = 'Counting students with at least one CA1/test score entered for each subject…';
   try {
-    const targetClasses = classes.filter(c => !level || (String(c).startsWith('JSS') ? 'JSS' : 'SS') === level)
-      .filter(c => view === 'school' || c === selectedClass);
+    const targetClasses = classes.filter(c => !level || (String(c).startsWith('JSS') ? 'JSS' : 'SS') === level).filter(c => view === 'school' || c === selectedClass);
     const classData = await Promise.all(targetClasses.map(async className => {
-      const [students, subjects] = await Promise.all([api('getStudents', { className }), loadSubjects(className)]);
-      return { className, count: students.length, subjects: Array.isArray(subjects) ? subjects : [] };
+      const subjects = await loadSubjects(className);
+      const subjectNames = Array.isArray(subjects) ? subjects : [];
+      const subjectCounts = await Promise.all(subjectNames.map(async subject => {
+        const scores = await api('getScores', { className, subject, term });
+        const enrolled = new Set();
+        (Array.isArray(scores) ? scores : []).forEach(student => {
+          const hasEntry = ['T1','T2','T3'].some(field => student[field] !== '' && student[field] !== null && student[field] !== undefined);
+          if (hasEntry && student.student_id) enrolled.add(String(student.student_id));
+        });
+        return { subject, count: enrolled.size };
+      }));
+      return { className, subjects: subjectNames, counts: Object.fromEntries(subjectCounts.map(x => [x.subject, x.count])) };
     }));
     const subjectNames = Array.from(new Set(classData.flatMap(x => x.subjects))).sort((a,b)=>a.localeCompare(b));
     const rows = subjectNames.map(subject => {
-      const perClass = {};
-      let total = 0;
-      classData.forEach(c => { const count = c.subjects.includes(subject) ? c.count : 0; perClass[c.className] = count; total += count; });
+      const perClass = {}; let total = 0;
+      classData.forEach(c => { const count = Number(c.counts[subject] || 0); perClass[c.className] = count; total += count; });
       return { subject, total, perClass };
     });
-    GTMC_SUBJECT_ENROLMENT_DATA = { classes: classData, rows, view, selectedClass, level };
-    const totalStudents = classData.reduce((n,c)=>n+c.count,0);
-    summary.textContent = view === 'class'
-      ? selectedClass + ': ' + (classData[0]?.count || 0) + ' student(s) in the register, ' + rows.length + ' subjects listed.'
-      : 'School-wide view: ' + totalStudents + ' students across ' + classData.length + ' class(es), ' + rows.length + ' subjects. Counts are based on class registers and the portal curriculum subject lists.';
-    if (!rows.length) { box.innerHTML = '<div class="empty">No subject enrolment data available for the selected filters.</div>'; return; }
+    GTMC_SUBJECT_ENROLMENT_DATA = { classes: classData, rows, view, selectedClass, level, term };
+    summary.textContent = view === 'class' ? selectedClass + ' · ' + term + ': counts include students with at least one T1/T2/T3 (CA1/test) entry.' : 'School-wide · ' + term + ': counts include students with at least one T1/T2/T3 (CA1/test) entry in each subject.';
+    if (!rows.length) { box.innerHTML = '<div class="empty">No subject or assessment-entry data available for the selected filters.</div>'; return; }
     if (view === 'class') {
       const c = classData[0];
-      box.innerHTML = '<h3>' + esc(c.className) + ' · ' + c.count + ' students</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Student count</th></tr></thead><tbody>' +
-        rows.filter(r => c.subjects.includes(r.subject)).map(r => '<tr><td>'+esc(r.subject)+'</td><td>'+r.total+'</td></tr>').join('') +
-        '</tbody></table></div>';
+      box.innerHTML = '<h3>' + esc(c.className) + ' · ' + term + '</h3><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Students with CA1 / Test Entry</th></tr></thead><tbody>' + rows.filter(r => c.subjects.includes(r.subject)).map(r => '<tr><td>'+esc(r.subject)+'</td><td>'+r.total+'</td></tr>').join('') + '</tbody></table></div>';
     } else {
-      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Total</th>' + classData.map(c=>'<th>'+esc(c.className)+'</th>').join('') + '</tr></thead><tbody>' +
-        rows.map(r=>'<tr><td>'+esc(r.subject)+'</td><td><strong>'+r.total+'</strong></td>'+classData.map(c=>'<td>'+ (r.perClass[c.className] || 0) +'</td>').join('')+'</tr>').join('') +
-        '</tbody></table></div>';
+      box.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Subject</th><th>Total</th>' + classData.map(c=>'<th>'+esc(c.className)+'</th>').join('') + '</tr></thead><tbody>' + rows.map(r=>'<tr><td>'+esc(r.subject)+'</td><td><strong>'+r.total+'</strong></td>'+classData.map(c=>'<td>'+ (r.perClass[c.className] || 0) +'</td>').join('')+'</tr>').join('') + '</tbody></table></div>';
     }
   } catch (e) {
-    GTMC_SUBJECT_ENROLMENT_DATA = null;
-    summary.textContent = 'Report failed to load.';
+    GTMC_SUBJECT_ENROLMENT_DATA = null; summary.textContent = 'Report failed to load.';
     box.innerHTML = '<div class="empty">Unable to generate report: '+esc(e.message)+'</div>';
   }
 }
