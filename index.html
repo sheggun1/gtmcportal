@@ -1349,7 +1349,7 @@ async function renderAdmin() {
       <div class="card">
         <div class="row" style="justify-content:space-between;align-items:center">
           <div><h2>Assessment Submission Status by Subject</h2><p class="sub">See which subjects have submitted each assessment for each class or arm. Uses the existing score-submission records only; no backend changes.</p></div>
-          <div class="row"><button class="blue" onclick="loadAssessmentSubmissionReport()">Refresh</button><button class="sec" onclick="printAssessmentSubmissionReport()">Print</button></div>
+          <div class="row"><button class="blue" onclick="loadAssessmentSubmissionReport()">Refresh</button><button class="sec" onclick="exportAssessmentCompletionReport()">Export CSV</button><button class="sec" onclick="printAssessmentSubmissionReport()">Print</button></div>
         </div>
         <div class="grid cols-4" style="margin-bottom:12px">
           <div><label>Class / Arm</label><select id="assSubClassFilter" onchange="loadAssessmentSubmissionReport()"><option value="">All classes/arms</option></select></div>
@@ -4269,16 +4269,36 @@ async function loadAssessmentSubmissionReport() {
         return {subject,submitted:!!rec,status:rec?String(rec.status||'Submitted'):'Not submitted',submittedAt:rec?rec.timestamp||rec.resubmitted_at||'':''};
       })});
     }
-    const allSubjects=reports.reduce((n,r)=>n+(r.subjects||[]).length,0),done=reports.reduce((n,r)=>n+(r.subjects||[]).filter(s=>s.submitted).length,0),pending=allSubjects-done;
-    if(summary)summary.innerHTML='<div class="portal-note"><strong>'+reports.length+'</strong><br>Classes/arms</div><div class="portal-note"><strong>'+done+'</strong><br>Subject submissions found</div><div class="portal-note"><strong>'+pending+'</strong><br>Outstanding subject submissions</div>';
+    const valid=reports.filter(r=>!r.error&&r.subjects?.length), allSubjects=valid.reduce((n,r)=>n+r.subjects.length,0), done=valid.reduce((n,r)=>n+r.subjects.filter(s=>s.submitted).length,0), pending=allSubjects-done;
+    const completed=valid.filter(r=>r.subjects.every(s=>s.submitted)).length, incomplete=valid.length-completed;
+    const percent=allSubjects?Math.round(done/allSubjects*100):0;
+    if(summary)summary.innerHTML='<div class="portal-note"><strong>'+reports.length+'</strong><br>Classes/arms</div><div class="portal-note"><strong>'+completed+'</strong><br>Complete classes/arms</div><div class="portal-note"><strong>'+incomplete+'</strong><br>Incomplete classes/arms</div><div class="portal-note"><strong>'+done+'/'+allSubjects+' ('+percent+'%)</strong><br>Subjects submitted</div><div class="portal-note"><strong>'+pending+'</strong><br>Outstanding subject submissions</div>';
     if(!reports.length){box.innerHTML='<div class="empty">No class or arm records available.</div>';return;}
     box.innerHTML=reports.map(r=>{
       if(r.error)return '<div class="portal-note">'+esc(r.className)+': Could not load subject list — '+esc(r.error)+'</div>';
       if(!r.subjects.length)return '<div class="portal-note">'+esc(r.className)+': No subjects returned.</div>';
-      const sub=r.subjects.filter(s=>s.submitted).length,not=r.subjects.length-sub;
-      return '<section class="card" style="margin:12px 0;padding:14px"><div class="row" style="justify-content:space-between"><h2>'+esc(r.className)+'</h2><span class="badge info">'+sub+' submitted · '+not+' outstanding</span></div><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Submission status</th><th>Record status</th></tr></thead><tbody>'+r.subjects.map(s=>'<tr><td>'+esc(s.subject)+'</td><td><span class="badge '+(s.submitted?'ok':'err')+'">'+(s.submitted?'Submitted':'Not submitted')+'</span></td><td>'+esc(s.status)+'</td></tr>').join('')+'</tbody></table></div></section>';
+      const sub=r.subjects.filter(s=>s.submitted).length,not=r.subjects.length-sub,complete=not===0, outstanding=r.subjects.filter(s=>!s.submitted).map(s=>s.subject);
+      return '<section class="card" style="margin:12px 0;padding:14px"><div class="row" style="justify-content:space-between"><h2>'+esc(r.className)+'</h2><span class="badge '+(complete?'ok':'err')+'">'+(complete?'Complete':'Incomplete')+' · '+sub+'/'+r.subjects.length+' subjects ('+Math.round(sub/r.subjects.length*100)+'%)</span></div><p><strong>Outstanding:</strong> '+(outstanding.length?outstanding.map(esc).join(', '):'None — all subjects submitted')+'</p><div class="table-wrap"><table><thead><tr><th>Subject</th><th>Submission status</th><th>Record status</th></tr></thead><tbody>'+r.subjects.map(s=>'<tr><td>'+esc(s.subject)+'</td><td><span class="badge '+(s.submitted?'ok':'err')+'">'+(s.submitted?'Submitted':'Not submitted')+'</span></td><td>'+esc(s.status)+'</td></tr>').join('')+'</tbody></table></div></section>';
     }).join('');
-  }catch(e){box.innerHTML='<div class="empty">Report unavailable: '+esc(e.message)+'</div>';if(summary)summary.innerHTML='';}
+    window.ASS_SUB_COMPLETION_REPORT={reports,filters:{className:selectedClass||'All classes/arms',term,assessment,year},summary:{classes:reports.length,complete:completed,incomplete,subjectsTotal:allSubjects,submitted:done,outstanding:pending,percentage:percent}};
+  }catch(e){box.innerHTML='<div class="empty">Report unavailable: '+esc(e.message)+'</div>';if(summary)summary.innerHTML='';window.ASS_SUB_COMPLETION_REPORT=null;}
+}
+function exportAssessmentCompletionReport(){
+  const data=window.ASS_SUB_COMPLETION_REPORT;
+  if(!data)return toast('Load the report first.','err');
+  const rows=[['Class/Arm','Term','Assessment','Academic Year','Completion Status','Subjects Total','Submitted Subjects','Outstanding Count','Completion %','Outstanding Subjects','Subject','Subject Status','Record Status']];
+  data.reports.forEach(r=>{
+    const total=(r.subjects||[]).length,submitted=(r.subjects||[]).filter(s=>s.submitted).length,complete=total>0&&submitted===total;
+    const pending=(r.subjects||[]).filter(s=>!s.submitted).map(s=>s.subject);
+    if(!total){rows.push([r.className,data.filters.term,data.filters.assessment,data.filters.year,'No subject list',0,0,0,0,'','','','']);return;}
+    (r.subjects||[]).forEach(s=>rows.push([r.className,data.filters.term,data.filters.assessment,data.filters.year,complete?'Complete':'Incomplete',total,submitted,pending.length,Math.round(submitted/total*100),pending.join('; '),s.subject,s.submitted?'Submitted':'Not submitted',s.status]));
+  });
+  const csv=rows.map(row=>row.map(value=>{const text=String(value??'');return '"'+text.replace(/"/g,'""')+'"';}).join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='assessment-score-completion-'+data.filters.year+'-'+data.filters.term+'-'+data.filters.assessment+'.csv';
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  toast('Completion report exported.','ok');
 }
 function printAssessmentSubmissionReport(){const box=q('assSubReportBox');if(!box||!box.innerHTML.trim())return toast('Load the report first.','err');const title='Assessment Submission Status';const w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print this report.','err');w.document.write('<html><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #bbb;padding:7px;text-align:left}h2{font-size:16px} .badge{font-weight:bold}</style></head><body><h1>'+title+'</h1><p>'+esc(q('assSubClassFilter')?.value||'All classes/arms')+' · '+esc(q('assSubTerm')?.value||'')+' · '+esc(q('assSubAssessment')?.value||'')+' · '+esc(q('assSubYear')?.value||'')+'</p>'+box.innerHTML+'</body></html>');w.document.close();w.focus();w.print();}
 
