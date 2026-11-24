@@ -5549,9 +5549,9 @@ function gtmcSubmitPasswordChangeRequest_(p,t){
   if(!current||!next)throw new Error('Current and new password are required.');
   if(next.length<6)throw new Error('New password must contain at least 6 characters.');
   if(current===next)throw new Error('New password must differ from current password.');
-  var info=adminUserSheetInfo_(),row=adminUserRow_(info,email);
-  if(!row)throw new Error('Your account was not found in Users.');
-  var passCol=info.headers.indexOf('password'),stored=String(info.sheet.getRange(row,passCol+1).getValue()||'');
+  var isParent=roleList_(u).indexOf('parent')>=0,accountSheet,accountRow,accountHeaders,stored;
+  if(isParent){accountSheet=getSheet('ParentAccounts');var pdata=accountSheet.getDataRange().getValues();accountHeaders=pdata[0].map(function(x){return String(x||'').toLowerCase();});var eCol=accountHeaders.indexOf('email'),pCol=accountHeaders.indexOf('password');accountRow=0;for(var pi=1;pi<pdata.length;pi++)if(String(pdata[pi][eCol]||'').toLowerCase()===email){accountRow=pi+1;stored=String(pdata[pi][pCol]||'');break;}if(!accountRow)throw new Error('Parent account not found.');
+  }else{var info=adminUserSheetInfo_(),row=adminUserRow_(info,email);if(!row)throw new Error('Your account was not found in Users.');var passCol=info.headers.indexOf('password');stored=String(info.sheet.getRange(row,passCol+1).getValue()||'');accountSheet=info.sheet;accountRow=row;accountHeaders=info.headers;}
   if(!gtmcPasswordMatches_(current,stored))throw new Error('Current password is incorrect.');
   var sh=gtmcPasswordRequestSheet_(),rows=gtmcPasswordRequestRows_();
   if(rows.some(function(r){return String(r.email||'').toLowerCase()===email&&String(r.status||'')==='Pending';}))throw new Error('You already have a pending password-change request.');
@@ -5574,8 +5574,10 @@ function gtmcAdminDecidePasswordRequests_(p,t){
     var ri=-1;for(var i=1;i<data.length;i++)if(String(data[i][col.request_id])===id){ri=i;break;}
     if(ri<0||String(data[ri][col.status])!=='Pending'){skipped++;return;}
     var email=String(data[ri][col.email]||'').trim().toLowerCase(),password=String(data[ri][col.requested_password]||'');
-    if(decision==='Approved'){var info=adminUserSheetInfo_(),userRow=adminUserRow_(info,email);if(!userRow||password.length<6){skipped++;return;}
-      info.sheet.getRange(userRow,info.headers.indexOf('password')+1).setValue(gtmcPasswordHash_(password));
+    if(decision==='Approved'){var isParent=String(data[ri][col.role_or_class]||'').toLowerCase().indexOf('parent')>=0,accountSheet,userRow,headers;
+      if(isParent){accountSheet=getSheet('ParentAccounts');var pdata=accountSheet.getDataRange().getValues();headers=pdata[0].map(function(x){return String(x||'').toLowerCase();});userRow=0;for(var pi=1;pi<pdata.length;pi++)if(String(pdata[pi][headers.indexOf('email')]||'').toLowerCase()===email){userRow=pi+1;break;}}
+      else{var info=adminUserSheetInfo_();accountSheet=info.sheet;headers=info.headers;userRow=adminUserRow_(info,email);}
+      if(!userRow||password.length<6){skipped++;return;}accountSheet.getRange(userRow,headers.indexOf('password')+1).setValue(gtmcPasswordHash_(password));
       var cache=CacheService.getScriptCache(),key='sessver_'+email,ver=Number(cache.get(key)||0)+1;cache.put(key,String(ver),21600);
     }
     sh.getRange(ri+1,col.status+1).setValue(decision);sh.getRange(ri+1,col.decided_by+1).setValue(admin.email);sh.getRange(ri+1,col.decided_at+1).setValue(now);sh.getRange(ri+1,col.admin_remarks+1).setValue(remarks);
