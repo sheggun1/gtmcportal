@@ -5233,7 +5233,7 @@ async function loadSubjectEnrolmentReport() {
     GTMC_SUBJECT_ENROLMENT_DATA = { classes: classData, rows, view, selectedClass, level };
     const totalStudents = classData.reduce((n,c)=>n+c.count,0);
     summary.textContent = view === 'class'
-      ? selectedClass + ': ' + (classData[0]?.count || 0) + ' active student(s), ' + rows.length + ' subjects listed.'
+      ? selectedClass + ': ' + (classData[0]?.count || 0) + ' student(s) in the register, ' + rows.length + ' subjects listed.'
       : 'School-wide view: ' + totalStudents + ' students across ' + classData.length + ' class(es), ' + rows.length + ' subjects. Counts are based on class registers and the portal curriculum subject lists.';
     if (!rows.length) { box.innerHTML = '<div class="empty">No subject enrolment data available for the selected filters.</div>'; return; }
     if (view === 'class') {
