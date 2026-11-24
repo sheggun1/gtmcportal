@@ -1361,6 +1361,10 @@ async function renderAdmin() {
         <div id="assSubReportBox"><div class="empty">Click Refresh to load the report.</div></div>
       </div>
 
+    </div>
+
+    <div class="panel" data-panel="scoreCompletion">
+      <div class="gtmc-module-hero" data-module="scoreCompletion"><div class="gtmc-module-copy"><div class="gtmc-module-eyebrow"><span class="gtmc-module-mark">GT</span><span>ACADEMICS</span><span class="gtmc-module-eyebrow-line"></span></div><h1>Score Completion Report</h1><p>Check actual scores entered for each selected assessment, identify missing student scores and export the report.</p></div><div class="gtmc-module-aside"><span class="gtmc-module-aside-mark">GTMC</span><span class="gtmc-module-aside-label">SCHOOL PORTAL</span><span class="gtmc-module-aside-rule"></span><span class="gtmc-module-aside-caption">Accurate. Accountable. Complete.</span></div></div>
       <div class="card" id="actualScoreCompletionCard">
         <div class="row" style="justify-content:space-between;align-items:center"><div><h2>Actual Score Completion &amp; Missing Scores</h2><p class="sub">Checks score values, not submission records. Senior subject enrolment is inferred only from existing score evidence; subjects with no score evidence are flagged as enrolment unconfirmed because no enrolment roster API is available.</p></div><div class="row"><button class="blue" onclick="loadActualScoreCompletionReport()">Refresh</button><button class="sec" onclick="exportActualScoreCompletionReport()">Export CSV</button><button class="sec" onclick="printActualScoreCompletionReport()">Print / Save PDF</button></div></div>
         <div class="grid cols-4" style="margin-bottom:12px"><div><label>Class / Arm</label><select id="scoreCompClass" onchange="loadActualScoreCompletionReport()"><option value="">All classes/arms</option></select></div><div><label>Term</label><select id="scoreCompTerm" onchange="loadActualScoreCompletionReport()"><option>Term1</option><option>Term2</option><option>Term3</option></select></div><div><label>Assessment</label><select id="scoreCompAssessment" onchange="loadActualScoreCompletionReport()"><option value="T1">CA 1</option><option value="T2">CA 2</option><option value="T3">CA 3</option><option value="Exam">Examination</option></select></div><div><label>Academic Year</label><input id="scoreCompYear" value="2026/2027"></div></div>
@@ -1612,6 +1616,7 @@ async function renderAdmin() {
     ]},
     { title: 'Academics', tabs: [
       { id: 'subjectEnrolment', label: 'Subject Enrolment' },
+      { id: 'scoreCompletion', label: 'Score Completion Report' },
 
       { id: 'submissions', label: 'Submissions' },
       { id: 'performance', label: 'Test Performance' },
@@ -1645,6 +1650,7 @@ async function renderAdmin() {
 
   assignNavOnload('dashboard', 'loadAdminDashboard');
   assignNavOnload('subjectEnrolment', 'loadSubjectEnrolmentReport');
+  assignNavOnload('scoreCompletion', 'loadActualScoreCompletionReport');
   assignNavOnload('submissions', 'loadSubmissions');
   assignNavOnload('performance', 'loadClassPerformance');
   assignNavOnload('broadsheet', 'initBroadsheet');
