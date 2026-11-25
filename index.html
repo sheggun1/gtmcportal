@@ -3750,7 +3750,7 @@ async function downloadStudentResultPDF() {
 async function renderParent() {
   q('roleTag').textContent = 'Parent Portal · Jesus, Our Teacher';
   q('main').innerHTML = `
-    <div class="page-head"><h1>Parent Portal</h1><p>View published results for your ward.</p></div>
+    <div class="page-head"><h1>Parent Portal</h1><p>Check your ward’s test performance and academic progress.</p></div>
 
     <div class="panel active" data-panel="report">
       <div class="card toolbar">
@@ -3799,7 +3799,7 @@ async function renderParent() {
       { id: 'chat', label: 'Ask Assistant' },
       { id: 'testPerformance', label: 'Test Performance' },
     ]},
-  ], 'report');
+  ], 'testPerformance');
 
   assignNavOnload('announcements', 'parentLoadAnnouncements');
   assignNavOnload('testPerformance', 'parentLoadTestPerformance');
@@ -3815,17 +3815,16 @@ async function renderParent() {
     }
     sel.innerHTML = wards.map((w, i) => `<option value="${i}">${esc(w.studentName)} · ${esc(w.className)}</option>`).join('');
     const ps=q('pTestWard'); if(ps) { ps.innerHTML=sel.innerHTML; ps.value=sel.value; }
-    sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; parentLoad(); });
-    if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; parentLoad(); });
+    sel.addEventListener('change',()=>{ if(q('pTestWard')) q('pTestWard').value=sel.value; parentLoad(); parentLoadTestPerformance(); });
+    if(ps) ps.addEventListener('change',()=>{ sel.value=ps.value; parentLoadTestPerformance(); });
     const academicAlert = document.createElement('div');
     academicAlert.id = 'pAcademicAlert';
     academicAlert.style.marginBottom = '14px';
     const reportPanel = document.querySelector('[data-panel="report"]');
     if (reportPanel) reportPanel.insertBefore(academicAlert, reportPanel.firstChild);
     await parentLoad();
-    // Keep ward selectors synchronized; load test analysis only when requested.
-    sel.addEventListener('change', () => { if (ps) ps.value = sel.value; });
-    if (ps) ps.addEventListener('change', () => { sel.value = ps.value; parentLoad(); });
+    // Test Performance is the parent landing dashboard; load it automatically after ward data is ready.
+    await parentLoadTestPerformance();
   } catch (e) { q('pStatus').textContent = e.message; }
 }
 
